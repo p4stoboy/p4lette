@@ -12,6 +12,6 @@ export const get_color_card_props = (hex: string, id: number): ColorCardProps =>
     const name = "Loading...";
     const brightness_val = brightnessByColor(hex);
     if (brightness_val === undefined) throw new Error(`bad hex: ${hex} passed to brightness test`);
-    const font_color = brightness_val > 150 ? "#00000055" : "#FFFFFF55";
+    const font_color = brightness_val > 150 ? "#00000066" : "#FFFFFF66";
     return {...resolve_color(hex), name, id, hex: hex.toUpperCase(), font_color};
 }

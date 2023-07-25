@@ -37,9 +37,11 @@ export const Provider = ({children}: any) => {
         update_color: (id: number, hex: string) => {
             const new_palette = [...palette];
             new_palette[id] = get_color_card_props(hex, id);
+            setNames(names.map((name, i) => i === id ? "Loading..." : name));
             setPalette(new_palette);
         },
     }
+    // useEffect(() => document.addEventListener("keyup", (e) => {if(e.code === "Space") {itf.add_color()} console.log("pressed")}), []);
 
     //don't update name until user stops changing color value
     useEffect(() => {
@@ -51,12 +53,10 @@ export const Provider = ({children}: any) => {
             };
     }, [palette]);
 
-    // useEffect(() => {
-    //     console.log(names);
-    // }, [names]);
     useEffect(() => {
         itf.add_color(3);
     }, []);
+
 return (
         <PaletteContext.Provider value={itf}>
             {children}

@@ -1,66 +1,77 @@
 import {ColorCardProps} from "./types/ColorCardProps";
-import {brightnessByColor} from "./functions/brightness";
-import {useCallback, useContext, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {PaletteContext} from "./context/PaletteContext";
 import { HexColorPicker} from "react-colorful";
 import {UseClickOutside} from "./functions/use_click_outside";
 
 
 export const ColorCard = (props: ColorCardProps) => {
+    const {palette} = useContext(PaletteContext);
     return (
     <div className="color-card" style={{ backgroundColor: props.hex, color: props.font_color }}>
-
-      <h1>{props.name}</h1>
-        <HexValue {...props} />
-        <Picker {...props} />
-        <DeleteButton {...props} key={props.id} />
-        {/*<ClickToPick {...props} />*/}
+        <CardContent{...props} />
     </div>
     );
 };
 
+
+export const CardContent = (props: ColorCardProps) => {
+    const {update_color, palette} = useContext(PaletteContext);
+    const popover = useRef();
+    const [is_focus, toggle_focus] = useState(false);
+    const [is_open, toggle] = useState(false);
+    const close = useCallback(() => toggle(false), []);
+    UseClickOutside(popover, close);
+
+    const [select_cols, set_select_cols] = useState({bg: props.hex, font: props.font_color});
+    useEffect(() => {
+        set_select_cols({bg: props.hex, font: props.font_color});
+    }, [palette]);
+
+    return (
+        // @ts-ignore
+        <div className="card-item-container"
+             style={{backgroundColor: props.hex, height:"100%", width: "100%"}}
+            onMouseEnter={() => toggle_focus(true)}
+            onMouseLeave={() => toggle_focus(false)}>
+            {/*spacer*/}
+            <div className="card-item-container" style={{backgroundColor: props.hex, height:"5%", width: "100%"}} />
+
+            <div className="card-item-container" style={{backgroundColor: select_cols.bg, color: select_cols.font}}
+                     onClick={() => toggle(true)}
+                     onMouseEnter={() => set_select_cols({bg: props.font_color ? props.font_color : "#000", font: props.hex})}
+                     onMouseLeave={() => set_select_cols({bg: props.hex, font: props.font_color ? props.font_color : "#000"})}
+                >
+                    <div className="card_item" style={{color: select_cols.font, fontSize: "1.5vh", height: "70%"}}>{props.name}</div>
+                    <div className="card_item" style={{color: select_cols.font, height:"30%", fontSize: "1vh"}}>{props.hex}</div>
+            </div>
+
+            {is_open && (
+                <div className="picker">
+                    {/* @ts-ignore */}
+                    <div className="popover" ref={popover}>
+                        <HexColorPicker color={props.hex} onChange={(hex) => {update_color(props.id, hex)}} />
+                    </div>
+                </div>
+            )}
+            {is_focus && !is_open && <DeleteButton {...props} key={props.id} />}
+        </div>
+    );
+}
+
 export const DeleteButton = (props: ColorCardProps) => {
     const {delete_color} = useContext(PaletteContext);
+    const [select_cols, set_select_cols] = useState({bg: props.hex, font: props.font_color});
     return (
-        <div className="card_item" onClick={() => delete_color(props.id)} style={{color: props.font_color}}>REMOVE</div>
+        <div className="card_item" style={{height: "88%", justifyContent: "flex-end"}}>
+        <div className="card_item"
+             onClick={() => delete_color(props.id)}
+             onMouseEnter={() => set_select_cols({bg: props.font_color ? props.font_color : "#000", font: props.hex})}
+             onMouseLeave={() => set_select_cols({bg: props.hex, font: props.font_color ? props.font_color : "#000"})}
+             style={{backgroundColor: select_cols.bg, color: select_cols.font, fontSize: "1.5vh", height: "10%", justifyContent: "center", borderRadius: "15px"}}>REMOVE</div>
+        </div>
     );
 }
 
-//create your forceUpdate hook
-export const Picker = (props: ColorCardProps) => {
-    const {update_color} = useContext(PaletteContext);
-        const popover = useRef();
-        const [is_open, toggle] = useState(false);
-        const close = useCallback(() => toggle(false), []);
-        UseClickOutside(popover, close);
 
 
-    return (
-            <div className="picker">
-                <div
-                    className="swatch"
-                    style={{ backgroundColor: props.hex, border: `3px solid ${props.font_color}` }}
-                    onClick={() => toggle(true)}
-                />
-
-                {is_open && (
-                    // @ts-ignore
-                    <div className="popover" ref={popover}>
-                        <HexColorPicker color={props.hex} onChange={(hex) => update_color(props.id, hex)} />
-                    </div>
-                )}
-            </div>
-        );
-}
-
-export const HexValue = (props: ColorCardProps) => {
-    return (
-        <div className="card_item" style={{color: props.font_color}}>{props.hex}</div>
-    );
-}
-// export const ClickToPick = (props: ColorCardProps) => {
-//     let picker_visible = false;
-//     return (
-//         <Picker {...props} />
-//     );
-// }
