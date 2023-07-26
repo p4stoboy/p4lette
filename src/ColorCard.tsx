@@ -1,15 +1,19 @@
-import {ColorCardProps} from "./types/ColorCardProps";
+import {ColorCardProps, DragColorCardProps} from "./types/ColorCardProps";
 import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {PaletteContext} from "./context/PaletteContext";
 import { HexColorPicker} from "react-colorful";
 import {UseClickOutside} from "./functions/use_click_outside";
 
 
-export const ColorCard = (props: ColorCardProps) => {
+export const ColorCard = (props: DragColorCardProps) => {
     const {palette} = useContext(PaletteContext);
     return (
-    <div className="color-card" style={{ backgroundColor: props.hex, color: props.font_color }}>
-        <CardContent{...props} />
+    <div className="color-card" style={{ backgroundColor: props.hex, color: props.font_color }} draggable
+        onDragStart={(e) => props.drag_start(e, props.id)}
+        onDragEnter={(e) => props.drag_enter(e, props.id)}
+        onDragEnd={(e) => props.drop(e)}
+    >
+        <CardContent{...props} key={props.data_id}/>
     </div>
     );
 };
@@ -50,11 +54,11 @@ export const CardContent = (props: ColorCardProps) => {
                 <div className="picker">
                     {/* @ts-ignore */}
                     <div className="popover" ref={popover}>
-                        <HexColorPicker color={props.hex} onChange={(hex) => {update_color(props.id, hex)}} />
+                        <HexColorPicker color={props.hex} onChange={(hex) => {update_color(props.id, hex, props.data_id)}} />
                     </div>
                 </div>
             )}
-            {is_focus && !is_open && <DeleteButton {...props} key={props.id} />}
+            {is_focus && !is_open && <DeleteButton {...props} key={props.data_id} />}
         </div>
     );
 }

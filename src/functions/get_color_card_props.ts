@@ -8,10 +8,10 @@ export const get_color_name = async (hex: string): Promise<string> => {
     const res = await nameres.json();
     return res.colors[0].name.toUpperCase();
 }
-export const get_color_card_props = (hex: string, id: number): ColorCardProps => {
+export const get_color_card_props = (hex: string, id: number, data_id: string): ColorCardProps => {
     const name = "Loading...";
     const brightness_val = brightnessByColor(hex);
     if (brightness_val === undefined) throw new Error(`bad hex: ${hex} passed to brightness test`);
     const font_color = brightness_val > 150 ? "#00000066" : "#FFFFFF66";
-    return {...resolve_color(hex), name, id, hex: hex.toUpperCase(), font_color};
+    return {...resolve_color(hex), name, id, hex: hex.toUpperCase(), font_color, data_id};
 }
