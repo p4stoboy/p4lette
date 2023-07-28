@@ -51,49 +51,19 @@ export function HexToHSL(hex: string): { h: number; s: number; l: number } {
     return { h, s, l };
 }
 
-export function HSLToRGB(hsl: {
-    h: number;
-    s: number;
-    l: number;
-}): { r: number; g: number; b: number } {
-    const { h, s, l } = hsl;
+const hex2rgb = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
 
-    const hDecimal = h / 100;
-    const sDecimal = s / 100;
-    const lDecimal = l / 100;
-
-    let r, g, b;
-
-    if (s === 0) {
-        return { r: lDecimal, g: lDecimal, b: lDecimal };
-    }
-
-    const HueToRGB = (p: number, q: number, t:number ) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-    };
-
-    let q =
-        lDecimal < 0.5
-            ? lDecimal * (1 + sDecimal)
-            : lDecimal + sDecimal - lDecimal * sDecimal;
-    let p = 2 * lDecimal - q;
-
-    r = HueToRGB(p, q, hDecimal + 1 / 3);
-    g = HueToRGB(p, q, hDecimal);
-    b = HueToRGB(p, q, hDecimal - 1 / 3);
-
-    return { r: r * 255, g: g * 255, b: b * 255 };
+    // return {r, g, b}
+    return { r, g, b };
 }
 
 export const resolve_color = (color: string): Colors => {
     const hex = color.startsWith("#") ? color : `#${color}`;
     const hsl = HexToHSL(hex);
-    const rgb = HSLToRGB(hsl);
+    const rgb = hex2rgb(hex);
     return { hex, rgb, hsl };
 }
 

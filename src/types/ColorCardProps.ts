@@ -1,4 +1,3 @@
-
 export type ColorCardProps = {
     [key: string]: any,
     id: number,

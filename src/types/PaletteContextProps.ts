@@ -1,8 +1,10 @@
 import {Palette} from "./Palette";
 
 export interface PaletteContextProps {
+    instructions: string;
     export_visible: boolean;
     export_template: string;
+    resolved_template: string;
     palette: Palette;
     names: string[];
     trigger: number,
@@ -14,4 +16,5 @@ export interface PaletteContextProps {
     doTrigger: (trigger: number) => void;
     setExportTemplate: (template: string) => void;
     setExportVisible: (visible: boolean) => void;
+    setResolvedTemplate: (template: string) => void;
 }

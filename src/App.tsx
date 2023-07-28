@@ -1,4 +1,3 @@
-// a component
 import {ColorCard} from "./ColorCard";
 import {useContext, useRef} from "react";
 import {PaletteContext} from "./context/PaletteContext";
