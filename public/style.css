@@ -181,7 +181,7 @@ body {
   justify-content: space-evenly;
   align-items: flex-start;
   border-radius: 10px;
-  border: 2px solid black;
+  border: 1px solid black;
 }
 
 .export-field {
@@ -192,7 +192,7 @@ body {
   padding: 0 1vw;
   overflow-y: auto;
   font-size: 1vh;
-  border: 2px solid black;
+  border: 2px solid #aaa;
   border-radius: 5px;
 }
 

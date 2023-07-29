@@ -8,32 +8,20 @@ import {resolve_template} from "../functions/resolve_export_template";
 
 // @ts-ignore
 export const PaletteContext = createContext<PaletteContextProps>({});
-const instructions = "// ALL VALUE LITERALS BETWEEN $\n" +
-    "const ONE_HEX = $1.hex$;\n" +
-    "// you can put any text / syntax you want around the literals; highlighting is set to javascript\n" +
+const instructions = "// refer to any color by its id:\n" +
+    "$1$\n" +
     "\n" +
-    "// COLORS ARE REFERENCED BY ID FROM LEFT TO RIGHT (STARTING AT 1)\n" +
-    "const ONE = $1$;\n" +
+    "// refer to any property (name, hex, rgb, hsl):\n" +
+    "$1.hex$\n" +
     "\n" +
-    "// COLOR PROPERTIES = {name, hex, hsl, rgb}\n" +
-    "const ONE_NAME = $1.name$;\n" +
-    "const ONE_HSL = $1.hsl$;\n" +
-    "// ETC.\n" +
+    "// arrays:\n" +
+    "$[1,3].name$\n" +
     "\n" +
-    "// ARRAY STRUCTURING\n" +
-    "const palette = {\n" +
-    "  ONE_AND_THREE: $[1, 3]$,\n" +
-    "  ONE_AND_THREE_HEX: $[1,3].hex$,\n" +
-    "  // ALL KEYWORD (ACCEPTS PROPERTIES)\n" +
-    "  ALL_HEX: $[all].hex$\n" +
-    "};\n" +
-    "\n" +
-    "// YOUR OWN INTERFACE:\n" +
-    "const my_palette = {\n" +
-    "  name: \"my palette name\",\n" +
-    "  water: $[1,2].hex$,\n" +
-    "  ground: $[3,4].hex$\n" +
-    "};"
+    "// write your own interface and copy it in to your IDE:\n" +
+    "{\n" +
+    "  main: $[1].hex$,\n" +
+    "  shades: $[2,3].hex$\n" +
+    "}"
 
 export const Provider = ({children}: any) => {
     const [palette, setPalette] = useState<Palette>([]);
@@ -101,6 +89,10 @@ export const Provider = ({children}: any) => {
     useEffect(() => {
         itf.add_color(3);
     }, []);
+
+    useEffect(() => {
+        setResolvedTemplate(resolve_template(export_template, palette, names));
+    }, [export_template]);
 
 return (
         <PaletteContext.Provider value={itf}>

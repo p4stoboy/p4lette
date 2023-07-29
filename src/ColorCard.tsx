@@ -67,7 +67,8 @@ export const CardButtons = (props: ColorCardProps) => {
     const [select_cols, set_select_cols] = useState({bg: props.hex, font: props.font_color});
     return (
         <div className="card_item" style={{height: "88%", justifyContent: "flex-end"}}>
-            <div className="card_item" style={{fontSize: "3vh"}}>{(props.id + 1).toString()}</div>
+            <div className="card_item" style={{fontSize: "2vh", height: "40%"}}>{(props.id + 1).toString()}</div>
+            <div className="card_item" style={{fontSize: "1vh", height: "30%"}}>DRAG TO REORDER</div>
         <div className="card_item"
              onClick={() => delete_color(props.id)}
              onMouseEnter={() => set_select_cols({bg: props.font_color ? props.font_color : "#000", font: props.hex})}

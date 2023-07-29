@@ -6,11 +6,9 @@ export const resolve_template = (template: string, colors: ColorCardProps[], nam
     const regex = /\$(.*?)\$/g;
     let result = template;
     let match = template.match(regex);
-    console.log(match);
     let value;
     while (match) {
         const key = match[0].slice(1, -1);
-        console.log(key);
         try {
             value = parse_input(key, named_colors);
         } catch (e: any) {

@@ -1,6 +1,5 @@
 import {useContext} from "react";
 import {PaletteContext} from "./context/PaletteContext";
-import {resolve_template} from "./functions/resolve_export_template";
 import CodeMirror from '@uiw/react-codemirror';
 import { EditorView } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
@@ -24,7 +23,7 @@ export const ExportTemplate = () => {
                     value={export_template}
                     height="100%"
                     extensions={[javascript({}), EditorView.lineWrapping]}
-                    onChange={(s: string) => {setExportTemplate(s); setResolvedTemplate(resolve_template(s, palette, names))}}
+                    onChange={(s: string) => {setExportTemplate(s);}}
                 />
             </div>
             <div className="export-field">
