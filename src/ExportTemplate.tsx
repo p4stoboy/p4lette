@@ -14,7 +14,7 @@ export const ExportTemplate = () => {
                 <div className="export-link" style={{textAlign: "left", width: "100%"}} onClick={() => setExportVisible(false)}>x</div>
             </div>
             <div className="export-header">
-                <div className="export-heading" style={{paddingTop: "2vh"}}>INPUT</div>
+                <div className="export-heading" style={{paddingTop: "2vh"}}>INPUT (EDIT THIS FIELD)</div>
                 <div className="export-heading" style={{paddingTop: "2vh"}}>OUTPUT</div>
             </div>
 

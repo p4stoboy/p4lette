@@ -11,6 +11,7 @@ export const ColorCard = (props: DragColorCardProps) => {
         onDragStart={(e) => props.drag_start(e, props.id)}
         onDragEnter={(e) => props.drag_enter(e, props.id)}
         onDragEnd={(e) => props.drop(e)}
+        onDragOver={(e) => e.preventDefault()}
     >
         <CardContent{...props} key={props.data_id}/>
     </div>

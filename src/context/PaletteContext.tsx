@@ -8,6 +8,7 @@ import {resolve_template} from "../functions/resolve_export_template";
 
 // @ts-ignore
 export const PaletteContext = createContext<PaletteContextProps>({});
+const ls: string | null = localStorage.getItem("export_template");
 const instructions = "// refer to any color by its id:\n" +
     "$1$\n" +
     "\n" +
@@ -22,6 +23,7 @@ const instructions = "// refer to any color by its id:\n" +
     "  main: $[1].hex$,\n" +
     "  shades: $[2,3].hex$\n" +
     "}"
+const initial_template = ls ? ls : instructions;
 
 export const Provider = ({children}: any) => {
     const [palette, setPalette] = useState<Palette>([]);
@@ -29,7 +31,7 @@ export const Provider = ({children}: any) => {
     //trigger name update
     const [trigger, doTrigger] = useState<number>(0);
     const [export_visible, setExportVisible] = useState<boolean>(false);
-    const [export_template, setExportTemplate] = useState<string>(instructions);
+    const [export_template, setExportTemplate] = useState<string>(initial_template);
     const [resolved_template, setResolvedTemplate] = useState<string>("");
     const update_names =  async () => {
         const new_names = await Promise.all(palette.map(async (color) => {
@@ -92,6 +94,7 @@ export const Provider = ({children}: any) => {
 
     useEffect(() => {
         setResolvedTemplate(resolve_template(export_template, palette, names));
+        localStorage.setItem("export_template", export_template);
     }, [export_template]);
 
 return (
