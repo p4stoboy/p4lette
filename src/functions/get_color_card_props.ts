@@ -2,12 +2,38 @@ import {ColorCardProps} from "../types/ColorCardProps";
 import {resolve_color} from "./color_converters";
 import {brightnessByColor} from "./brightness";
 
-export const get_color_name = async (hex: string): Promise<string> => {
-    const nameres = await fetch(`https://api.color.pizza/v1/?values=${hex.slice(1)}`);
-    if (!nameres.ok) throw new Error("Could not fetch color name");
-    const res = await nameres.json();
-    return res.colors[0].name.toUpperCase();
+const colorNameCache = new Map<string, string>();
+
+const normalizeColorNameHex = (hex: string): string => {
+    const withHash = hex.startsWith("#") ? hex : `#${hex}`;
+    return withHash.toUpperCase();
+};
+
+export const clear_color_name_cache = () => {
+    colorNameCache.clear();
+};
+
+export const get_color_name = async (hex: string, fallback: string = hex): Promise<string> => {
+    const normalizedHex = normalizeColorNameHex(hex);
+    const cachedName = colorNameCache.get(normalizedHex);
+    if (cachedName) return cachedName;
+
+    try {
+        const nameres = await fetch(`https://api.color.pizza/v1/?values=${normalizedHex.slice(1)}`);
+        if (!nameres.ok) return fallback.toUpperCase();
+
+        const res = await nameres.json();
+        const name = res?.colors?.[0]?.name;
+        if (typeof name !== "string" || !name.trim()) return fallback.toUpperCase();
+
+        const normalizedName = name.toUpperCase();
+        colorNameCache.set(normalizedHex, normalizedName);
+        return normalizedName;
+    } catch {
+        return fallback.toUpperCase();
+    }
 }
+
 export const get_color_card_props = (hex: string, id: number, data_id: string): ColorCardProps => {
     const name = "Loading...";
     const brightness_val = brightnessByColor(hex);

@@ -1,12 +1,21 @@
-import {useContext} from "react";
-import {PaletteContext} from "./context/PaletteContext";
+import {useState} from "react";
+import {usePalette} from "./context/PaletteContext";
 import CodeMirror from '@uiw/react-codemirror';
-import { EditorView } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 import { javascript } from '@codemirror/lang-javascript';
 
 
 export const ExportTemplate = () => {
-    const {export_template, resolved_template, setExportTemplate, setExportVisible, setResolvedTemplate, instructions, palette, names} = useContext(PaletteContext);
+    const {export_template, resolved_template, setExportTemplate, setExportVisible, instructions} = usePalette();
+    const [copyLabel, setCopyLabel] = useState("COPY");
+    const copyExport = async () => {
+        try {
+            await navigator.clipboard.writeText(resolved_template);
+            setCopyLabel("COPIED!");
+        } catch {
+            setCopyLabel("COPY FAILED");
+        }
+    };
 
     return (
         <div className="export-container">
@@ -36,13 +45,8 @@ export const ExportTemplate = () => {
             </div>
             <div className="export-header" style={{}}>
                 <div className="export-link" style={{color: "#FF0000"}} onClick={()=>setExportTemplate(instructions)}>RESET</div>
-                <div className="export-link" onClick={(e) =>
-                {
-                    navigator.clipboard.writeText(resolved_template);
-                    e.currentTarget.innerHTML = "COPIED!";
-                }} onMouseLeave={(e) => e.currentTarget.innerHTML="COPY"}>COPY</div>
+                <div className="export-link" onClick={copyExport} onMouseLeave={() => setCopyLabel("COPY")}>{copyLabel}</div>
             </div>
         </div>
     );
 }
-

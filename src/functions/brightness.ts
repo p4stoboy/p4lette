@@ -1,21 +1,41 @@
-//@ts-nocheck
+type RGB = {r: number, g: number, b: number};
 
-// from: https://gist.github.com/w3core/e3d9b5b6d69a3ba8671cc84714cca8a4
+const calculateBrightness = ({r, g, b}: RGB): number => ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+const parseHexColor = (color: string): RGB | undefined => {
+    const value = color.trim();
+    const result = (value.startsWith("#") ? /^#([a-f\d]{3}|[a-f\d]{6})$/i : /^([a-f\d]{6})$/i).exec(value);
+    if (!result) return undefined;
+
+    const hex = result[1].length === 3
+        ? result[1].split("").map((char) => `${char}${char}`).join("")
+        : result[1];
+
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+    };
+};
+
+const parseRgbColor = (color: string): RGB | undefined => {
+    const result = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i.exec(color.trim());
+    if (!result) return undefined;
+
+    const rgb = {
+        r: Number(result[1]),
+        g: Number(result[2]),
+        b: Number(result[3]),
+    };
+
+    return Object.values(rgb).every((value) => value >= 0 && value <= 255) ? rgb : undefined;
+};
 
 /**
  * Calculate brightness value by RGB or HEX color.
- * @param color (String) The color value in RGB or HEX (for example: #000000 || #000 || rgb(0,0,0) || rgba(0,0,0,0))
- * @returns (Number) The brightness value (dark) 0 ... 255 (light)
+ * Returns a dark-to-light value from 0 to 255, or undefined for unsupported input.
  */
-export function brightnessByColor (color) {
-    var color = "" + color, isHEX = color.indexOf("#") == 0, isRGB = color.indexOf("rgb") == 0;
-    if (isHEX) {
-        var m = color.substr(1).match(color.length == 7 ? /(\S{2})/g : /(\S{1})/g);
-        if (m) var r = parseInt(m[0], 16), g = parseInt(m[1], 16), b = parseInt(m[2], 16);
-    }
-    if (isRGB) {
-        var m = color.match(/(\d+){3}/g);
-        if (m) var r = m[0], g = m[1], b = m[2];
-    }
-    if (typeof r != "undefined") return ((r*299)+(g*587)+(b*114))/1000;
+export function brightnessByColor(color: string): number | undefined {
+    const rgb = parseHexColor(color) ?? parseRgbColor(color);
+    return rgb ? calculateBrightness(rgb) : undefined;
 }

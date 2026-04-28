@@ -1,46 +1,30 @@
-# Getting Started with Create React App
+# P4LETTE
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+P4LETTE is a small React color palette tool. It generates editable colors, names them through the external `color.pizza` API, and resolves custom export templates for copying palette data into other projects.
 
-## Available Scripts
+## Scripts
 
-In the project directory, you can run:
+- `npm run dev` starts the Vite dev server.
+- `npm run build` runs TypeScript checking and creates a production build in `dist/`.
+- `npm run preview` serves the production build locally.
+- `npm test` runs the Vitest suite once.
+- `npm run test:watch` runs Vitest in watch mode.
+- `npm run typecheck` runs TypeScript without emitting files.
+- `npm run lint` runs ESLint over the project.
 
-### `npm start`
+## Export Templates
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Template placeholders are wrapped in `$...$` and use 1-based color ids.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- `$1$` resolves the full first color object.
+- `$1.hex$`, `$1.name$`, `$1.rgb$`, and `$1.hsl$` resolve supported properties.
+- `$[1,3].name$` resolves an array from selected ids.
+- `$[all].hex$` resolves an array for the full palette.
 
-### `npm test`
+Invalid ids, selectors, or properties resolve to explicit error text so the export panel stays usable.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Notes
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Color-name lookups depend on `https://api.color.pizza/v1/`.
+- Successful color-name lookups are cached in memory by normalized hex value.
+- Failed color-name lookups fall back to the previous name or hex value and are not cached.

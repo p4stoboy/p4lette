@@ -1,59 +1,71 @@
 import {ColorCardProps} from "../types/ColorCardProps";
+import {ColorProperty} from "../types/Colors";
 
 
 export const resolve_template = (template: string, colors: ColorCardProps[], names: string[]): string => {
     const named_colors = colors.map((color, i) => ({...color, name: names.length > i ? names[i] : ""}));
-    const regex = /\$(.*?)\$/g;
-    let result = template;
-    let match = template.match(regex);
-    let value;
-    while (match) {
-        const key = match[0].slice(1, -1);
-        try {
-            value = parse_input(key, named_colors);
-        } catch (e: any) {
-            return e.message;
-        }
-        result = result.replace(match[0], value);
-        match = result.match(regex);
+    try {
+        return template.replace(/\$(.*?)\$/g, (_, key: string) => parse_input(key, named_colors));
+    } catch (error) {
+        return error instanceof Error ? error.message : "Could not resolve template";
     }
-    return result;
 }
 
 const parse_input = (input: string, colors: ColorCardProps[]): string => {
-    const is_array = input[0] === '[';
-    const split = input.split('.')[0] !== '' ? input.split('.') : [input];
+    const [selector, rawProperty, ...extra] = input.split('.');
+    if (!selector || extra.length > 0) throw new Error(`Invalid color reference {${input}}.`);
 
-    let res = is_array ? "[\n" : "";
-    const values = is_array ? split[0].slice(1, -1).split(',').map(x => x.toLowerCase()) : [split[0].toLowerCase()];
+    const property = rawProperty ? parse_property(rawProperty) : undefined;
+    const is_array = selector.startsWith("[");
+    const values = parse_selector(selector, is_array);
+    const indexes = values.includes("all")
+        ? colors.map((_, i) => ({index: i, label: `${i + 1}`}))
+        : values.map((value) => ({index: parse_color_index(value), label: value}));
 
-    const is_all = values.includes("all");
-    const indexes = is_all ? colors.map((_, i) => i) : values.map(x => parseInt(x) - 1);
-    const property = split.length > 1 ? split[1].toLowerCase() : undefined;
-
-    for (let i = 0; i < indexes.length; i++) {
-        const index = indexes[i];
+    const lines = indexes.map(({index, label}) => {
         const color = colors[index];
-        // if (!color) throw new Error(`Color id {${index+1}} does not exist.`);
-        if (!color) {res += `Color id {${index+1}} does not exist.\n`; continue;}
-        const parsed_color = {...color};
-        // @ts-ignore
-        res += resolve_line_attributes(parsed_color, property);
-        if (i < indexes.length - 1) res += ',\n';
-    }
-    if (is_array) res += '\n]';
-    return res;
+        return color ? resolve_line_attributes(color, property) : `Color id {${label}} does not exist.`;
+    });
+
+    return is_array ? `[\n${lines.join(',\n')}\n]` : lines[0];
 }
 
+const parse_selector = (selector: string, is_array: boolean): string[] => {
+    if (!is_array) return [selector.trim().toLowerCase()];
+    if (!selector.endsWith("]")) throw new Error(`Invalid color selector {${selector}}.`);
 
-const resolve_line_attributes = (parsed_color: ColorCardProps, property: string | undefined): string => {
+    const values = selector
+        .slice(1, -1)
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+
+    if (values.length === 0) throw new Error(`Invalid color selector {${selector}}.`);
+    return values;
+};
+
+const parse_color_index = (value: string): number => /^\d+$/.test(value) ? Number(value) - 1 : -1;
+
+const supported_properties: ColorProperty[] = ["name", "hex", "rgb", "hsl"];
+
+const parse_property = (property: string): ColorProperty => {
+    const normalized = property.trim().toLowerCase();
+    if (supported_properties.includes(normalized as ColorProperty)) return normalized as ColorProperty;
+    throw new Error(`Property {${property}} does not exist.`);
+};
+
+const format_template_value = (value: unknown): string => JSON.stringify(value, null, 4)
+    .split(" ")
+    .map((part) => (part.startsWith("\"#") || /[A-Z]/.test(part)) ? part : part.replaceAll(/"/g, ""))
+    .join(" ");
+
+const resolve_line_attributes = (parsed_color: ColorCardProps, property: ColorProperty | undefined): string => {
     return property
-        ? JSON.stringify(parsed_color[property], null, 4).split(" ").map(x => (x.startsWith("\"#") ||  /[A-Z]/.test(x)) ? x : x.replaceAll(/"/g, "")).join(" ")
-        : JSON.stringify(
-        {
+        ? format_template_value(parsed_color[property])
+        : format_template_value({
             name: parsed_color.name,
             hex: parsed_color.hex,
             hsl: parsed_color.hsl,
-            rgb: parsed_color.rgb},
-            null, 4).split(" ").map(x => (x.startsWith("\"#") ||  /[A-Z]/.test(x)) ? x : x.replaceAll(/"/g, "")).join(" ")
+            rgb: parsed_color.rgb
+        });
 }

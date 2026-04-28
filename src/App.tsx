@@ -1,13 +1,16 @@
 import {ColorCard} from "./ColorCard";
-import {useContext, useRef} from "react";
-import {PaletteContext} from "./context/PaletteContext";
+import {Suspense, lazy, useRef} from "react";
+import {usePalette} from "./context/PaletteContext";
 import {ColorCardProps} from "./types/ColorCardProps";
 import {Nav} from "./Nav";
-import {ExportTemplate} from "./ExportTemplate";
+
+const ExportTemplate = lazy(() =>
+    import("./ExportTemplate").then((module) => ({default: module.ExportTemplate}))
+);
 
 export const App = () => {
 
-    const {palette, names, setPalette, setNames, trigger, doTrigger, export_visible} = useContext(PaletteContext);
+    const {palette, names, reorderColor, export_visible} = usePalette();
 
     // drag logic from https://rootstack.com/en/blog/how-do-i-use-drag-and-drop-react
     const dragItem = useRef<number>();
@@ -19,25 +22,14 @@ export const App = () => {
 
     const drag_enter = (e: React.DragEvent<HTMLDivElement>, i: number) => {
         dragOverItem.current = i;
-        const new_palette = [...palette];
-        const new_names = [...names];
-        if (dragItem.current === undefined || dragOverItem.current === undefined) throw new Error('drag index not set');
-        const dragged_content = new_palette[dragItem.current];
-        const dragged_name = new_names[dragItem.current];
-        new_palette.splice(dragItem.current, 1);
-        new_palette.splice(dragOverItem.current, 0, dragged_content);
-        new_names.splice(dragItem.current, 1);
-        new_names.splice(dragOverItem.current, 0, dragged_name);
-        const res = new_palette.map((color: ColorCardProps, i: number) => ({...color, id: i}));
-        setPalette(res);
-        setNames(new_names);
+        if (dragItem.current === undefined || dragOverItem.current === undefined) return;
+        reorderColor(dragItem.current, dragOverItem.current);
         dragItem.current = i;
     };
 
-    const drop = (e: React.DragEvent<HTMLDivElement>) => {
+    const drop = () => {
         dragItem.current = undefined;
         dragOverItem.current = undefined;
-        doTrigger(trigger+1);
     };
 
     const palette_cards = palette.map((color: ColorCardProps, i: number) => <ColorCard {...{...color, name: i < names.length ? names[i] : "Loading...", drag_start, drag_enter, drop}} key={color.data_id} />);
@@ -47,8 +39,11 @@ export const App = () => {
             <div className="palette_container">
                 {palette_cards}
             </div>
-            {export_visible && <ExportTemplate />}
+            {export_visible && (
+                <Suspense fallback={null}>
+                    <ExportTemplate />
+                </Suspense>
+            )}
         </div>
     );
 }
-

@@ -1,11 +1,25 @@
 import {Colors} from "../types/Colors";
 
-export function HexToHSL(hex: string): { h: number; s: number; l: number } {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+const normalizeHex = (color: string): string => {
+    const hasHash = color.startsWith("#");
+    const value = hasHash ? color : `#${color}`;
+    const result = (hasHash ? /^#([a-f\d]{3}|[a-f\d]{6})$/i : /^#([a-f\d]{6})$/i).exec(value);
 
     if (!result) {
         throw new Error("Could not parse Hex Color");
     }
+
+    const hex = result[1].length === 3
+        ? result[1].split("").map((char) => `${char}${char}`).join("")
+        : result[1];
+
+    return `#${hex}`;
+};
+
+export function HexToHSL(hex: string): { h: number; s: number; l: number } {
+    const normalizedHex = normalizeHex(hex);
+    const result = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(normalizedHex);
+    if (!result) throw new Error("Could not parse Hex Color");
 
     const rHex = parseInt(result[1], 16);
     const gHex = parseInt(result[2], 16);
@@ -24,7 +38,7 @@ export function HexToHSL(hex: string): { h: number; s: number; l: number } {
 
     if (max === min) {
         // Achromatic
-        return { h: 0, s: 0, l };
+        return { h: 0, s: 0, l: Math.round(l * 100) };
     }
 
     const d = max - min;
@@ -52,16 +66,17 @@ export function HexToHSL(hex: string): { h: number; s: number; l: number } {
 }
 
 const hex2rgb = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
+    const normalizedHex = normalizeHex(hex);
+    const r = parseInt(normalizedHex.slice(1, 3), 16);
+    const g = parseInt(normalizedHex.slice(3, 5), 16);
+    const b = parseInt(normalizedHex.slice(5, 7), 16);
 
     // return {r, g, b}
     return { r, g, b };
 }
 
 export const resolve_color = (color: string): Colors => {
-    const hex = color.startsWith("#") ? color : `#${color}`;
+    const hex = normalizeHex(color);
     const hsl = HexToHSL(hex);
     const rgb = hex2rgb(hex);
     return { hex, rgb, hsl };
