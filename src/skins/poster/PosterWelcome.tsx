@@ -4,18 +4,19 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   bg: string;
+  isMobile: boolean;
   onClose: () => void;
 }
 
 const KEYMAP: ReadonlyArray<readonly [string, string]> = [
   ["SPACE", "Shuffle unlocked colors"],
-  ["CLICK", "Edit a color inline"],
+  ["TAP", "Edit a color inline"],
   ["DRAG", "Reorder columns"],
   ["L", "Lock a color"],
   ["E", "Open export sheet"],
 ];
 
-export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
+export const PosterWelcome = ({ ink, bg, isMobile, onClose }: Props) => (
   <Backdrop onClose={onClose}>
     <div
       onClick={(e) => e.stopPropagation()}
@@ -25,7 +26,8 @@ export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
         border: `${POSTER.borderW}px solid ${ink}`,
         width: 560,
         maxWidth: "92vw",
-        maxHeight: "88vh",
+        maxHeight: "92vh",
+        overflow: "auto",
         boxShadow: `12px 12px 0 ${POSTER.accent}`,
         position: "relative",
         display: "flex",
@@ -39,6 +41,7 @@ export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexShrink: 0,
         }}
       >
         <div
@@ -52,22 +55,26 @@ export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
         </div>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `2px solid ${ink}` : "none",
             fontSize: 22,
             cursor: "pointer",
             color: ink,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
         </button>
       </div>
-      <div style={{ padding: "20px 24px 8px" }}>
+      <div style={{ padding: isMobile ? "16px 18px 8px" : "20px 24px 8px" }}>
         <div
           style={{
             fontFamily: POSTER.display,
-            fontSize: 64,
+            fontSize: isMobile ? 48 : 64,
             lineHeight: 0.92,
             letterSpacing: "-0.03em",
             marginBottom: 10,
@@ -92,39 +99,41 @@ export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
           building.
         </p>
       </div>
-      <div style={{ padding: "0 24px 18px", display: "grid", gap: 8 }}>
-        {KEYMAP.map(([k, v]) => (
-          <div
-            key={k}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              fontSize: 13,
-            }}
-          >
-            <span
+      {!isMobile && (
+        <div style={{ padding: "0 24px 18px", display: "grid", gap: 8 }}>
+          {KEYMAP.map(([k, v]) => (
+            <div
+              key={k}
               style={{
-                fontFamily: POSTER.mono,
-                fontSize: 11,
-                fontWeight: 600,
-                padding: "3px 8px",
-                border: `2px solid ${ink}`,
-                minWidth: 48,
-                textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                fontSize: 13,
               }}
             >
-              {k}
-            </span>
-            <span style={{ opacity: 0.85 }}>{v}</span>
-          </div>
-        ))}
-      </div>
+              <span
+                style={{
+                  fontFamily: POSTER.mono,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "3px 8px",
+                  border: `2px solid ${ink}`,
+                  minWidth: 48,
+                  textAlign: "center",
+                }}
+              >
+                {k}
+              </span>
+              <span style={{ opacity: 0.85 }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <button
         onClick={onClose}
         style={{
           width: "100%",
-          padding: "14px",
+          padding: isMobile ? "20px" : "14px",
           background: ink,
           color: bg,
           border: "none",
@@ -133,6 +142,8 @@ export const PosterWelcome = ({ ink, bg, onClose }: Props) => (
           fontSize: 22,
           letterSpacing: "0.04em",
           cursor: "pointer",
+          minHeight: isMobile ? 64 : undefined,
+          touchAction: "manipulation",
         }}
       >
         LET&apos;S GO →

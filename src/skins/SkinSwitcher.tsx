@@ -1,4 +1,5 @@
 import { CSSProperties, ReactNode, useState } from "react";
+import { useViewport } from "../hooks/use_viewport";
 
 export type Skin = "poster" | "terminal";
 
@@ -16,12 +17,15 @@ const TERM_ACCENT = "#00FF6A";
 
 export const SkinSwitcher = ({ skin, setSkin }: Props) => {
   const isPoster = skin === "poster";
+  const { isMobile } = useViewport();
 
   const wrapStyle: CSSProperties = isPoster
     ? {
         position: "fixed",
-        bottom: 18,
-        right: 18,
+        bottom: isMobile
+          ? "calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          : 18,
+        right: isMobile ? 12 : 18,
         zIndex: 9999,
         background: POSTER_BG,
         border: `3px solid ${POSTER_INK}`,
@@ -33,8 +37,10 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
       }
     : {
         position: "fixed",
-        bottom: 14,
-        right: 14,
+        bottom: isMobile
+          ? "calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          : 14,
+        right: isMobile ? 12 : 14,
         zIndex: 9999,
         background: TERM_BG,
         border: `1px solid ${TERM_INK}`,
@@ -47,7 +53,7 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
 
   const labelStyle: CSSProperties = isPoster
     ? {
-        padding: "6px 12px",
+        padding: isMobile ? "10px 12px" : "6px 12px",
         fontSize: 11,
         letterSpacing: "0.14em",
         color: POSTER_INK,
@@ -60,7 +66,7 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
         textTransform: "uppercase",
       }
     : {
-        padding: "4px 10px",
+        padding: isMobile ? "10px 10px" : "4px 10px",
         fontSize: 10,
         letterSpacing: "0.16em",
         color: TERM_INK,
@@ -73,7 +79,7 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
 
   const hotkeyStyle: CSSProperties = isPoster
     ? {
-        padding: "6px 10px",
+        padding: isMobile ? "10px 10px" : "6px 10px",
         fontSize: 10,
         letterSpacing: "0.14em",
         color: POSTER_INK,
@@ -86,7 +92,7 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
         textTransform: "uppercase",
       }
     : {
-        padding: "4px 8px",
+        padding: isMobile ? "10px 8px" : "4px 8px",
         fontSize: 10,
         letterSpacing: "0.14em",
         color: TERM_INK,
@@ -99,9 +105,12 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
 
   return (
     <div style={wrapStyle}>
-      <div style={labelStyle}>{isPoster ? "◆ SKIN" : "// SKIN"}</div>
+      {!isMobile && (
+        <div style={labelStyle}>{isPoster ? "◆ SKIN" : "// SKIN"}</div>
+      )}
       <SkinBtn
         isPoster={isPoster}
+        isMobile={isMobile}
         active={isPoster}
         onClick={() => setSkin("poster")}
       >
@@ -109,41 +118,45 @@ export const SkinSwitcher = ({ skin, setSkin }: Props) => {
       </SkinBtn>
       <SkinBtn
         isPoster={isPoster}
+        isMobile={isMobile}
         active={!isPoster}
         onClick={() => setSkin("terminal")}
       >
         {isPoster ? "TERMINAL" : "[B] TERMINAL"}
       </SkinBtn>
-      <div style={hotkeyStyle}>T</div>
+      {!isMobile && <div style={hotkeyStyle}>T</div>}
     </div>
   );
 };
 
 interface BtnProps {
   isPoster: boolean;
+  isMobile: boolean;
   active: boolean;
   onClick: () => void;
   children: ReactNode;
 }
 
-const SkinBtn = ({ isPoster, active, onClick, children }: BtnProps) => {
+const SkinBtn = ({ isPoster, isMobile, active, onClick, children }: BtnProps) => {
   const [hov, setHov] = useState(false);
   const baseStyle: CSSProperties = isPoster
     ? {
-        padding: "8px 16px",
+        padding: isMobile ? "12px 18px" : "8px 16px",
         border: "none",
         borderRight: `3px solid ${POSTER_INK}`,
         fontFamily: '"Anton", Impact, sans-serif',
-        fontSize: 18,
+        fontSize: isMobile ? 16 : 18,
         letterSpacing: "0.04em",
         cursor: "pointer",
         textTransform: "uppercase",
         transition: "background .12s, color .12s",
         background: active ? POSTER_INK : hov ? POSTER_ACCENT : POSTER_BG,
         color: active ? POSTER_BG : hov ? POSTER_BG : POSTER_INK,
+        minHeight: isMobile ? 44 : undefined,
+        touchAction: "manipulation",
       }
     : {
-        padding: "4px 12px",
+        padding: isMobile ? "12px 14px" : "4px 12px",
         border: "none",
         borderRight: `1px solid ${TERM_INK}`,
         fontFamily: '"JetBrains Mono", Menlo, monospace',
@@ -154,6 +167,8 @@ const SkinBtn = ({ isPoster, active, onClick, children }: BtnProps) => {
         transition: "background .1s, color .1s",
         background: active ? TERM_ACCENT : hov ? "#1a1a1a" : TERM_BG,
         color: active ? "#000" : TERM_INK,
+        minHeight: isMobile ? 44 : undefined,
+        touchAction: "manipulation",
       };
   return (
     <button

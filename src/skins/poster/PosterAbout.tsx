@@ -5,10 +5,11 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   bg: string;
+  isMobile: boolean;
   onClose: () => void;
 }
 
-export const PosterAbout = ({ ink, bg, onClose }: Props) => (
+export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
   <Backdrop onClose={onClose}>
     <div
       onClick={(e) => e.stopPropagation()}
@@ -35,22 +36,26 @@ export const PosterAbout = ({ ink, bg, onClose }: Props) => (
         <div style={{ fontFamily: POSTER.display, fontSize: 20 }}>ABOUT</div>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `2px solid ${ink}` : "none",
             fontSize: 22,
             cursor: "pointer",
             color: ink,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
         </button>
       </div>
-      <div style={{ padding: 28 }}>
+      <div style={{ padding: isMobile ? 18 : 28 }}>
         <div
           style={{
             fontFamily: POSTER.display,
-            fontSize: 88,
+            fontSize: isMobile ? 56 : 88,
             lineHeight: 0.88,
             letterSpacing: "-0.03em",
           }}
@@ -77,7 +82,7 @@ export const PosterAbout = ({ ink, bg, onClose }: Props) => (
           style={{
             marginTop: 24,
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: 18,
           }}
         >

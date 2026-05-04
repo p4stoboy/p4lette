@@ -7,6 +7,7 @@ interface CmdBarProps {
   ink: string;
   accent: string;
   isDark: boolean;
+  compact: boolean;
   palette: Palette;
   savedCount: number;
   clock: Date;
@@ -18,12 +19,14 @@ interface CmdBarProps {
   onHarmony: () => void;
   onExport: () => void;
   onAbout: () => void;
+  onMenu: () => void;
 }
 
 export const TerminalCmdBar = ({
   ink,
   accent,
   isDark,
+  compact,
   palette,
   savedCount,
   clock,
@@ -35,7 +38,60 @@ export const TerminalCmdBar = ({
   onHarmony,
   onExport,
   onAbout,
+  onMenu,
 }: CmdBarProps) => {
+  if (compact) {
+    return (
+      <div
+        style={{
+          borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
+          display: "flex",
+          alignItems: "stretch",
+          flexShrink: 0,
+          height: 48,
+          fontFamily: TERMINAL.mono,
+        }}
+      >
+        <button
+          onClick={onMenu}
+          aria-label="open menu"
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "0 14px",
+            border: "none",
+            background: "transparent",
+            color: ink,
+            cursor: "pointer",
+            fontFamily: TERMINAL.mono,
+            fontSize: 14,
+            letterSpacing: "0.12em",
+            fontWeight: 700,
+            textAlign: "left",
+            touchAction: "manipulation",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              width: 10,
+              height: 10,
+              background: accent,
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ color: accent }}>p4lette</span>
+          <span>$ menu_</span>
+          <span style={{ marginLeft: "auto", opacity: 0.6, fontSize: 12 }}>
+            [{palette.length}]
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   const ts = clock.toTimeString().slice(0, 8);
   const dt = clock.toISOString().slice(0, 10);
   return (

@@ -4,7 +4,7 @@ import { POSTER } from "./tokens";
 interface BackdropProps {
   children: ReactNode;
   onClose: () => void;
-  align?: "center" | "right";
+  align?: "center" | "right" | "bottom";
 }
 
 export const Backdrop = ({
@@ -17,7 +17,8 @@ export const Backdrop = ({
     inset: 0,
     background: "rgba(14,11,8,0.5)",
     display: "flex",
-    alignItems: align === "right" ? "stretch" : "center",
+    alignItems:
+      align === "right" ? "stretch" : align === "bottom" ? "flex-end" : "center",
     justifyContent: align === "right" ? "flex-end" : "center",
     zIndex: 100,
     animation: "maxFadeIn .18s ease",
@@ -34,9 +35,10 @@ interface SmallBtnProps {
   ink: string;
   onClick: (e: MouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
+  tall?: boolean;
 }
 
-export const SmallBtn = ({ ink, onClick, children }: SmallBtnProps) => {
+export const SmallBtn = ({ ink, onClick, children, tall }: SmallBtnProps) => {
   const [hov, setHov] = useState(false);
   return (
     <button
@@ -46,13 +48,15 @@ export const SmallBtn = ({ ink, onClick, children }: SmallBtnProps) => {
       style={{
         fontFamily: POSTER.body,
         fontWeight: 700,
-        fontSize: 10,
+        fontSize: tall ? 12 : 10,
         letterSpacing: "0.1em",
-        padding: "5px 10px",
+        padding: tall ? "12px 18px" : "5px 10px",
+        minHeight: tall ? 44 : undefined,
         border: `2px solid ${ink}`,
         background: hov ? ink : "transparent",
         color: hov ? POSTER.bg : ink,
         cursor: "pointer",
+        touchAction: "manipulation",
       }}
     >
       {children}

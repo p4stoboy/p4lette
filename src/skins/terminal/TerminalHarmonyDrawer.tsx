@@ -8,6 +8,7 @@ interface Props {
   ink: string;
   bg: string;
   accent: string;
+  isMobile: boolean;
   palette: Palette;
   onClose: () => void;
   onApply: (hexes: string[]) => void;
@@ -27,28 +28,32 @@ export const TerminalHarmonyDrawer = ({
   ink,
   bg,
   accent,
+  isMobile,
   palette,
   onClose,
   onApply,
 }: Props) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#00ff6a");
   return (
-    <BrutBackdrop onClose={onClose} align="right">
+    <BrutBackdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: bg,
           color: ink,
-          borderLeft: `${TERMINAL.borderW}px solid ${ink}`,
-          width: 480,
-          height: "100%",
+          borderLeft: isMobile ? "none" : `${TERMINAL.borderW}px solid ${ink}`,
+          borderTop: isMobile ? `${TERMINAL.borderW}px solid ${ink}` : "none",
+          width: isMobile ? "100%" : 480,
+          height: isMobile ? "auto" : "100%",
+          maxWidth: isMobile ? "100vw" : "94vw",
+          maxHeight: isMobile ? "88vh" : "100%",
           display: "flex",
           flexDirection: "column",
         }}
       >
         <div
           style={{
-            padding: "6px 14px",
+            padding: isMobile ? "10px 14px" : "6px 14px",
             borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
             background: ink,
             color: bg,
@@ -65,13 +70,17 @@ export const TerminalHarmonyDrawer = ({
           </span>
           <button
             onClick={onClose}
+            aria-label="close"
             style={{
               background: "none",
-              border: "none",
+              border: isMobile ? `${TERMINAL.borderW}px solid ${bg}` : "none",
               color: bg,
               cursor: "pointer",
               fontFamily: TERMINAL.mono,
               fontSize: 14,
+              width: isMobile ? 44 : undefined,
+              height: isMobile ? 44 : undefined,
+              touchAction: "manipulation",
             }}
           >
             ×
@@ -101,6 +110,7 @@ export const TerminalHarmonyDrawer = ({
                 height: 30,
                 background: base,
                 border: `${TERMINAL.borderW}px solid ${ink}`,
+                flexShrink: 0,
               }}
             />
             <input
@@ -109,12 +119,13 @@ export const TerminalHarmonyDrawer = ({
               style={{
                 fontFamily: TERMINAL.mono,
                 fontSize: 13,
-                padding: "4px 8px",
+                padding: isMobile ? "10px 12px" : "4px 8px",
                 border: `${TERMINAL.borderW}px solid ${ink}`,
                 background: "transparent",
                 color: ink,
                 flex: 1,
                 outline: "none",
+                minHeight: isMobile ? 44 : undefined,
               }}
             />
           </div>
@@ -123,14 +134,16 @@ export const TerminalHarmonyDrawer = ({
               <button
                 key={c.dataId}
                 onClick={() => setBase(c.hex)}
+                aria-label={`use ${c.hex}`}
                 style={{
                   flex: 1,
-                  height: 20,
+                  height: isMobile ? 44 : 20,
                   background: c.hex,
                   border: `${TERMINAL.borderW}px solid ${
                     base === c.hex ? accent : ink
                   }`,
                   cursor: "pointer",
+                  touchAction: "manipulation",
                 }}
               />
             ))}
@@ -147,14 +160,14 @@ export const TerminalHarmonyDrawer = ({
                   border: `${TERMINAL.borderW}px solid ${ink}`,
                 }}
               >
-                <div style={{ display: "flex", height: 40 }}>
+                <div style={{ display: "flex", height: isMobile ? 60 : 40 }}>
                   {colors.map((h, i) => (
                     <div key={i} style={{ flex: 1, background: h }} />
                   ))}
                 </div>
                 <div
                   style={{
-                    padding: "6px 10px",
+                    padding: "8px 10px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -168,6 +181,7 @@ export const TerminalHarmonyDrawer = ({
                   <BrutSmallBtn
                     ink={ink}
                     accent={accent}
+                    tall={isMobile}
                     onClick={() => onApply(colors)}
                   >
                     APPLY

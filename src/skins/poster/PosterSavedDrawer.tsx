@@ -5,6 +5,7 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   bg: string;
+  isMobile: boolean;
   list: SavedPalette[];
   onClose: () => void;
   onLoad: (hexes: string[]) => void;
@@ -14,21 +15,24 @@ interface Props {
 export const PosterSavedDrawer = ({
   ink,
   bg,
+  isMobile,
   list,
   onClose,
   onLoad,
   onDelete,
 }: Props) => (
-  <Backdrop onClose={onClose} align="right">
+  <Backdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
         background: bg,
         color: ink,
-        borderLeft: `${POSTER.borderW}px solid ${ink}`,
-        width: 460,
-        height: "100%",
-        maxWidth: "94vw",
+        borderLeft: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
+        borderTop: isMobile ? `${POSTER.borderW}px solid ${ink}` : "none",
+        width: isMobile ? "100%" : 460,
+        height: isMobile ? "auto" : "100%",
+        maxWidth: isMobile ? "100vw" : "94vw",
+        maxHeight: isMobile ? "88vh" : "100%",
         display: "flex",
         flexDirection: "column",
       }}
@@ -46,12 +50,16 @@ export const PosterSavedDrawer = ({
         <div style={{ fontFamily: POSTER.display, fontSize: 28 }}>VAULT</div>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `2px solid ${ink}` : "none",
             fontSize: 22,
             cursor: "pointer",
             color: ink,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
@@ -92,7 +100,7 @@ export const PosterSavedDrawer = ({
             key={s.id}
             style={{ marginBottom: 14, border: `2px solid ${ink}` }}
           >
-            <div style={{ display: "flex", height: 60 }}>
+            <div style={{ display: "flex", height: isMobile ? 80 : 60 }}>
               {s.hexes.map((h, i) => (
                 <div key={i} style={{ flex: 1, background: h }} />
               ))}
@@ -103,6 +111,7 @@ export const PosterSavedDrawer = ({
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                gap: 8,
                 borderTop: `2px solid ${ink}`,
               }}
             >
@@ -113,10 +122,10 @@ export const PosterSavedDrawer = ({
                 colors
               </div>
               <div style={{ display: "flex", gap: 6 }}>
-                <SmallBtn ink={ink} onClick={() => onLoad(s.hexes)}>
+                <SmallBtn ink={ink} tall={isMobile} onClick={() => onLoad(s.hexes)}>
                   LOAD
                 </SmallBtn>
-                <SmallBtn ink={ink} onClick={() => onDelete(s.id)}>
+                <SmallBtn ink={ink} tall={isMobile} onClick={() => onDelete(s.id)}>
                   DEL
                 </SmallBtn>
               </div>
