@@ -1,3 +1,3 @@
-import {ColorCardProps} from "./ColorCardProps";
+import { ColorCardProps } from "./ColorCardProps";
 
 export type Palette = ColorCardProps[];

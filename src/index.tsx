@@ -1,17 +1,7 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
-import {App} from "./App";
-import {Provider} from "./context/PaletteContext";
-
+import { App } from "./App";
 
 const el = document.getElementById("root");
 if (!el) throw new Error("no root element");
 
-// point react at root div
-const root = ReactDOM.createRoot(el);
-
-root.render(
-    <Provider>
-        <App />
-    </Provider>
-);
+ReactDOM.createRoot(el).render(<App />);
