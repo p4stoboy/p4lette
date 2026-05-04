@@ -1,40 +1,61 @@
-import {describe, expect, it} from "vitest";
-import {get_color_card_props} from "./get_color_card_props";
-import {resolve_template} from "./resolve_export_template";
+import { describe, expect, it } from "vitest";
+import { ColorCardProps } from "../types/ColorCardProps";
+import { resolveTemplate } from "./resolve_export_template";
 
-const colors = [
-    get_color_card_props("#AABBCC", 0, "first"),
-    get_color_card_props("#112233", 1, "second"),
-];
+const make = (hex: string, id: number): ColorCardProps => ({
+  id,
+  hex,
+  locked: false,
+  dataId: `${id}`,
+});
+
+const palette = [make("#aabbcc", 0), make("#112233", 1)];
 const names = ["SKY", "MIDNIGHT"];
 
-describe("resolve_template", () => {
-    it("resolves single color properties", () => {
-        expect(resolve_template("main: $1.hex$", colors, names)).toBe('main: "#AABBCC"');
-        expect(resolve_template("$2.name$", colors, names)).toBe('"MIDNIGHT"');
-    });
+describe("resolveTemplate", () => {
+  it("resolves a single color property as a bare value", () => {
+    expect(resolveTemplate("main: $1.hex$", palette, names)).toBe(
+      "main: #aabbcc",
+    );
+    expect(resolveTemplate("$2.name$", palette, names)).toBe("MIDNIGHT");
+  });
 
-    it("resolves full color objects", () => {
-        const result = resolve_template("$1$", colors, names);
+  it("resolves a full color object as JSON", () => {
+    const result = resolveTemplate("$1$", palette, names);
+    expect(result).toContain('"name":"SKY"');
+    expect(result).toContain('"hex":"#aabbcc"');
+    expect(result).toContain('"rgb"');
+    expect(result).toContain('"hsl"');
+  });
 
-        expect(result).toContain('name: "SKY"');
-        expect(result).toContain('hex: "#AABBCC"');
-        expect(result).toContain("rgb:");
-        expect(result).toContain("hsl:");
-    });
+  it("resolves array selectors", () => {
+    expect(resolveTemplate("$[1,2].name$", palette, names)).toBe(
+      '["SKY","MIDNIGHT"]',
+    );
+  });
 
-    it("resolves arrays and all selectors", () => {
-        expect(resolve_template("$[1,2].name$", colors, names)).toBe('[\n"SKY",\n"MIDNIGHT"\n]');
-        expect(resolve_template("$[all].hex$", colors, names)).toBe('[\n"#AABBCC",\n"#112233"\n]');
-    });
+  it("resolves the [all] selector", () => {
+    expect(resolveTemplate("$[all].hex$", palette, names)).toBe(
+      '["#aabbcc","#112233"]',
+    );
+  });
 
-    it("resolves repeated tokens deterministically", () => {
-        expect(resolve_template("$1.hex$/$1.hex$", colors, names)).toBe('"#AABBCC"/"#AABBCC"');
-    });
+  it("resolves repeated tokens deterministically", () => {
+    expect(resolveTemplate("$1.hex$/$1.hex$", palette, names)).toBe(
+      "#aabbcc/#aabbcc",
+    );
+  });
 
-    it("returns explicit messages for invalid ids and properties", () => {
-        expect(resolve_template("$3.hex$", colors, names)).toBe("Color id {3} does not exist.");
-        expect(resolve_template("$[1,3].hex$", colors, names)).toBe('[\n"#AABBCC",\nColor id {3} does not exist.\n]');
-        expect(resolve_template("$1.cmyk$", colors, names)).toBe("Property {cmyk} does not exist.");
-    });
+  it("returns explicit error markers for unknown ids and props", () => {
+    expect(resolveTemplate("$3.hex$", palette, names)).toBe(
+      "[ERROR: no color 3]",
+    );
+    expect(resolveTemplate("$1.cmyk$", palette, names)).toBe(
+      "[ERROR: no prop cmyk]",
+    );
+  });
+
+  it("filters missing ids out of array results", () => {
+    expect(resolveTemplate("$[1,9].hex$", palette, names)).toBe('["#aabbcc"]');
+  });
 });

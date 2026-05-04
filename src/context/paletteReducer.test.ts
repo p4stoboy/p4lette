@@ -1,61 +1,134 @@
-import {describe, expect, it} from "vitest";
-import {get_color_card_props} from "../functions/get_color_card_props";
-import {PaletteState, createPaletteState, paletteReducer} from "./paletteReducer";
+import { describe, expect, it } from "vitest";
+import { ColorCardProps } from "../types/ColorCardProps";
+import {
+  PaletteState,
+  createPaletteState,
+  paletteReducer,
+} from "./paletteReducer";
 
-const first = get_color_card_props("#AABBCC", 0, "first");
-const second = get_color_card_props("#112233", 1, "second");
-const third = get_color_card_props("#445566", 2, "third");
+const make = (hex: string, id: number, locked = false): ColorCardProps => ({
+  id,
+  hex,
+  locked,
+  dataId: `dataId-${id}`,
+});
 
-const state = (overrides: Partial<PaletteState> = {}): PaletteState => ({
-    ...createPaletteState("$[all].hex$"),
-    palette: [first, second],
-    names: ["SKY", "MIDNIGHT"],
-    ...overrides,
+const baseState = (overrides: Partial<PaletteState> = {}): PaletteState => ({
+  ...createPaletteState({ exportTemplate: "$[all].hex$", initialCount: 0 }),
+  palette: [make("#aabbcc", 0), make("#112233", 1)],
+  names: ["SKY", "MIDNIGHT"],
+  ...overrides,
+});
+
+describe("createPaletteState", () => {
+  it("seeds from a hash when provided", () => {
+    const state = createPaletteState({
+      exportTemplate: "tpl",
+      hash: "#p=ff0000-00ff00",
+    });
+    expect(state.palette.map((c) => c.hex)).toEqual(["#ff0000", "#00ff00"]);
+    expect(state.palette.every((c) => !c.locked)).toBe(true);
+    expect(state.exportTemplate).toBe("tpl");
+  });
+
+  it("falls back to random colors when no hash is provided", () => {
+    const state = createPaletteState({
+      exportTemplate: "tpl",
+      initialCount: 4,
+    });
+    expect(state.palette).toHaveLength(4);
+    for (const c of state.palette) {
+      expect(c.hex).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
 });
 
 describe("paletteReducer", () => {
-    it("adds colors and renumbers ids", () => {
-        const result = paletteReducer(state(), {
-            type: "addColors",
-            colors: [{...third, id: 99}],
-        });
-
-        expect(result.palette.map((color) => color.id)).toEqual([0, 1, 2]);
-        expect(result.palette[2].data_id).toBe("third");
-        expect(result.names).toEqual(["SKY", "MIDNIGHT", "Loading..."]);
+  it("appends a color via addColor", () => {
+    const result = paletteReducer(baseState(), {
+      type: "addColor",
+      hex: "#445566",
     });
+    expect(result.palette.map((c) => c.hex)).toEqual([
+      "#aabbcc",
+      "#112233",
+      "#445566",
+    ]);
+    expect(result.palette.map((c) => c.id)).toEqual([0, 1, 2]);
+    expect(result.names).toEqual(["SKY", "MIDNIGHT", "..."]);
+  });
 
-    it("deletes colors and keeps names aligned", () => {
-        const result = paletteReducer(state(), {type: "deleteColor", id: 0});
+  it("deletes by id and renumbers", () => {
+    const result = paletteReducer(baseState(), { type: "deleteColor", id: 0 });
+    expect(result.palette).toHaveLength(1);
+    expect(result.palette[0].id).toBe(0);
+    expect(result.palette[0].hex).toBe("#112233");
+    expect(result.names).toEqual(["MIDNIGHT"]);
+  });
 
-        expect(result.palette).toEqual([{...second, id: 0}]);
-        expect(result.names).toEqual(["MIDNIGHT"]);
+  it("updates only the matching color and clears its name", () => {
+    const result = paletteReducer(baseState(), {
+      type: "updateColor",
+      id: 1,
+      hex: "#000000",
     });
+    expect(result.palette[0].hex).toBe("#aabbcc");
+    expect(result.palette[1].hex).toBe("#000000");
+    expect(result.names).toEqual(["SKY", "..."]);
+  });
 
-    it("updates colors and resets only the changed name", () => {
-        const result = paletteReducer(state(), {
-            type: "updateColor",
-            id: 1,
-            color: {...third, id: 1},
-        });
-
-        expect(result.palette).toEqual([first, {...third, id: 1}]);
-        expect(result.names).toEqual(["SKY", "Loading..."]);
+  it("reorders palette and names together", () => {
+    const result = paletteReducer(baseState(), {
+      type: "reorderColor",
+      fromIndex: 0,
+      toIndex: 1,
     });
+    expect(result.palette.map((c) => c.hex)).toEqual(["#112233", "#aabbcc"]);
+    expect(result.names).toEqual(["MIDNIGHT", "SKY"]);
+  });
 
-    it("reorders colors and names together", () => {
-        const result = paletteReducer(state(), {type: "reorderColor", fromIndex: 0, toIndex: 1});
+  it("toggleLock flips the locked flag of the matching id only", () => {
+    const start = baseState();
+    const after = paletteReducer(start, { type: "toggleLock", id: 0 });
+    expect(after.palette[0].locked).toBe(true);
+    expect(after.palette[1].locked).toBe(false);
+    const back = paletteReducer(after, { type: "toggleLock", id: 0 });
+    expect(back.palette[0].locked).toBe(false);
+  });
 
-        expect(result.palette).toEqual([{...second, id: 0}, {...first, id: 1}]);
-        expect(result.names).toEqual(["MIDNIGHT", "SKY"]);
+  it("randomizeUnlocked preserves locked colors and re-rolls others", () => {
+    const start = baseState({
+      palette: [make("#aabbcc", 0, true), make("#112233", 1)],
     });
+    const result = paletteReducer(start, { type: "randomizeUnlocked" });
+    expect(result.palette[0].hex).toBe("#aabbcc");
+    expect(result.palette[1].hex).not.toBe("#112233");
+    expect(result.palette[1].hex).toMatch(/^#[0-9a-f]{6}$/);
+  });
 
-    it("aligns fetched names to the current palette length", () => {
-        const result = paletteReducer(state({palette: [first, second, third]}), {
-            type: "setNames",
-            names: ["SKY"],
-        });
-
-        expect(result.names).toEqual(["SKY", "Loading...", "Loading..."]);
+  it("replaceAll resets palette to provided hexes and clears names", () => {
+    const result = paletteReducer(baseState(), {
+      type: "replaceAll",
+      hexes: ["#000000", "#ffffff", "#888888"],
     });
+    expect(result.palette.map((c) => c.hex)).toEqual([
+      "#000000",
+      "#ffffff",
+      "#888888",
+    ]);
+    expect(result.palette.map((c) => c.id)).toEqual([0, 1, 2]);
+    expect(result.names).toEqual(["...", "...", "..."]);
+  });
+
+  it("setNames pads to palette length", () => {
+    const result = paletteReducer(
+      baseState({ palette: [make("#a", 0), make("#b", 1), make("#c", 2)] }),
+      {
+        type: "setNames",
+        names: ["A"],
+      },
+    );
+    expect(result.names).toHaveLength(3);
+    expect(result.names[0]).toBe("A");
+  });
 });

@@ -1,71 +1,83 @@
-import {ColorCardProps} from "../types/ColorCardProps";
-import {ColorProperty} from "../types/Colors";
+import { Palette } from "../types/Palette";
+import { hexToHsl, hexToRgb } from "./color_converters";
 
+export const DEFAULT_TEMPLATE =
+  "// refer to a color by its 1-based id:\n" +
+  "$1$\n\n" +
+  "// pluck a single property (name, hex, rgb, hsl):\n" +
+  "$1.hex$\n\n" +
+  "// arrays of selected ids:\n" +
+  "$[1,3].name$\n\n" +
+  "// or all of them:\n" +
+  "{\n" +
+  "  palette: $[all].hex$,\n" +
+  "  primary: $1.hex$\n" +
+  "}";
 
-export const resolve_template = (template: string, colors: ColorCardProps[], names: string[]): string => {
-    const named_colors = colors.map((color, i) => ({...color, name: names.length > i ? names[i] : ""}));
+interface ResolvedColor {
+  name: string;
+  hex: string;
+  rgb: { r: number; g: number; b: number };
+  hsl: { h: number; s: number; l: number };
+}
+
+const fmt = (v: unknown): string =>
+  typeof v === "object" ? JSON.stringify(v) : String(v);
+
+export const resolveTemplate = (
+  template: string,
+  palette: Palette,
+  names: string[],
+): string => {
+  const colorAt = (i: number): ResolvedColor | null => {
+    const c = palette[i - 1];
+    if (!c) return null;
+    const rgb = hexToRgb(c.hex);
+    const hsl = hexToHsl(c.hex);
+    return {
+      name: names[i - 1] || c.hex,
+      hex: c.hex,
+      rgb: { r: Math.round(rgb.r), g: Math.round(rgb.g), b: Math.round(rgb.b) },
+      hsl: { h: Math.round(hsl.h), s: Math.round(hsl.s), l: Math.round(hsl.l) },
+    };
+  };
+
+  return template.replace(/\$([^$]+)\$/g, (m, expr: string) => {
     try {
-        return template.replace(/\$(.*?)\$/g, (_, key: string) => parse_input(key, named_colors));
-    } catch (error) {
-        return error instanceof Error ? error.message : "Could not resolve template";
+      const arrayMatch = expr.match(/^\[([^\]]+)\](?:\.(\w+))?$/);
+      if (arrayMatch) {
+        const sel = arrayMatch[1].trim();
+        const prop = arrayMatch[2] as keyof ResolvedColor | undefined;
+        let ids: number[] = [];
+        if (sel === "all") {
+          ids = palette.map((_, i) => i + 1);
+        } else {
+          ids = sel
+            .split(",")
+            .map((n) => parseInt(n.trim(), 10))
+            .filter(Number.isFinite);
+        }
+        const items = ids
+          .map(colorAt)
+          .filter((it): it is ResolvedColor => it !== null);
+        if (!items.length) return `[ERROR: no ids in ${m}]`;
+        return prop ? fmt(items.map((it) => it[prop])) : fmt(items);
+      }
+
+      const singleMatch = expr.match(/^(\d+)(?:\.(\w+))?$/);
+      if (singleMatch) {
+        const id = parseInt(singleMatch[1], 10);
+        const prop = singleMatch[2] as keyof ResolvedColor | undefined;
+        const it = colorAt(id);
+        if (!it) return `[ERROR: no color ${id}]`;
+        if (!prop) return fmt(it);
+        if (it[prop] === undefined) return `[ERROR: no prop ${prop}]`;
+        return fmt(it[prop]);
+      }
+
+      return `[ERROR: bad expr ${m}]`;
+    } catch {
+      return `[ERROR: ${m}]`;
     }
-}
-
-const parse_input = (input: string, colors: ColorCardProps[]): string => {
-    const [selector, rawProperty, ...extra] = input.split('.');
-    if (!selector || extra.length > 0) throw new Error(`Invalid color reference {${input}}.`);
-
-    const property = rawProperty ? parse_property(rawProperty) : undefined;
-    const is_array = selector.startsWith("[");
-    const values = parse_selector(selector, is_array);
-    const indexes = values.includes("all")
-        ? colors.map((_, i) => ({index: i, label: `${i + 1}`}))
-        : values.map((value) => ({index: parse_color_index(value), label: value}));
-
-    const lines = indexes.map(({index, label}) => {
-        const color = colors[index];
-        return color ? resolve_line_attributes(color, property) : `Color id {${label}} does not exist.`;
-    });
-
-    return is_array ? `[\n${lines.join(',\n')}\n]` : lines[0];
-}
-
-const parse_selector = (selector: string, is_array: boolean): string[] => {
-    if (!is_array) return [selector.trim().toLowerCase()];
-    if (!selector.endsWith("]")) throw new Error(`Invalid color selector {${selector}}.`);
-
-    const values = selector
-        .slice(1, -1)
-        .split(",")
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean);
-
-    if (values.length === 0) throw new Error(`Invalid color selector {${selector}}.`);
-    return values;
+  });
 };
-
-const parse_color_index = (value: string): number => /^\d+$/.test(value) ? Number(value) - 1 : -1;
-
-const supported_properties: ColorProperty[] = ["name", "hex", "rgb", "hsl"];
-
-const parse_property = (property: string): ColorProperty => {
-    const normalized = property.trim().toLowerCase();
-    if (supported_properties.includes(normalized as ColorProperty)) return normalized as ColorProperty;
-    throw new Error(`Property {${property}} does not exist.`);
-};
-
-const format_template_value = (value: unknown): string => JSON.stringify(value, null, 4)
-    .split(" ")
-    .map((part) => (part.startsWith("\"#") || /[A-Z]/.test(part)) ? part : part.replaceAll(/"/g, ""))
-    .join(" ");
-
-const resolve_line_attributes = (parsed_color: ColorCardProps, property: ColorProperty | undefined): string => {
-    return property
-        ? format_template_value(parsed_color[property])
-        : format_template_value({
-            name: parsed_color.name,
-            hex: parsed_color.hex,
-            hsl: parsed_color.hsl,
-            rgb: parsed_color.rgb
-        });
-}

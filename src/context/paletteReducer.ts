@@ -1,108 +1,164 @@
-import {ColorCardProps} from "../types/ColorCardProps";
-import {Palette} from "../types/Palette";
+import { ColorCardProps } from "../types/ColorCardProps";
+import { Palette } from "../types/Palette";
+import { randomHex } from "../functions/color_converters";
+import { decodePalette } from "../functions/share_url";
 
 export type PaletteState = {
-    palette: Palette;
-    names: string[];
-    export_visible: boolean;
-    export_template: string;
+  palette: Palette;
+  names: string[];
+  exportVisible: boolean;
+  exportTemplate: string;
 };
 
 export type PaletteAction =
-    | {type: "addColors", colors: ColorCardProps[]}
-    | {type: "deleteColor", id: number}
-    | {type: "updateColor", id: number, color: ColorCardProps}
-    | {type: "reorderColor", fromIndex: number, toIndex: number}
-    | {type: "setNames", names: string[]}
-    | {type: "setExportTemplate", template: string}
-    | {type: "setExportVisible", visible: boolean};
+  | { type: "addColor"; hex?: string }
+  | { type: "deleteColor"; id: number }
+  | { type: "updateColor"; id: number; hex: string }
+  | { type: "reorderColor"; fromIndex: number; toIndex: number }
+  | { type: "toggleLock"; id: number }
+  | { type: "randomizeUnlocked" }
+  | { type: "replaceAll"; hexes: string[] }
+  | { type: "setNames"; names: string[] }
+  | { type: "setExportTemplate"; template: string }
+  | { type: "setExportVisible"; visible: boolean };
 
-export const createPaletteState = (export_template: string): PaletteState => ({
-    palette: [],
-    names: [],
-    export_visible: false,
-    export_template,
+const NAME_PLACEHOLDER = "...";
+
+const newDataId = (id: number): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${id}-${Math.random().toString(16).slice(2)}`;
+
+const makeColor = (hex: string, id: number): ColorCardProps => ({
+  id,
+  hex,
+  locked: false,
+  dataId: newDataId(id),
 });
 
-const renumberPalette = (palette: Palette): Palette => palette.map((color, id) => ({...color, id}));
+const renumber = (palette: Palette): Palette =>
+  palette.map((c, i) => ({ ...c, id: i }));
 
-const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
-    if (
-        fromIndex === toIndex ||
-        fromIndex < 0 ||
-        toIndex < 0 ||
-        fromIndex >= items.length ||
-        toIndex >= items.length
-    ) {
-        return items;
-    }
-
-    const next = [...items];
-    const [item] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, item);
-    return next;
+const reorderItems = <T>(items: T[], from: number, to: number): T[] => {
+  if (
+    from === to ||
+    from < 0 ||
+    to < 0 ||
+    from >= items.length ||
+    to >= items.length
+  ) {
+    return items;
+  }
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 };
 
-const alignNames = (palette: Palette, names: string[]): string[] =>
-    palette.map((_, i) => names[i] ?? "Loading...");
+export interface CreatePaletteOptions {
+  initialCount?: number;
+  exportTemplate: string;
+  hash?: string | null;
+}
 
-export const paletteReducer = (state: PaletteState, action: PaletteAction): PaletteState => {
-    switch (action.type) {
-        case "addColors": {
-            if (action.colors.length === 0) return state;
-            const palette = renumberPalette([...state.palette, ...action.colors]);
-            return {
-                ...state,
-                palette,
-                names: [...state.names, ...action.colors.map(() => "Loading...")],
-            };
-        }
-        case "deleteColor": {
-            const deleteIndex = state.palette.findIndex((color) => color.id === action.id);
-            if (deleteIndex === -1) return state;
+export const createPaletteState = ({
+  initialCount = 5,
+  exportTemplate,
+  hash,
+}: CreatePaletteOptions): PaletteState => {
+  const decoded = decodePalette(hash ?? null);
+  const seed =
+    decoded ?? Array.from({ length: initialCount }, () => randomHex());
+  return {
+    palette: seed.map((hex, id) => makeColor(hex, id)),
+    names: seed.map(() => NAME_PLACEHOLDER),
+    exportVisible: false,
+    exportTemplate,
+  };
+};
 
-            const palette = renumberPalette(state.palette.filter((_, i) => i !== deleteIndex));
-            return {
-                ...state,
-                palette,
-                names: state.names.filter((_, i) => i !== deleteIndex),
-            };
-        }
-        case "updateColor": {
-            const updateIndex = state.palette.findIndex((color) => color.id === action.id);
-            if (updateIndex === -1) return state;
-
-            const palette = renumberPalette(state.palette.map((color, i) =>
-                i === updateIndex ? action.color : color
-            ));
-            return {
-                ...state,
-                palette,
-                names: state.names.map((name, i) => i === updateIndex ? "Loading..." : name),
-            };
-        }
-        case "reorderColor": {
-            const palette = renumberPalette(reorderItems(state.palette, action.fromIndex, action.toIndex));
-            return {
-                ...state,
-                palette,
-                names: reorderItems(state.names, action.fromIndex, action.toIndex),
-            };
-        }
-        case "setNames":
-            return {
-                ...state,
-                names: alignNames(state.palette, action.names),
-            };
-        case "setExportTemplate":
-            return {
-                ...state,
-                export_template: action.template,
-            };
-        case "setExportVisible":
-            return {
-                ...state,
-                export_visible: action.visible,
-            };
+export const paletteReducer = (
+  state: PaletteState,
+  action: PaletteAction,
+): PaletteState => {
+  switch (action.type) {
+    case "addColor": {
+      const hex = action.hex ?? randomHex();
+      return {
+        ...state,
+        palette: renumber([
+          ...state.palette,
+          makeColor(hex, state.palette.length),
+        ]),
+        names: [...state.names, NAME_PLACEHOLDER],
+      };
     }
+    case "deleteColor": {
+      const idx = state.palette.findIndex((c) => c.id === action.id);
+      if (idx === -1) return state;
+      return {
+        ...state,
+        palette: renumber(state.palette.filter((_, i) => i !== idx)),
+        names: state.names.filter((_, i) => i !== idx),
+      };
+    }
+    case "updateColor": {
+      const idx = state.palette.findIndex((c) => c.id === action.id);
+      if (idx === -1) return state;
+      return {
+        ...state,
+        palette: state.palette.map((c, i) =>
+          i === idx ? { ...c, hex: action.hex } : c,
+        ),
+        names: state.names.map((n, i) => (i === idx ? NAME_PLACEHOLDER : n)),
+      };
+    }
+    case "reorderColor": {
+      return {
+        ...state,
+        palette: renumber(
+          reorderItems(state.palette, action.fromIndex, action.toIndex),
+        ),
+        names: reorderItems(state.names, action.fromIndex, action.toIndex),
+      };
+    }
+    case "toggleLock": {
+      return {
+        ...state,
+        palette: state.palette.map((c) =>
+          c.id === action.id ? { ...c, locked: !c.locked } : c,
+        ),
+      };
+    }
+    case "randomizeUnlocked": {
+      return {
+        ...state,
+        palette: state.palette.map((c) =>
+          c.locked ? c : { ...c, hex: randomHex() },
+        ),
+        names: state.palette.map((c, i) =>
+          c.locked ? (state.names[i] ?? NAME_PLACEHOLDER) : NAME_PLACEHOLDER,
+        ),
+      };
+    }
+    case "replaceAll": {
+      return {
+        ...state,
+        palette: action.hexes.map((hex, id) => makeColor(hex, id)),
+        names: action.hexes.map(() => NAME_PLACEHOLDER),
+      };
+    }
+    case "setNames": {
+      return {
+        ...state,
+        names: state.palette.map(
+          (_, i) => action.names[i] ?? state.names[i] ?? NAME_PLACEHOLDER,
+        ),
+      };
+    }
+    case "setExportTemplate":
+      return { ...state, exportTemplate: action.template };
+    case "setExportVisible":
+      return { ...state, exportVisible: action.visible };
+  }
 };

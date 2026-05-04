@@ -1,163 +1,202 @@
-import {ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef} from "react";
-import {get_color_card_props, get_color_name} from "../functions/get_color_card_props";
-import {random_hex} from "../functions/color_converters";
-import {PaletteContextProps} from "../types/PaletteContextProps";
-import {resolve_template} from "../functions/resolve_export_template";
-import {PaletteState, createPaletteState, paletteReducer} from "./paletteReducer";
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react";
+import { PaletteContextProps } from "../types/PaletteContextProps";
+import {
+  DEFAULT_TEMPLATE,
+  resolveTemplate,
+} from "../functions/resolve_export_template";
+import { getColorName } from "../functions/get_color_card_props";
+import { encodePalette } from "../functions/share_url";
+import {
+  PaletteState,
+  createPaletteState,
+  paletteReducer,
+} from "./paletteReducer";
 
-const instructions = "// refer to any color by its id:\n" +
-    "$1$\n" +
-    "\n" +
-    "// refer to any property (name, hex, rgb, hsl):\n" +
-    "$1.hex$\n" +
-    "\n" +
-    "// arrays:\n" +
-    "$[1,3].name$\n" +
-    "\n" +
-    "// write your own interface and copy it in to your IDE:\n" +
-    "{\n" +
-    "  main: $[1].hex$,\n" +
-    "  shades: $[2,3].hex$\n" +
-    "}"
+const EXPORT_KEY = "p4lette_export_template_v1";
+const NAMES_DEBOUNCE_MS = 500;
+const HASH_DEBOUNCE_MS = 150;
+const NAME_PLACEHOLDER = "...";
 
-export const PaletteContext = createContext<PaletteContextProps | undefined>(undefined);
+export const PaletteContext = createContext<PaletteContextProps | undefined>(
+  undefined,
+);
 
 export const usePalette = (): PaletteContextProps => {
-    const context = useContext(PaletteContext);
-    if (!context) throw new Error("usePalette must be used within Provider");
-    return context;
+  const ctx = useContext(PaletteContext);
+  if (!ctx) throw new Error("usePalette must be used within Provider");
+  return ctx;
 };
 
-const get_initial_template = (): string => {
-    if (typeof localStorage === "undefined") return instructions;
-    return localStorage.getItem("export_template") ?? instructions;
+const readInitialTemplate = (): string => {
+  if (typeof localStorage === "undefined") return DEFAULT_TEMPLATE;
+  try {
+    return localStorage.getItem(EXPORT_KEY) ?? DEFAULT_TEMPLATE;
+  } catch {
+    return DEFAULT_TEMPLATE;
+  }
 };
 
-const createDataId = (): string => {
-    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const readInitialHash = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return window.location.hash || null;
 };
 
 type ProviderProps = {
-    children: ReactNode;
-    initialState?: PaletteState;
+  children: ReactNode;
+  initialState?: PaletteState;
 };
 
-export const Provider = ({children, initialState}: ProviderProps) => {
-    const [state, dispatch] = useReducer(
-        paletteReducer,
-        initialState ?? createPaletteState(get_initial_template())
-    );
-    const {palette, names, export_visible, export_template} = state;
-    const namesRef = useRef<string[]>([]);
+export const Provider = ({ children, initialState }: ProviderProps) => {
+  const [state, dispatch] = useReducer(
+    paletteReducer,
+    undefined,
+    () =>
+      initialState ??
+      createPaletteState({
+        exportTemplate: readInitialTemplate(),
+        hash: readInitialHash(),
+      }),
+  );
+  const { palette, names, exportVisible, exportTemplate } = state;
+  const namesRef = useRef<string[]>(names);
 
-    const resolved_template = useMemo(
-        () => resolve_template(export_template, palette, names),
-        [export_template, palette, names]
-    );
+  useEffect(() => {
+    namesRef.current = names;
+  }, [names]);
 
-    useEffect(() => {
-        namesRef.current = names;
-    }, [names]);
+  const resolvedTemplate = useMemo(
+    () => resolveTemplate(exportTemplate, palette, names),
+    [exportTemplate, palette, names],
+  );
 
-    const deleteColor = useCallback((id: number) => {
-        dispatch({type: "deleteColor", id});
-    }, []);
+  useEffect(() => {
+    if (palette.length === 0) {
+      dispatch({ type: "setNames", names: [] });
+      return;
+    }
+    let alive = true;
+    const t = setTimeout(async () => {
+      const current = namesRef.current;
+      const next = await Promise.all(
+        palette.map((c, i) => {
+          const fb =
+            current[i] && current[i] !== NAME_PLACEHOLDER ? current[i] : c.hex;
+          return getColorName(c.hex, fb);
+        }),
+      );
+      if (alive) dispatch({ type: "setNames", names: next });
+    }, NAMES_DEBOUNCE_MS);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [palette]);
 
-    const addColors = useCallback((amount: number = 1) => {
-        const safeAmount = Math.max(0, Math.floor(amount));
-        if (safeAmount === 0) return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const t = setTimeout(() => {
+      const enc = encodePalette(palette);
+      const target = enc ? `#p=${enc}` : "";
+      if (window.location.hash !== target) {
+        const url = target || window.location.pathname + window.location.search;
+        window.history.replaceState(null, "", url);
+      }
+    }, HASH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [palette]);
 
-        const colors = Array.from({length: safeAmount}, () =>
-            get_color_card_props(random_hex(), 0, createDataId())
-        );
-        dispatch({type: "addColors", colors});
-    }, []);
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(EXPORT_KEY, exportTemplate);
+    } catch {
+      /* ignore quota */
+    }
+  }, [exportTemplate]);
 
-    const updateColor = useCallback((id: number, hex: string, data_id: string) => {
-        dispatch({
-            type: "updateColor",
-            id,
-            color: get_color_card_props(hex, id, data_id),
-        });
-    }, []);
+  const addColor = useCallback(
+    (hex?: string) => dispatch({ type: "addColor", hex }),
+    [],
+  );
+  const deleteColor = useCallback(
+    (id: number) => dispatch({ type: "deleteColor", id }),
+    [],
+  );
+  const updateColor = useCallback(
+    (id: number, hex: string) => dispatch({ type: "updateColor", id, hex }),
+    [],
+  );
+  const reorderColor = useCallback(
+    (fromIndex: number, toIndex: number) =>
+      dispatch({ type: "reorderColor", fromIndex, toIndex }),
+    [],
+  );
+  const toggleLock = useCallback(
+    (id: number) => dispatch({ type: "toggleLock", id }),
+    [],
+  );
+  const randomizeUnlocked = useCallback(
+    () => dispatch({ type: "randomizeUnlocked" }),
+    [],
+  );
+  const replaceAll = useCallback(
+    (hexes: string[]) => dispatch({ type: "replaceAll", hexes }),
+    [],
+  );
+  const setExportTemplate = useCallback(
+    (template: string) => dispatch({ type: "setExportTemplate", template }),
+    [],
+  );
+  const setExportVisible = useCallback(
+    (visible: boolean) => dispatch({ type: "setExportVisible", visible }),
+    [],
+  );
 
-    const reorderColor = useCallback((fromIndex: number, toIndex: number) => {
-        dispatch({type: "reorderColor", fromIndex, toIndex});
-    }, []);
+  const itf = useMemo<PaletteContextProps>(
+    () => ({
+      palette,
+      names,
+      exportVisible,
+      exportTemplate,
+      resolvedTemplate,
+      addColor,
+      deleteColor,
+      updateColor,
+      reorderColor,
+      toggleLock,
+      randomizeUnlocked,
+      replaceAll,
+      setExportTemplate,
+      setExportVisible,
+    }),
+    [
+      palette,
+      names,
+      exportVisible,
+      exportTemplate,
+      resolvedTemplate,
+      addColor,
+      deleteColor,
+      updateColor,
+      reorderColor,
+      toggleLock,
+      randomizeUnlocked,
+      replaceAll,
+      setExportTemplate,
+      setExportVisible,
+    ],
+  );
 
-    // Don't update color names until the user stops changing palette state.
-    useEffect(() => {
-        if (palette.length === 0) {
-            dispatch({type: "setNames", names: []});
-            return;
-        }
-
-        let is_current = true;
-        const timeout = setTimeout(async () => {
-            const currentNames = namesRef.current;
-            const new_names = await Promise.all(palette.map(async (color, i) => {
-                const fallbackName = currentNames[i] && currentNames[i] !== "Loading..."
-                    ? currentNames[i]
-                    : color.hex;
-                return get_color_name(color.hex, fallbackName);
-            }));
-
-            if (is_current) dispatch({type: "setNames", names: new_names});
-        }, 600);
-
-        return () => {
-            is_current = false;
-            clearTimeout(timeout);
-        };
-    }, [palette]);
-
-    useEffect(() => {
-        if (!initialState) addColors(3);
-    }, [addColors, initialState]);
-
-    useEffect(() => {
-        if (typeof localStorage !== "undefined") localStorage.setItem("export_template", export_template);
-    }, [export_template]);
-
-    const setExportTemplate = useCallback((template: string) => {
-        dispatch({type: "setExportTemplate", template});
-    }, []);
-
-    const setExportVisible = useCallback((visible: boolean) => {
-        dispatch({type: "setExportVisible", visible});
-    }, []);
-
-    const itf = useMemo<PaletteContextProps>(() => ({
-        palette,
-        names,
-        export_template,
-        export_visible,
-        instructions,
-        resolved_template,
-        setExportTemplate,
-        setExportVisible,
-        deleteColor,
-        addColors,
-        updateColor,
-        reorderColor,
-    }), [
-        palette,
-        names,
-        export_template,
-        export_visible,
-        resolved_template,
-        setExportTemplate,
-        setExportVisible,
-        deleteColor,
-        addColors,
-        updateColor,
-        reorderColor,
-    ]);
-
-    return (
-        <PaletteContext.Provider value={itf}>
-            {children}
-        </PaletteContext.Provider>
-    );
-}
+  return (
+    <PaletteContext.Provider value={itf}>{children}</PaletteContext.Provider>
+  );
+};
