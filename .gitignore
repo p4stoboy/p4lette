@@ -26,3 +26,6 @@ yarn-error.log*
 
 # prototype reference — kept locally, not committed
 /handoff
+
+# OG generator font cache
+/scripts/.fonts
