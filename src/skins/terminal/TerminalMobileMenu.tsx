@@ -16,6 +16,7 @@ interface MenuProps {
   onHarmony: () => void;
   onExport: () => void;
   onAbout: () => void;
+  onSwapSkin: () => void;
 }
 
 export const TerminalMobileMenu = ({
@@ -33,6 +34,7 @@ export const TerminalMobileMenu = ({
   onHarmony,
   onExport,
   onAbout,
+  onSwapSkin,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -147,9 +149,16 @@ export const TerminalMobileMenu = ({
           <Cmd
             ink={ink}
             accent={accent}
-            k="t"
+            k="d"
             label={isDark ? "light mode" : "dark mode"}
             onClick={fire(onTheme)}
+          />
+          <Cmd
+            ink={ink}
+            accent={accent}
+            k="t"
+            label="poster skin"
+            onClick={fire(onSwapSkin)}
           />
         </div>
       </div>

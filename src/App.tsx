@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Provider } from "./context/PaletteContext";
 import { PosterSkin } from "./skins/poster/PosterSkin";
 import { TerminalSkin } from "./skins/terminal/TerminalSkin";
-import { Skin, SkinSwitcher } from "./skins/SkinSwitcher";
+import { Skin } from "./skins/SkinSwitcher";
 
 const SKIN_KEY = "p4lette_skin_v1";
 
@@ -27,6 +27,11 @@ export const App = () => {
     }
   }, [skin]);
 
+  const toggleSkin = useCallback(
+    () => setSkin((s) => (s === "poster" ? "terminal" : "poster")),
+    [],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -39,17 +44,20 @@ export const App = () => {
         return;
       }
       if (e.key === "t" || e.key === "T") {
-        setSkin((s) => (s === "poster" ? "terminal" : "poster"));
+        toggleSkin();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [toggleSkin]);
 
   return (
     <Provider>
-      {skin === "poster" ? <PosterSkin /> : <TerminalSkin />}
-      <SkinSwitcher skin={skin} setSkin={setSkin} />
+      {skin === "poster" ? (
+        <PosterSkin onSwapSkin={toggleSkin} />
+      ) : (
+        <TerminalSkin onSwapSkin={toggleSkin} />
+      )}
     </Provider>
   );
 };

@@ -15,6 +15,7 @@ interface MenuProps {
   onHarmony: () => void;
   onExport: () => void;
   onAbout: () => void;
+  onSwapSkin: () => void;
 }
 
 export const PosterMobileMenu = ({
@@ -31,6 +32,7 @@ export const PosterMobileMenu = ({
   onHarmony,
   onExport,
   onAbout,
+  onSwapSkin,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -126,7 +128,10 @@ export const PosterMobileMenu = ({
           ABOUT
         </Row>
         <Row ink={ink} onClick={fire(onTheme)}>
-          {isDark ? "☀ LIGHT MODE" : "☾ DARK MODE"}
+          {isDark ? "LIGHT MODE" : "DARK MODE"}
+        </Row>
+        <Row ink={ink} onClick={fire(onSwapSkin)}>
+          ▷ TERMINAL SKIN
         </Row>
       </div>
     </div>

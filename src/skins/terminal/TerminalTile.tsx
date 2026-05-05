@@ -68,7 +68,9 @@ export const TerminalTile = ({
         if (!editing) onEdit();
       }}
       style={{
-        aspectRatio: "1 / 1",
+        aspectRatio: editing ? "auto" : "1 / 1",
+        gridColumn: editing ? "1 / -1" : "auto",
+        minHeight: editing ? 540 : undefined,
         background: color.hex,
         color: fontColor,
         position: "relative",
