@@ -4,7 +4,7 @@ import { TERMINAL } from "./tokens";
 interface BackdropProps {
   children: ReactNode;
   onClose: () => void;
-  align?: "center" | "right";
+  align?: "center" | "right" | "bottom";
 }
 
 export const BrutBackdrop = ({
@@ -17,7 +17,8 @@ export const BrutBackdrop = ({
     inset: 0,
     background: "rgba(0,0,0,0.55)",
     display: "flex",
-    alignItems: align === "right" ? "stretch" : "center",
+    alignItems:
+      align === "right" ? "stretch" : align === "bottom" ? "flex-end" : "center",
     justifyContent: align === "right" ? "flex-end" : "center",
     zIndex: 100,
     animation: "brutFade .14s linear",
@@ -35,6 +36,7 @@ interface SmallBtnProps {
   accent: string;
   onClick: (e: MouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
+  tall?: boolean;
 }
 
 export const BrutSmallBtn = ({
@@ -42,6 +44,7 @@ export const BrutSmallBtn = ({
   accent,
   onClick,
   children,
+  tall,
 }: SmallBtnProps) => {
   const [hov, setHov] = useState(false);
   return (
@@ -52,13 +55,15 @@ export const BrutSmallBtn = ({
       style={{
         fontFamily: TERMINAL.mono,
         fontWeight: 700,
-        fontSize: 10,
+        fontSize: tall ? 12 : 10,
         letterSpacing: "0.1em",
-        padding: "3px 8px",
+        padding: tall ? "10px 16px" : "3px 8px",
+        minHeight: tall ? 44 : undefined,
         border: `${TERMINAL.borderW}px solid ${ink}`,
         background: hov ? accent : "transparent",
         color: hov ? "#000" : ink,
         cursor: "pointer",
+        touchAction: "manipulation",
       }}
     >
       {children}

@@ -125,8 +125,8 @@ export const TerminalColumn = ({
           left: 0,
           right: 0,
           height: 0,
-          borderTop: `1px dashed ${fontColor}`,
-          opacity: 0.85,
+          borderTop: `1px dashed ${ink}`,
+          opacity: 0.45,
           pointerEvents: "none",
         }}
       />
@@ -151,7 +151,7 @@ export const TerminalColumn = ({
       <div
         style={{
           padding: "12px 12px 14px",
-          borderTop: `1px solid ${fontColor}`,
+          borderTop: `1px solid ${ink}`,
           background: color.hex,
           display: "flex",
           flexDirection: "column",

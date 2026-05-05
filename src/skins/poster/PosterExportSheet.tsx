@@ -4,6 +4,7 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   bg: string;
+  isMobile: boolean;
   tpl: string;
   setTpl: (v: string) => void;
   resolved: string;
@@ -16,6 +17,7 @@ interface Props {
 export const PosterExportSheet = ({
   ink,
   bg,
+  isMobile,
   tpl,
   setTpl,
   resolved,
@@ -33,11 +35,12 @@ export const PosterExportSheet = ({
       background: bg,
       color: ink,
       borderTop: `${POSTER.borderW}px solid ${ink}`,
-      height: "62%",
+      height: isMobile ? "92%" : "62%",
       animation: "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
       display: "flex",
       flexDirection: "column",
       boxShadow: `0 -10px 0 ${POSTER.accent}`,
+      zIndex: 50,
     }}
   >
     <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}}`}</style>
@@ -45,64 +48,72 @@ export const PosterExportSheet = ({
     <div
       style={{
         borderBottom: `${POSTER.borderW}px solid ${ink}`,
-        padding: "14px 22px",
+        padding: isMobile ? "12px 14px" : "14px 22px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 8,
         flexShrink: 0,
+        flexWrap: isMobile ? "wrap" : "nowrap",
       }}
     >
       <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
         <span
           style={{
             fontFamily: POSTER.display,
-            fontSize: 32,
+            fontSize: isMobile ? 26 : 32,
             letterSpacing: "-0.02em",
           }}
         >
           EXPORT
         </span>
-        <span
-          style={{
-            fontFamily: POSTER.body,
-            fontSize: 12,
-            letterSpacing: "0.1em",
-            opacity: 0.6,
-          }}
-        >
-          $1.hex$ · $[1,3].name$ · $[all].hex$
-        </span>
+        {!isMobile && (
+          <span
+            style={{
+              fontFamily: POSTER.body,
+              fontSize: 12,
+              letterSpacing: "0.1em",
+              opacity: 0.6,
+            }}
+          >
+            $1.hex$ · $[1,3].name$ · $[all].hex$
+          </span>
+        )}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <SmallBtn ink={ink} onClick={onReset}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <SmallBtn ink={ink} tall={isMobile} onClick={onReset}>
           RESET
         </SmallBtn>
         <button
           onClick={onCopy}
           style={{
             fontFamily: POSTER.display,
-            fontSize: 18,
+            fontSize: isMobile ? 16 : 18,
             letterSpacing: "0.04em",
-            padding: "6px 18px",
+            padding: isMobile ? "10px 16px" : "6px 18px",
             border: `${POSTER.borderW}px solid ${ink}`,
             background: POSTER.accent,
             color: POSTER.bg,
             cursor: "pointer",
+            minHeight: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           {copyLabel}
         </button>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
             border: `2px solid ${ink}`,
             color: ink,
-            width: 34,
-            height: 34,
+            width: isMobile ? 44 : 34,
+            height: isMobile ? 44 : 34,
             cursor: "pointer",
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: 700,
+            touchAction: "manipulation",
           }}
         >
           ×
@@ -114,15 +125,18 @@ export const PosterExportSheet = ({
       style={{
         flex: 1,
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gridTemplateRows: isMobile ? "1fr 1fr" : "1fr",
         minHeight: 0,
       }}
     >
       <div
         style={{
-          borderRight: `${POSTER.borderW}px solid ${ink}`,
+          borderRight: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
+          borderBottom: isMobile ? `${POSTER.borderW}px solid ${ink}` : "none",
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
         }}
       >
         <div
@@ -133,6 +147,7 @@ export const PosterExportSheet = ({
             fontWeight: 700,
             fontSize: 11,
             letterSpacing: "0.12em",
+            flexShrink: 0,
           }}
         >
           INPUT — EDIT ME
@@ -155,7 +170,7 @@ export const PosterExportSheet = ({
           }}
         />
       </div>
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div
           style={{
             padding: "8px 16px",
@@ -164,6 +179,7 @@ export const PosterExportSheet = ({
             fontWeight: 700,
             fontSize: 11,
             letterSpacing: "0.12em",
+            flexShrink: 0,
           }}
         >
           OUTPUT — COPY ME

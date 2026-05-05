@@ -5,12 +5,13 @@ interface Props {
   ink: string;
   bg: string;
   accent: string;
+  isMobile: boolean;
   onClose: () => void;
 }
 
 const KEYMAP: ReadonlyArray<readonly [string, string]> = [
   ["SPACE", "Shuffle unlocked colors"],
-  ["CLICK", "Edit a color inline"],
+  ["TAP", "Edit a color inline"],
   ["DRAG", "Reorder columns"],
   ["L", "Lock a color"],
   ["E", "Open export"],
@@ -22,7 +23,7 @@ const BOOT_LOG = `> p4lette init
 > connecting color.pizza..... ok
 > ready.`;
 
-export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
+export const TerminalWelcome = ({ ink, bg, accent, isMobile, onClose }: Props) => (
   <BrutBackdrop onClose={onClose}>
     <div
       onClick={(e) => e.stopPropagation()}
@@ -32,6 +33,8 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
         border: `${TERMINAL.borderW}px solid ${ink}`,
         width: 540,
         maxWidth: "92vw",
+        maxHeight: "92vh",
+        overflow: "auto",
         boxShadow: `4px 4px 0 ${accent}`,
       }}
     >
@@ -40,7 +43,7 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "6px 12px",
+          padding: "8px 12px",
           borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
           background: ink,
           color: bg,
@@ -53,13 +56,17 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
         </span>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `${TERMINAL.borderW}px solid ${bg}` : "none",
             color: bg,
             cursor: "pointer",
             fontFamily: TERMINAL.mono,
             fontSize: 14,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
@@ -67,7 +74,7 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
       </div>
       <div
         style={{
-          padding: 22,
+          padding: isMobile ? 16 : 22,
           fontFamily: TERMINAL.mono,
           fontSize: 13,
           lineHeight: 1.6,
@@ -79,7 +86,7 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
         <div
           style={{
             fontFamily: TERMINAL.display,
-            fontSize: 56,
+            fontSize: isMobile ? 40 : 56,
             lineHeight: 0.92,
             marginTop: 18,
             letterSpacing: "0.02em",
@@ -91,28 +98,30 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
           <br />
           WHO_LIKE_KEYS.
         </div>
-        <div style={{ marginTop: 18, display: "grid", gap: 4, fontSize: 12 }}>
-          {KEYMAP.map(([k, v]) => (
-            <div key={k} style={{ display: "flex", gap: 12 }}>
-              <span
-                style={{
-                  fontWeight: 700,
-                  color: accent,
-                  minWidth: 70,
-                }}
-              >
-                [{k}]
-              </span>
-              <span style={{ opacity: 0.85 }}>{v}</span>
-            </div>
-          ))}
-        </div>
+        {!isMobile && (
+          <div style={{ marginTop: 18, display: "grid", gap: 4, fontSize: 12 }}>
+            {KEYMAP.map(([k, v]) => (
+              <div key={k} style={{ display: "flex", gap: 12 }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: accent,
+                    minWidth: 70,
+                  }}
+                >
+                  [{k}]
+                </span>
+                <span style={{ opacity: 0.85 }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <button
         onClick={onClose}
         style={{
           width: "100%",
-          padding: 12,
+          padding: isMobile ? 18 : 12,
           background: accent,
           color: "#000",
           border: "none",
@@ -120,8 +129,10 @@ export const TerminalWelcome = ({ ink, bg, accent, onClose }: Props) => (
           fontFamily: TERMINAL.mono,
           fontWeight: 700,
           letterSpacing: "0.16em",
-          fontSize: 12,
+          fontSize: 14,
           cursor: "pointer",
+          minHeight: isMobile ? 56 : undefined,
+          touchAction: "manipulation",
         }}
       >
         &gt; ENTER_

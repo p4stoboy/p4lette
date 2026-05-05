@@ -10,9 +10,12 @@ import { DEFAULT_TEMPLATE } from "../../functions/resolve_export_template";
 import { useFitNameSize } from "../../hooks/use_fit_name_size";
 import { useGlobalShortcuts } from "../../hooks/use_global_shortcuts";
 import { useTouchDragReorder } from "../../hooks/use_touch_drag_reorder";
+import { useViewport } from "../../hooks/use_viewport";
 import { TERMINAL } from "./tokens";
 import { TerminalCmdBar } from "./TerminalCmdBar";
 import { TerminalColumn } from "./TerminalColumn";
+import { TerminalTile } from "./TerminalTile";
+import { TerminalMobileMenu } from "./TerminalMobileMenu";
 import { TerminalStatusline } from "./TerminalStatusline";
 import { TerminalWelcome } from "./TerminalWelcome";
 import { TerminalAbout } from "./TerminalAbout";
@@ -56,12 +59,15 @@ export const TerminalSkin = () => {
     setExportTemplate,
   } = usePalette();
 
+  const { isMobile } = useViewport();
+
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [showAbout, setShowAbout] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !readSeenWelcome());
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
@@ -115,6 +121,7 @@ export const TerminalSkin = () => {
 
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
+    else if (showMenu) setShowMenu(false);
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showSaved) setShowSaved(false);
@@ -122,6 +129,7 @@ export const TerminalSkin = () => {
     else if (editingId !== null) setEditingId(null);
   }, [
     showWelcome,
+    showMenu,
     showExport,
     showHarmony,
     showSaved,
@@ -163,9 +171,9 @@ export const TerminalSkin = () => {
   const nameFontSize = useFitNameSize({
     names,
     containerRef: paletteRef,
-    columnCount: palette.length,
-    paddingX: 12,
-    maxFontSize: 17,
+    columnCount: isMobile ? 2 : palette.length,
+    paddingX: isMobile ? 14 : 12,
+    maxFontSize: isMobile ? 14 : 17,
     minFontSize: 9,
     fontFamily: TERMINAL.mono,
     fontWeight: 700,
@@ -191,6 +199,7 @@ export const TerminalSkin = () => {
         ink={ink}
         accent={accent}
         isDark={isDark}
+        compact={isMobile}
         palette={palette}
         savedCount={savedList.length}
         clock={clock}
@@ -202,52 +211,110 @@ export const TerminalSkin = () => {
         onHarmony={() => setShowHarmony(true)}
         onExport={() => setShowExport(true)}
         onAbout={() => setShowAbout(true)}
+        onMenu={() => setShowMenu(true)}
       />
 
-      <div ref={paletteRef} style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        {palette.map((c, i) => (
-          <TerminalColumn
-            key={c.dataId}
-            color={c}
-            name={names[i] || "..."}
-            index={i}
-            editing={editingId === c.id}
-            nameFontSize={nameFontSize}
-            onEdit={() => {
-              setEditingId(c.id);
-              setLastEditedId(c.id);
-            }}
-            onCloseEdit={() => setEditingId(null)}
-            onUpdate={(hex) => {
-              updateColor(c.id, hex);
-              setLastEditedId(c.id);
-            }}
-            onDelete={() => {
-              deleteColor(c.id);
-              setEditingId(null);
-            }}
-            onLock={() => {
-              toggleLock(c.id);
-              setLastEditedId(c.id);
-            }}
-            onDragStart={onDragStart(i)}
-            onDragOver={onDragOver(i)}
-            onPointerDown={touchHandlers.onPointerDown(i)}
-            onPointerMove={touchHandlers.onPointerMove}
-            onPointerUp={touchHandlers.onPointerUp}
-            onPointerCancel={touchHandlers.onPointerCancel}
-            ink={ink}
-          />
-        ))}
-      </div>
+      {isMobile ? (
+        <div
+          ref={paletteRef}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gridAutoRows: "max-content",
+            alignContent: "start",
+            gap: 0,
+            overscrollBehavior: "contain",
+            position: "relative",
+          }}
+        >
+          {palette.map((c, i) => (
+            <TerminalTile
+              key={c.dataId}
+              color={c}
+              name={names[i] || "..."}
+              index={i}
+              editing={editingId === c.id}
+              nameFontSize={nameFontSize}
+              ink={ink}
+              onEdit={() => {
+                setEditingId(c.id);
+                setLastEditedId(c.id);
+              }}
+              onCloseEdit={() => setEditingId(null)}
+              onUpdate={(hex) => {
+                updateColor(c.id, hex);
+                setLastEditedId(c.id);
+              }}
+              onDelete={() => {
+                deleteColor(c.id);
+                setEditingId(null);
+              }}
+              onLock={() => {
+                toggleLock(c.id);
+                setLastEditedId(c.id);
+              }}
+              onDragStart={onDragStart(i)}
+              onDragOver={onDragOver(i)}
+              onPointerDown={touchHandlers.onPointerDown(i)}
+              onPointerMove={touchHandlers.onPointerMove}
+              onPointerUp={touchHandlers.onPointerUp}
+              onPointerCancel={touchHandlers.onPointerCancel}
+            />
+          ))}
+          <TerminalAddTile ink={ink} accent={accent} onAdd={() => addColor()} />
+        </div>
+      ) : (
+        <div ref={paletteRef} style={{ flex: 1, display: "flex", minHeight: 0 }}>
+          {palette.map((c, i) => (
+            <TerminalColumn
+              key={c.dataId}
+              color={c}
+              name={names[i] || "..."}
+              index={i}
+              editing={editingId === c.id}
+              nameFontSize={nameFontSize}
+              onEdit={() => {
+                setEditingId(c.id);
+                setLastEditedId(c.id);
+              }}
+              onCloseEdit={() => setEditingId(null)}
+              onUpdate={(hex) => {
+                updateColor(c.id, hex);
+                setLastEditedId(c.id);
+              }}
+              onDelete={() => {
+                deleteColor(c.id);
+                setEditingId(null);
+              }}
+              onLock={() => {
+                toggleLock(c.id);
+                setLastEditedId(c.id);
+              }}
+              onDragStart={onDragStart(i)}
+              onDragOver={onDragOver(i)}
+              onPointerDown={touchHandlers.onPointerDown(i)}
+              onPointerMove={touchHandlers.onPointerMove}
+              onPointerUp={touchHandlers.onPointerUp}
+              onPointerCancel={touchHandlers.onPointerCancel}
+              ink={ink}
+            />
+          ))}
+        </div>
+      )}
 
-      <TerminalStatusline palette={palette} ink={ink} accent={accent} />
+      {!isMobile && (
+        <TerminalStatusline palette={palette} ink={ink} accent={accent} />
+      )}
 
       {showWelcome && (
         <TerminalWelcome
           ink={ink}
           bg={bg}
           accent={accent}
+          isMobile={isMobile}
           onClose={dismissWelcome}
         />
       )}
@@ -256,6 +323,7 @@ export const TerminalSkin = () => {
           ink={ink}
           bg={bg}
           accent={accent}
+          isMobile={isMobile}
           onClose={() => setShowAbout(false)}
         />
       )}
@@ -264,6 +332,7 @@ export const TerminalSkin = () => {
           ink={ink}
           bg={bg}
           accent={accent}
+          isMobile={isMobile}
           list={savedList}
           onClose={() => setShowSaved(false)}
           onLoad={(hexes) => {
@@ -278,6 +347,7 @@ export const TerminalSkin = () => {
           ink={ink}
           bg={bg}
           accent={accent}
+          isMobile={isMobile}
           palette={palette}
           onClose={() => setShowHarmony(false)}
           onApply={(hexes) => {
@@ -291,6 +361,7 @@ export const TerminalSkin = () => {
           ink={ink}
           bg={bg}
           accent={accent}
+          isMobile={isMobile}
           tpl={exportTemplate}
           setTpl={setExportTemplate}
           resolved={resolvedTemplate}
@@ -300,6 +371,59 @@ export const TerminalSkin = () => {
           onClose={() => setShowExport(false)}
         />
       )}
+      {showMenu && (
+        <TerminalMobileMenu
+          ink={ink}
+          bg={bg}
+          accent={accent}
+          isDark={isDark}
+          savedCount={savedList.length}
+          onClose={() => setShowMenu(false)}
+          onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          onAdd={() => addColor()}
+          onShuffle={randomizeUnlocked}
+          onSave={handleSavePalette}
+          onVault={() => setShowSaved(true)}
+          onHarmony={() => setShowHarmony(true)}
+          onExport={() => setShowExport(true)}
+          onAbout={() => setShowAbout(true)}
+        />
+      )}
     </div>
   );
 };
+
+interface AddTileProps {
+  ink: string;
+  accent: string;
+  onAdd: () => void;
+}
+
+const TerminalAddTile = ({ ink, accent, onAdd }: AddTileProps) => (
+  <button
+    onClick={onAdd}
+    aria-label="add color"
+    style={{
+      aspectRatio: "1 / 1",
+      background: "transparent",
+      borderTop: "none",
+      borderLeft: "none",
+      borderRight: `${TERMINAL.borderW}px solid ${ink}`,
+      borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
+      color: ink,
+      cursor: "pointer",
+      fontFamily: TERMINAL.mono,
+      fontSize: 28,
+      fontWeight: 700,
+      letterSpacing: "0.06em",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      touchAction: "manipulation",
+    }}
+  >
+    <span style={{ color: accent }}>$</span>
+    <span>add</span>
+  </button>
+);

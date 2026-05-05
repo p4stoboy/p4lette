@@ -7,6 +7,7 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   bg: string;
+  isMobile: boolean;
   palette: Palette;
   onClose: () => void;
   onApply: (hexes: string[]) => void;
@@ -25,6 +26,7 @@ const HARMONIES: ReadonlyArray<readonly [string, HarmonyKind]> = [
 export const PosterHarmonyDrawer = ({
   ink,
   bg,
+  isMobile,
   palette,
   onClose,
   onApply,
@@ -33,16 +35,18 @@ export const PosterHarmonyDrawer = ({
   const [base, setBase] = useState(baseHex);
 
   return (
-    <Backdrop onClose={onClose} align="right">
+    <Backdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: bg,
           color: ink,
-          borderLeft: `${POSTER.borderW}px solid ${ink}`,
-          width: 520,
-          height: "100%",
-          maxWidth: "94vw",
+          borderLeft: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
+          borderTop: isMobile ? `${POSTER.borderW}px solid ${ink}` : "none",
+          width: isMobile ? "100%" : 520,
+          height: isMobile ? "auto" : "100%",
+          maxWidth: isMobile ? "100vw" : "94vw",
+          maxHeight: isMobile ? "88vh" : "100%",
           display: "flex",
           flexDirection: "column",
         }}
@@ -62,12 +66,16 @@ export const PosterHarmonyDrawer = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="close"
             style={{
               background: "none",
-              border: "none",
+              border: isMobile ? `2px solid ${ink}` : "none",
               fontSize: 22,
               cursor: "pointer",
               color: ink,
+              width: isMobile ? 44 : undefined,
+              height: isMobile ? 44 : undefined,
+              touchAction: "manipulation",
             }}
           >
             ×
@@ -98,6 +106,7 @@ export const PosterHarmonyDrawer = ({
                 height: 36,
                 background: base,
                 border: `2px solid ${ink}`,
+                flexShrink: 0,
               }}
             />
             <input
@@ -106,12 +115,13 @@ export const PosterHarmonyDrawer = ({
               style={{
                 fontFamily: POSTER.mono,
                 fontSize: 14,
-                padding: "6px 10px",
+                padding: isMobile ? "10px 12px" : "6px 10px",
                 border: `2px solid ${ink}`,
                 background: "transparent",
                 color: ink,
                 flex: 1,
                 outline: "none",
+                minHeight: isMobile ? 44 : undefined,
               }}
             />
           </div>
@@ -120,15 +130,17 @@ export const PosterHarmonyDrawer = ({
               <button
                 key={c.dataId}
                 onClick={() => setBase(c.hex)}
+                aria-label={`use ${c.hex}`}
                 style={{
                   flex: 1,
-                  height: 24,
+                  height: isMobile ? 44 : 24,
                   background: c.hex,
                   border:
                     base === c.hex
                       ? `2px solid ${ink}`
                       : "2px solid transparent",
                   cursor: "pointer",
+                  touchAction: "manipulation",
                 }}
               />
             ))}
@@ -143,7 +155,7 @@ export const PosterHarmonyDrawer = ({
                 key={kind}
                 style={{ marginBottom: 14, border: `2px solid ${ink}` }}
               >
-                <div style={{ display: "flex", height: 56 }}>
+                <div style={{ display: "flex", height: isMobile ? 76 : 56 }}>
                   {colors.map((h, i) => (
                     <div key={i} style={{ flex: 1, background: h }} />
                   ))}
@@ -166,7 +178,7 @@ export const PosterHarmonyDrawer = ({
                   >
                     {label}
                   </div>
-                  <SmallBtn ink={ink} onClick={() => onApply(colors)}>
+                  <SmallBtn ink={ink} tall={isMobile} onClick={() => onApply(colors)}>
                     USE
                   </SmallBtn>
                 </div>

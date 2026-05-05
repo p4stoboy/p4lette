@@ -6,10 +6,11 @@ interface Props {
   ink: string;
   bg: string;
   accent: string;
+  isMobile: boolean;
   onClose: () => void;
 }
 
-export const TerminalAbout = ({ ink, bg, accent, onClose }: Props) => (
+export const TerminalAbout = ({ ink, bg, accent, isMobile, onClose }: Props) => (
   <BrutBackdrop onClose={onClose}>
     <div
       onClick={(e) => e.stopPropagation()}
@@ -26,7 +27,7 @@ export const TerminalAbout = ({ ink, bg, accent, onClose }: Props) => (
     >
       <div
         style={{
-          padding: "6px 12px",
+          padding: "8px 12px",
           borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
           background: ink,
           color: bg,
@@ -42,23 +43,27 @@ export const TerminalAbout = ({ ink, bg, accent, onClose }: Props) => (
         </span>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `${TERMINAL.borderW}px solid ${bg}` : "none",
             color: bg,
             cursor: "pointer",
             fontFamily: TERMINAL.mono,
             fontSize: 14,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
         </button>
       </div>
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
         <div
           style={{
             fontFamily: TERMINAL.display,
-            fontSize: 64,
+            fontSize: isMobile ? 44 : 64,
             lineHeight: 0.94,
             letterSpacing: "0.01em",
           }}
@@ -73,7 +78,7 @@ export const TerminalAbout = ({ ink, bg, accent, onClose }: Props) => (
           style={{
             marginTop: 22,
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: 16,
             fontSize: 12,
             lineHeight: 1.6,

@@ -6,6 +6,7 @@ interface Props {
   ink: string;
   bg: string;
   accent: string;
+  isMobile: boolean;
   list: SavedPalette[];
   onClose: () => void;
   onLoad: (hexes: string[]) => void;
@@ -22,27 +23,31 @@ export const TerminalSavedDrawer = ({
   ink,
   bg,
   accent,
+  isMobile,
   list,
   onClose,
   onLoad,
   onDelete,
 }: Props) => (
-  <BrutBackdrop onClose={onClose} align="right">
+  <BrutBackdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
         background: bg,
         color: ink,
-        borderLeft: `${TERMINAL.borderW}px solid ${ink}`,
-        width: 440,
-        height: "100%",
+        borderLeft: isMobile ? "none" : `${TERMINAL.borderW}px solid ${ink}`,
+        borderTop: isMobile ? `${TERMINAL.borderW}px solid ${ink}` : "none",
+        width: isMobile ? "100%" : 440,
+        height: isMobile ? "auto" : "100%",
+        maxWidth: isMobile ? "100vw" : "94vw",
+        maxHeight: isMobile ? "88vh" : "100%",
         display: "flex",
         flexDirection: "column",
       }}
     >
       <div
         style={{
-          padding: "6px 14px",
+          padding: isMobile ? "10px 14px" : "6px 14px",
           borderBottom: `${TERMINAL.borderW}px solid ${ink}`,
           background: ink,
           color: bg,
@@ -59,13 +64,17 @@ export const TerminalSavedDrawer = ({
         </span>
         <button
           onClick={onClose}
+          aria-label="close"
           style={{
             background: "none",
-            border: "none",
+            border: isMobile ? `${TERMINAL.borderW}px solid ${bg}` : "none",
             color: bg,
             cursor: "pointer",
             fontFamily: TERMINAL.mono,
             fontSize: 14,
+            width: isMobile ? 44 : undefined,
+            height: isMobile ? 44 : undefined,
+            touchAction: "manipulation",
           }}
         >
           ×
@@ -104,17 +113,18 @@ export const TerminalSavedDrawer = ({
               border: `${TERMINAL.borderW}px solid ${ink}`,
             }}
           >
-            <div style={{ display: "flex", height: 44 }}>
+            <div style={{ display: "flex", height: isMobile ? 64 : 44 }}>
               {s.hexes.map((h, i) => (
                 <div key={i} style={{ flex: 1, background: h }} />
               ))}
             </div>
             <div
               style={{
-                padding: "6px 10px",
+                padding: "8px 10px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                gap: 8,
                 borderTop: `${TERMINAL.borderW}px solid ${ink}`,
                 fontSize: 10,
                 letterSpacing: "0.1em",
@@ -124,10 +134,11 @@ export const TerminalSavedDrawer = ({
                 {new Date(s.createdAt).toISOString().slice(0, 10)} ·{" "}
                 {s.hexes.length} cols
               </span>
-              <span style={{ display: "flex", gap: 4 }}>
+              <span style={{ display: "flex", gap: 6 }}>
                 <BrutSmallBtn
                   ink={ink}
                   accent={accent}
+                  tall={isMobile}
                   onClick={() => onLoad(s.hexes)}
                 >
                   LOAD
@@ -135,6 +146,7 @@ export const TerminalSavedDrawer = ({
                 <BrutSmallBtn
                   ink={ink}
                   accent={accent}
+                  tall={isMobile}
                   onClick={() => onDelete(s.id)}
                 >
                   RM

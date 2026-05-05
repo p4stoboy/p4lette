@@ -10,10 +10,13 @@ import { DEFAULT_TEMPLATE } from "../../functions/resolve_export_template";
 import { useFitNameSize } from "../../hooks/use_fit_name_size";
 import { useGlobalShortcuts } from "../../hooks/use_global_shortcuts";
 import { useTouchDragReorder } from "../../hooks/use_touch_drag_reorder";
+import { useViewport } from "../../hooks/use_viewport";
 import { POSTER } from "./tokens";
 import { PosterNav } from "./PosterNav";
 import { PosterTicker } from "./PosterTicker";
 import { PosterColumn } from "./PosterColumn";
+import { PosterTile } from "./PosterTile";
+import { PosterMobileMenu } from "./PosterMobileMenu";
 import { PosterFooter } from "./PosterFooter";
 import { PosterWelcome } from "./PosterWelcome";
 import { PosterAbout } from "./PosterAbout";
@@ -57,12 +60,15 @@ export const PosterSkin = () => {
     setExportTemplate,
   } = usePalette();
 
+  const { isMobile } = useViewport();
+
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [showAbout, setShowAbout] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !readSeenWelcome());
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
@@ -115,6 +121,7 @@ export const PosterSkin = () => {
 
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
+    else if (showMenu) setShowMenu(false);
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showSaved) setShowSaved(false);
@@ -122,6 +129,7 @@ export const PosterSkin = () => {
     else if (editingId !== null) setEditingId(null);
   }, [
     showWelcome,
+    showMenu,
     showExport,
     showHarmony,
     showSaved,
@@ -163,10 +171,10 @@ export const PosterSkin = () => {
   const nameFontSize = useFitNameSize({
     names,
     containerRef: paletteRef,
-    columnCount: palette.length,
-    paddingX: 20,
-    maxFontSize: 38,
-    minFontSize: 14,
+    columnCount: isMobile ? 2 : palette.length,
+    paddingX: isMobile ? 16 : 20,
+    maxFontSize: isMobile ? 28 : 38,
+    minFontSize: isMobile ? 12 : 14,
     fontFamily: POSTER.display,
     fontWeight: 400,
     letterSpacing: "-0.02em",
@@ -190,6 +198,7 @@ export const PosterSkin = () => {
         ink={ink}
         bg={bg}
         isDark={isDark}
+        compact={isMobile}
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
@@ -198,62 +207,133 @@ export const PosterSkin = () => {
         onSave={handleSavePalette}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
+        onMenu={() => setShowMenu(true)}
         savedCount={savedList.length}
       />
 
-      <PosterTicker ink={ink} roll={tickRoll} palette={palette} />
+      {!isMobile && <PosterTicker ink={ink} roll={tickRoll} palette={palette} />}
 
-      <div
-        ref={paletteRef}
-        style={{ flex: 1, display: "flex", position: "relative", minHeight: 0 }}
-      >
-        {palette.map((c, i) => (
-          <PosterColumn
-            key={c.dataId}
-            color={c}
-            name={names[i] || "..."}
-            index={i}
-            editing={editingId === c.id}
-            nameFontSize={nameFontSize}
-            onEdit={() => {
-              setEditingId(c.id);
-              setLastEditedId(c.id);
-            }}
-            onCloseEdit={() => setEditingId(null)}
-            onUpdate={(hex) => {
-              updateColor(c.id, hex);
-              setLastEditedId(c.id);
-            }}
-            onDelete={() => {
-              deleteColor(c.id);
-              setEditingId(null);
-            }}
-            onLock={() => {
-              toggleLock(c.id);
-              setLastEditedId(c.id);
-            }}
-            onDragStart={onDragStart(i)}
-            onDragOver={onDragOver(i)}
-            onPointerDown={touchHandlers.onPointerDown(i)}
-            onPointerMove={touchHandlers.onPointerMove}
-            onPointerUp={touchHandlers.onPointerUp}
-            onPointerCancel={touchHandlers.onPointerCancel}
-          />
-        ))}
-      </div>
+      {isMobile ? (
+        <div
+          ref={paletteRef}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gridAutoRows: "max-content",
+            alignContent: "start",
+            gap: 0,
+            overscrollBehavior: "contain",
+            position: "relative",
+          }}
+        >
+          {palette.map((c, i) => (
+            <PosterTile
+              key={c.dataId}
+              color={c}
+              name={names[i] || "..."}
+              index={i}
+              editing={editingId === c.id}
+              nameFontSize={nameFontSize}
+              ink={ink}
+              onEdit={() => {
+                setEditingId(c.id);
+                setLastEditedId(c.id);
+              }}
+              onCloseEdit={() => setEditingId(null)}
+              onUpdate={(hex) => {
+                updateColor(c.id, hex);
+                setLastEditedId(c.id);
+              }}
+              onDelete={() => {
+                deleteColor(c.id);
+                setEditingId(null);
+              }}
+              onLock={() => {
+                toggleLock(c.id);
+                setLastEditedId(c.id);
+              }}
+              onDragStart={onDragStart(i)}
+              onDragOver={onDragOver(i)}
+              onPointerDown={touchHandlers.onPointerDown(i)}
+              onPointerMove={touchHandlers.onPointerMove}
+              onPointerUp={touchHandlers.onPointerUp}
+              onPointerCancel={touchHandlers.onPointerCancel}
+            />
+          ))}
+          <PosterAddTile ink={ink} onAdd={() => addColor()} />
+        </div>
+      ) : (
+        <div
+          ref={paletteRef}
+          style={{
+            flex: 1,
+            display: "flex",
+            position: "relative",
+            minHeight: 0,
+          }}
+        >
+          {palette.map((c, i) => (
+            <PosterColumn
+              key={c.dataId}
+              color={c}
+              name={names[i] || "..."}
+              index={i}
+              editing={editingId === c.id}
+              nameFontSize={nameFontSize}
+              onEdit={() => {
+                setEditingId(c.id);
+                setLastEditedId(c.id);
+              }}
+              onCloseEdit={() => setEditingId(null)}
+              onUpdate={(hex) => {
+                updateColor(c.id, hex);
+                setLastEditedId(c.id);
+              }}
+              onDelete={() => {
+                deleteColor(c.id);
+                setEditingId(null);
+              }}
+              onLock={() => {
+                toggleLock(c.id);
+                setLastEditedId(c.id);
+              }}
+              onDragStart={onDragStart(i)}
+              onDragOver={onDragOver(i)}
+              onPointerDown={touchHandlers.onPointerDown(i)}
+              onPointerMove={touchHandlers.onPointerMove}
+              onPointerUp={touchHandlers.onPointerUp}
+              onPointerCancel={touchHandlers.onPointerCancel}
+            />
+          ))}
+        </div>
+      )}
 
-      <PosterFooter palette={palette} ink={ink} />
+      {!isMobile && <PosterFooter palette={palette} ink={ink} />}
 
       {showWelcome && (
-        <PosterWelcome ink={ink} bg={bg} onClose={dismissWelcome} />
+        <PosterWelcome
+          ink={ink}
+          bg={bg}
+          isMobile={isMobile}
+          onClose={dismissWelcome}
+        />
       )}
       {showAbout && (
-        <PosterAbout ink={ink} bg={bg} onClose={() => setShowAbout(false)} />
+        <PosterAbout
+          ink={ink}
+          bg={bg}
+          isMobile={isMobile}
+          onClose={() => setShowAbout(false)}
+        />
       )}
       {showSaved && (
         <PosterSavedDrawer
           ink={ink}
           bg={bg}
+          isMobile={isMobile}
           list={savedList}
           onClose={() => setShowSaved(false)}
           onLoad={(hexes) => {
@@ -267,6 +347,7 @@ export const PosterSkin = () => {
         <PosterHarmonyDrawer
           ink={ink}
           bg={bg}
+          isMobile={isMobile}
           palette={palette}
           onClose={() => setShowHarmony(false)}
           onApply={(hexes) => {
@@ -279,6 +360,7 @@ export const PosterSkin = () => {
         <PosterExportSheet
           ink={ink}
           bg={bg}
+          isMobile={isMobile}
           tpl={exportTemplate}
           setTpl={setExportTemplate}
           resolved={resolvedTemplate}
@@ -288,6 +370,54 @@ export const PosterSkin = () => {
           onClose={() => setShowExport(false)}
         />
       )}
+      {showMenu && (
+        <PosterMobileMenu
+          ink={ink}
+          bg={bg}
+          isDark={isDark}
+          savedCount={savedList.length}
+          onClose={() => setShowMenu(false)}
+          onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          onAdd={() => addColor()}
+          onRandomize={randomizeUnlocked}
+          onSave={handleSavePalette}
+          onSaved={() => setShowSaved(true)}
+          onHarmony={() => setShowHarmony(true)}
+          onExport={() => setShowExport(true)}
+          onAbout={() => setShowAbout(true)}
+        />
+      )}
     </div>
   );
 };
+
+interface AddTileProps {
+  ink: string;
+  onAdd: () => void;
+}
+
+const PosterAddTile = ({ ink, onAdd }: AddTileProps) => (
+  <button
+    onClick={onAdd}
+    aria-label="add color"
+    style={{
+      aspectRatio: "1 / 1",
+      background: "transparent",
+      border: "none",
+      borderRight: `1px solid ${ink}`,
+      borderBottom: `1px solid ${ink}`,
+      color: ink,
+      cursor: "pointer",
+      fontFamily: POSTER.display,
+      fontSize: 56,
+      lineHeight: 1,
+      letterSpacing: "-0.02em",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      touchAction: "manipulation",
+    }}
+  >
+    ＋
+  </button>
+);
