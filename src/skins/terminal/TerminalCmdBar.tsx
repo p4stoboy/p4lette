@@ -20,6 +20,7 @@ interface CmdBarProps {
   onExport: () => void;
   onAbout: () => void;
   onMenu: () => void;
+  onSwapSkin: () => void;
 }
 
 export const TerminalCmdBar = ({
@@ -39,6 +40,7 @@ export const TerminalCmdBar = ({
   onExport,
   onAbout,
   onMenu,
+  onSwapSkin,
 }: CmdBarProps) => {
   if (compact) {
     return (
@@ -220,6 +222,13 @@ export const TerminalCmdBar = ({
           k="?"
           label="ABOUT"
           onClick={onAbout}
+        />
+        <CmdKey
+          ink={ink}
+          accent={accent}
+          k="T"
+          label="POSTER"
+          onClick={onSwapSkin}
         />
       </div>
 

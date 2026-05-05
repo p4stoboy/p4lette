@@ -43,7 +43,11 @@ const markWelcomeSeen = () => {
   }
 };
 
-export const TerminalSkin = () => {
+interface SkinProps {
+  onSwapSkin: () => void;
+}
+
+export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
   const {
     palette,
     names,
@@ -212,6 +216,7 @@ export const TerminalSkin = () => {
         onExport={() => setShowExport(true)}
         onAbout={() => setShowAbout(true)}
         onMenu={() => setShowMenu(true)}
+        onSwapSkin={onSwapSkin}
       />
 
       {isMobile ? (
@@ -387,6 +392,7 @@ export const TerminalSkin = () => {
           onHarmony={() => setShowHarmony(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
+          onSwapSkin={onSwapSkin}
         />
       )}
     </div>
