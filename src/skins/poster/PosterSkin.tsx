@@ -222,6 +222,8 @@ export const PosterSkin = () => {
             overflowY: "auto",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
+            gridAutoRows: "max-content",
+            alignContent: "start",
             gap: 0,
             overscrollBehavior: "contain",
             position: "relative",
@@ -261,9 +263,7 @@ export const PosterSkin = () => {
               onPointerCancel={touchHandlers.onPointerCancel}
             />
           ))}
-          {palette.length % 2 === 1 && (
-            <PosterAddTile ink={ink} onAdd={() => addColor()} />
-          )}
+          <PosterAddTile ink={ink} onAdd={() => addColor()} />
         </div>
       ) : (
         <div

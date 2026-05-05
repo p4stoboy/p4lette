@@ -223,6 +223,8 @@ export const TerminalSkin = () => {
             overflowY: "auto",
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
+            gridAutoRows: "max-content",
+            alignContent: "start",
             gap: 0,
             overscrollBehavior: "contain",
             position: "relative",
@@ -262,9 +264,7 @@ export const TerminalSkin = () => {
               onPointerCancel={touchHandlers.onPointerCancel}
             />
           ))}
-          {palette.length % 2 === 1 && (
-            <TerminalAddTile ink={ink} accent={accent} onAdd={() => addColor()} />
-          )}
+          <TerminalAddTile ink={ink} accent={accent} onAdd={() => addColor()} />
         </div>
       ) : (
         <div ref={paletteRef} style={{ flex: 1, display: "flex", minHeight: 0 }}>
