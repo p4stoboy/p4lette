@@ -6,7 +6,7 @@ interface Props {
   palette: Palette;
 }
 
-const COPIES = 4;
+const COPIES = 8;
 
 export const PosterTicker = ({ ink, palette }: Props) => {
   const items = [
