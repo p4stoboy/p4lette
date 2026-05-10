@@ -13,7 +13,10 @@ import {
   DEFAULT_TEMPLATE,
   resolveTemplate,
 } from "../functions/resolve_export_template";
-import { getColorNames } from "../functions/get_color_card_props";
+import {
+  DEFAULT_NAME_LIST,
+  getColorNames,
+} from "../functions/get_color_card_props";
 import { encodePalette } from "../functions/share_url";
 import {
   PaletteState,
@@ -22,6 +25,7 @@ import {
 } from "./paletteReducer";
 
 const EXPORT_KEY = "p4lette_export_template_v1";
+const NAME_LIST_KEY = "p4lette_name_list_v1";
 const NAMES_DEBOUNCE_MS = 500;
 const HASH_DEBOUNCE_MS = 150;
 const NAME_PLACEHOLDER = "...";
@@ -45,6 +49,15 @@ const readInitialTemplate = (): string => {
   }
 };
 
+const readInitialNameList = (): string => {
+  if (typeof localStorage === "undefined") return DEFAULT_NAME_LIST;
+  try {
+    return localStorage.getItem(NAME_LIST_KEY) ?? DEFAULT_NAME_LIST;
+  } catch {
+    return DEFAULT_NAME_LIST;
+  }
+};
+
 const readInitialHash = (): string | null => {
   if (typeof window === "undefined") return null;
   return window.location.hash || null;
@@ -64,9 +77,10 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       createPaletteState({
         exportTemplate: readInitialTemplate(),
         hash: readInitialHash(),
+        nameList: readInitialNameList(),
       }),
   );
-  const { palette, names, exportVisible, exportTemplate } = state;
+  const { palette, names, exportVisible, exportTemplate, nameList } = state;
   const namesRef = useRef<string[]>(names);
 
   useEffect(() => {
@@ -89,17 +103,17 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       const fallbacks = palette.map((c, i) =>
         current[i] && current[i] !== NAME_PLACEHOLDER ? current[i] : c.hex,
       );
-      const next = await getColorNames(
-        palette.map((c) => c.hex),
+      const next = await getColorNames(palette.map((c) => c.hex), {
+        list: nameList,
         fallbacks,
-      );
+      });
       if (alive) dispatch({ type: "setNames", names: next });
     }, NAMES_DEBOUNCE_MS);
     return () => {
       alive = false;
       clearTimeout(t);
     };
-  }, [palette]);
+  }, [palette, nameList]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -122,6 +136,15 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       /* ignore quota */
     }
   }, [exportTemplate]);
+
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(NAME_LIST_KEY, nameList);
+    } catch {
+      /* ignore quota */
+    }
+  }, [nameList]);
 
   const addColor = useCallback(
     (hex?: string) => dispatch({ type: "addColor", hex }),
@@ -160,6 +183,10 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     (visible: boolean) => dispatch({ type: "setExportVisible", visible }),
     [],
   );
+  const setNameList = useCallback(
+    (list: string) => dispatch({ type: "setNameList", list }),
+    [],
+  );
 
   const itf = useMemo<PaletteContextProps>(
     () => ({
@@ -168,6 +195,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       exportVisible,
       exportTemplate,
       resolvedTemplate,
+      nameList,
       addColor,
       deleteColor,
       updateColor,
@@ -177,6 +205,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       replaceAll,
       setExportTemplate,
       setExportVisible,
+      setNameList,
     }),
     [
       palette,
@@ -184,6 +213,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       exportVisible,
       exportTemplate,
       resolvedTemplate,
+      nameList,
       addColor,
       deleteColor,
       updateColor,
@@ -193,6 +223,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       replaceAll,
       setExportTemplate,
       setExportVisible,
+      setNameList,
     ],
   );
 

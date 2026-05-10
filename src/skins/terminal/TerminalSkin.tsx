@@ -311,7 +311,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
       )}
 
       {!isMobile && (
-        <TerminalStatusline palette={palette} ink={ink} accent={accent} />
+        <TerminalStatusline palette={palette} ink={ink} bg={bg} accent={accent} />
       )}
 
       {showWelcome && (

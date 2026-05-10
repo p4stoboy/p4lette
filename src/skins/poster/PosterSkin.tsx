@@ -316,7 +316,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         </div>
       )}
 
-      {!isMobile && <PosterFooter palette={palette} ink={ink} />}
+      {!isMobile && <PosterFooter palette={palette} ink={ink} bg={bg} />}
 
       {showWelcome && (
         <PosterWelcome

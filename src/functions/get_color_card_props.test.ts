@@ -9,7 +9,7 @@ describe("getColorNames", () => {
     vi.restoreAllMocks();
   });
 
-  it("makes one batched request with noduplicates and returns names in order", async () => {
+  it("makes one batched request with the default list and noduplicates", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -28,6 +28,19 @@ describe("getColorNames", () => {
     );
   });
 
+  it("uses the provided list and url-encodes it", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ colors: [{ name: "X" }] }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await getColorNames(["#aabbcc"], { list: "sanzoWadaI" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.color.pizza/v1/?values=aabbcc&noduplicates=true&list=sanzoWadaI",
+    );
+  });
+
   it("returns an empty array without fetching when given no hexes", async () => {
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -42,7 +55,9 @@ describe("getColorNames", () => {
       .mockRejectedValue(new Error("offline")) as unknown as typeof fetch;
 
     await expect(
-      getColorNames(["#aabbcc", "#cc3300"], ["Existing Name", undefined as unknown as string]),
+      getColorNames(["#aabbcc", "#cc3300"], {
+        fallbacks: ["Existing Name", undefined as unknown as string],
+      }),
     ).resolves.toEqual(["Existing Name", "#cc3300"]);
   });
 
@@ -53,7 +68,9 @@ describe("getColorNames", () => {
     }) as unknown as typeof fetch;
 
     await expect(
-      getColorNames(["#aabbcc", "#cc3300"], ["Soft Blue", "Previous Red"]),
+      getColorNames(["#aabbcc", "#cc3300"], {
+        fallbacks: ["Soft Blue", "Previous Red"],
+      }),
     ).resolves.toEqual(["Soft Blue", "Previous Red"]);
   });
 
