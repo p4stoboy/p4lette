@@ -22,6 +22,7 @@ import { TerminalAbout } from "./TerminalAbout";
 import { TerminalSavedDrawer } from "./TerminalSavedDrawer";
 import { TerminalHarmonyDrawer } from "./TerminalHarmonyDrawer";
 import { TerminalExportSheet } from "./TerminalExportSheet";
+import { TerminalNamingSheet } from "./TerminalNamingSheet";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 
@@ -61,6 +62,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
     replaceAll,
     exportTemplate,
     setExportTemplate,
+    nameList,
   } = usePalette();
 
   const { isMobile } = useViewport();
@@ -71,6 +73,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
+  const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
@@ -126,6 +129,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
+    else if (showNaming) setShowNaming(false);
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showSaved) setShowSaved(false);
@@ -134,6 +138,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
   }, [
     showWelcome,
     showMenu,
+    showNaming,
     showExport,
     showHarmony,
     showSaved,
@@ -272,7 +277,10 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
           <TerminalAddTile ink={ink} accent={accent} onAdd={() => addColor()} />
         </div>
       ) : (
-        <div ref={paletteRef} style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div
+          ref={paletteRef}
+          style={{ flex: 1, display: "flex", minHeight: 0 }}
+        >
           {palette.map((c, i) => (
             <TerminalColumn
               key={c.dataId}
@@ -311,7 +319,12 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
       )}
 
       {!isMobile && (
-        <TerminalStatusline palette={palette} ink={ink} bg={bg} accent={accent} />
+        <TerminalStatusline
+          palette={palette}
+          ink={ink}
+          bg={bg}
+          accent={accent}
+        />
       )}
 
       {showWelcome && (
@@ -383,6 +396,7 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
           accent={accent}
           isDark={isDark}
           savedCount={savedList.length}
+          nameList={nameList}
           onClose={() => setShowMenu(false)}
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
@@ -392,7 +406,16 @@ export const TerminalSkin = ({ onSwapSkin }: SkinProps) => {
           onHarmony={() => setShowHarmony(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
+          onNaming={() => setShowNaming(true)}
           onSwapSkin={onSwapSkin}
+        />
+      )}
+      {showNaming && (
+        <TerminalNamingSheet
+          ink={ink}
+          bg={bg}
+          accent={accent}
+          onClose={() => setShowNaming(false)}
         />
       )}
     </div>
