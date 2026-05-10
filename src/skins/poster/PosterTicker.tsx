@@ -3,11 +3,12 @@ import { POSTER } from "./tokens";
 
 interface Props {
   ink: string;
-  roll: number;
   palette: Palette;
 }
 
-export const PosterTicker = ({ ink, roll, palette }: Props) => {
+const COPIES = 4;
+
+export const PosterTicker = ({ ink, palette }: Props) => {
   const items = [
     "COLOR-PIZZA NAMING ✺",
     `${palette.length} COLORS LIVE ✺`,
@@ -16,7 +17,8 @@ export const PosterTicker = ({ ink, roll, palette }: Props) => {
     "LOCK TO PROTECT ✺",
     "SHUFFLE THE REST ✺",
   ];
-  const text = items.join("  ◇  ") + "  ◇  ";
+  const row = items.join("  ◇  ") + "  ◇  ";
+
   return (
     <div
       style={{
@@ -24,20 +26,24 @@ export const PosterTicker = ({ ink, roll, palette }: Props) => {
         padding: "6px 0",
         overflow: "hidden",
         flexShrink: 0,
-        position: "relative",
       }}
     >
       <div
+        className="p4l-marquee"
+        aria-hidden="true"
         style={{
+          display: "inline-flex",
           fontFamily: POSTER.display,
           fontSize: 18,
           letterSpacing: "0.06em",
           whiteSpace: "nowrap",
-          transform: `translateX(${-roll * 1.5}px)`,
-          display: "inline-block",
+          animation: "p4l-marquee 60s linear infinite",
+          willChange: "transform",
         }}
       >
-        {text.repeat(8)}
+        {Array.from({ length: COPIES }, (_, i) => (
+          <span key={i}>{row}</span>
+        ))}
       </div>
     </div>
   );
