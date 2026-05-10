@@ -7,6 +7,7 @@ interface MenuProps {
   accent: string;
   isDark: boolean;
   savedCount: number;
+  nameList: string;
   onClose: () => void;
   onTheme: () => void;
   onAdd: () => void;
@@ -16,6 +17,7 @@ interface MenuProps {
   onHarmony: () => void;
   onExport: () => void;
   onAbout: () => void;
+  onNaming: () => void;
   onSwapSkin: () => void;
 }
 
@@ -25,6 +27,7 @@ export const TerminalMobileMenu = ({
   accent,
   isDark,
   savedCount,
+  nameList,
   onClose,
   onTheme,
   onAdd,
@@ -34,6 +37,7 @@ export const TerminalMobileMenu = ({
   onHarmony,
   onExport,
   onAbout,
+  onNaming,
   onSwapSkin,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
@@ -115,7 +119,13 @@ export const TerminalMobileMenu = ({
             flexDirection: "column",
           }}
         >
-          <Cmd ink={ink} accent={accent} k="a" label="add color" onClick={fire(onAdd)} />
+          <Cmd
+            ink={ink}
+            accent={accent}
+            k="a"
+            label="add color"
+            onClick={fire(onAdd)}
+          />
           <Cmd
             ink={ink}
             accent={accent}
@@ -123,7 +133,13 @@ export const TerminalMobileMenu = ({
             label="shuffle unlocked"
             onClick={fire(onShuffle)}
           />
-          <Cmd ink={ink} accent={accent} k="w" label="save palette" onClick={fire(onSave)} />
+          <Cmd
+            ink={ink}
+            accent={accent}
+            k="w"
+            label="save palette"
+            onClick={fire(onSave)}
+          />
           <Cmd
             ink={ink}
             accent={accent}
@@ -145,7 +161,20 @@ export const TerminalMobileMenu = ({
             label="export"
             onClick={fire(onExport)}
           />
-          <Cmd ink={ink} accent={accent} k="?" label="about" onClick={fire(onAbout)} />
+          <Cmd
+            ink={ink}
+            accent={accent}
+            k="n"
+            label={`names (${nameList})`}
+            onClick={fire(onNaming)}
+          />
+          <Cmd
+            ink={ink}
+            accent={accent}
+            k="?"
+            label="about"
+            onClick={fire(onAbout)}
+          />
           <Cmd
             ink={ink}
             accent={accent}

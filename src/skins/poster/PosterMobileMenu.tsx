@@ -6,6 +6,7 @@ interface MenuProps {
   bg: string;
   isDark: boolean;
   savedCount: number;
+  nameList: string;
   onClose: () => void;
   onTheme: () => void;
   onAdd: () => void;
@@ -15,6 +16,7 @@ interface MenuProps {
   onHarmony: () => void;
   onExport: () => void;
   onAbout: () => void;
+  onNaming: () => void;
   onSwapSkin: () => void;
 }
 
@@ -23,6 +25,7 @@ export const PosterMobileMenu = ({
   bg,
   isDark,
   savedCount,
+  nameList,
   onClose,
   onTheme,
   onAdd,
@@ -32,6 +35,7 @@ export const PosterMobileMenu = ({
   onHarmony,
   onExport,
   onAbout,
+  onNaming,
   onSwapSkin,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
@@ -123,6 +127,9 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
+        </Row>
+        <Row ink={ink} onClick={fire(onNaming)}>
+          NAMES · {nameList}
         </Row>
         <Row ink={ink} onClick={fire(onAbout)}>
           ABOUT

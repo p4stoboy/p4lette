@@ -1,4 +1,4 @@
-import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import { DragEvent, useCallback, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import {
   SavedPalette,
@@ -23,6 +23,7 @@ import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
 import { PosterExportSheet } from "./PosterExportSheet";
+import { PosterNamingSheet } from "./PosterNamingSheet";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 
@@ -62,6 +63,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
     replaceAll,
     exportTemplate,
     setExportTemplate,
+    nameList,
   } = usePalette();
 
   const { isMobile } = useViewport();
@@ -72,21 +74,16 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
+  const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
   const [copyLabel, setCopyLabel] = useState("COPY!");
-  const [tickRoll, setTickRoll] = useState(0);
 
   const isDark = theme === "dark";
   const bg = isDark ? POSTER.bgDark : POSTER.bg;
   const ink = isDark ? POSTER.inkDark : POSTER.ink;
-
-  useEffect(() => {
-    const i = window.setInterval(() => setTickRoll((t) => t + 1), 50);
-    return () => window.clearInterval(i);
-  }, []);
 
   const onCopy = useCallback(async () => {
     try {
@@ -126,6 +123,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
+    else if (showNaming) setShowNaming(false);
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showSaved) setShowSaved(false);
@@ -134,6 +132,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   }, [
     showWelcome,
     showMenu,
+    showNaming,
     showExport,
     showHarmony,
     showSaved,
@@ -216,7 +215,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         savedCount={savedList.length}
       />
 
-      {!isMobile && <PosterTicker ink={ink} roll={tickRoll} palette={palette} />}
+      {!isMobile && <PosterTicker ink={ink} palette={palette} />}
 
       {isMobile ? (
         <div
@@ -316,7 +315,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         </div>
       )}
 
-      {!isMobile && <PosterFooter palette={palette} ink={ink} />}
+      {!isMobile && <PosterFooter palette={palette} ink={ink} bg={bg} />}
 
       {showWelcome && (
         <PosterWelcome
@@ -381,6 +380,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           bg={bg}
           isDark={isDark}
           savedCount={savedList.length}
+          nameList={nameList}
           onClose={() => setShowMenu(false)}
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
@@ -390,7 +390,15 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           onHarmony={() => setShowHarmony(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
+          onNaming={() => setShowNaming(true)}
           onSwapSkin={onSwapSkin}
+        />
+      )}
+      {showNaming && (
+        <PosterNamingSheet
+          ink={ink}
+          bg={bg}
+          onClose={() => setShowNaming(false)}
         />
       )}
     </div>

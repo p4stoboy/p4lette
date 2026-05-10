@@ -131,4 +131,23 @@ describe("paletteReducer", () => {
     expect(result.names).toHaveLength(3);
     expect(result.names[0]).toBe("A");
   });
+
+  it("setNameList clears names so previous-list names cannot leak as fallbacks", () => {
+    const state = baseState({ nameList: "bestOf" });
+    const result = paletteReducer(state, {
+      type: "setNameList",
+      list: "wikipedia",
+    });
+    expect(result.nameList).toBe("wikipedia");
+    expect(result.names).toEqual(["...", "..."]);
+  });
+
+  it("setNameList is a no-op when the list is unchanged", () => {
+    const state = baseState({ nameList: "bestOf" });
+    const result = paletteReducer(state, {
+      type: "setNameList",
+      list: "bestOf",
+    });
+    expect(result).toBe(state);
+  });
 });

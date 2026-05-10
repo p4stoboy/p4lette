@@ -2,13 +2,15 @@ import { ReactNode } from "react";
 import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
 import { POSTER } from "./tokens";
+import { PosterNamingPicker } from "./PosterNamingPicker";
 
 interface Props {
   palette: Palette;
   ink: string;
+  bg: string;
 }
 
-export const PosterFooter = ({ palette, ink }: Props) => {
+export const PosterFooter = ({ palette, ink, bg }: Props) => {
   let worst = { ratio: 99, a: "", b: "" };
   for (let i = 0; i < palette.length; i++) {
     for (let j = i + 1; j < palette.length; j++) {
@@ -63,7 +65,7 @@ export const PosterFooter = ({ palette, ink }: Props) => {
         HSL · 6 DIGIT HEX
       </Stat>
       <Stat ink={ink} label="NAMING">
-        color.pizza
+        <PosterNamingPicker ink={ink} bg={bg} />
       </Stat>
       <div style={{ flex: 1 }} />
       <Stat ink={ink} label="SHARE" right>
