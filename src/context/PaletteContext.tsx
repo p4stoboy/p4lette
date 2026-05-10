@@ -13,7 +13,7 @@ import {
   DEFAULT_TEMPLATE,
   resolveTemplate,
 } from "../functions/resolve_export_template";
-import { getColorName } from "../functions/get_color_card_props";
+import { getColorNames } from "../functions/get_color_card_props";
 import { encodePalette } from "../functions/share_url";
 import {
   PaletteState,
@@ -86,12 +86,12 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     let alive = true;
     const t = setTimeout(async () => {
       const current = namesRef.current;
-      const next = await Promise.all(
-        palette.map((c, i) => {
-          const fb =
-            current[i] && current[i] !== NAME_PLACEHOLDER ? current[i] : c.hex;
-          return getColorName(c.hex, fb);
-        }),
+      const fallbacks = palette.map((c, i) =>
+        current[i] && current[i] !== NAME_PLACEHOLDER ? current[i] : c.hex,
+      );
+      const next = await getColorNames(
+        palette.map((c) => c.hex),
+        fallbacks,
       );
       if (alive) dispatch({ type: "setNames", names: next });
     }, NAMES_DEBOUNCE_MS);
