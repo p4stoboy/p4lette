@@ -168,6 +168,10 @@ export const paletteReducer = (
       return { ...state, exportVisible: action.visible };
     case "setNameList":
       if (action.list === state.nameList) return state;
-      return { ...state, nameList: action.list };
+      return {
+        ...state,
+        nameList: action.list,
+        names: state.palette.map(() => NAME_PLACEHOLDER),
+      };
   }
 };
