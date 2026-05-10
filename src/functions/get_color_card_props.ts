@@ -11,7 +11,7 @@ export const getColorNames = async (
 
   try {
     const res = await fetch(
-      `https://api.color.pizza/v1/?values=${keys}&noduplicates=true&list=default`,
+      `https://api.color.pizza/v1/?values=${keys}&noduplicates=true&list=bestOf`,
     );
     if (!res.ok) return hexes.map((_, i) => fb(i));
     const json = await res.json();

@@ -24,7 +24,7 @@ describe("getColorNames", () => {
     ]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.color.pizza/v1/?values=aabbcc,cc3300&noduplicates=true&list=default",
+      "https://api.color.pizza/v1/?values=aabbcc,cc3300&noduplicates=true&list=bestOf",
     );
   });
 
