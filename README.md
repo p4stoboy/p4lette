@@ -26,5 +26,5 @@ Invalid ids, selectors, or properties resolve to explicit error text so the expo
 ## Notes
 
 - Color-name lookups depend on `https://api.color.pizza/v1/`.
-- Successful color-name lookups are cached in memory by normalized hex value.
-- Failed color-name lookups fall back to the previous name or hex value and are not cached.
+- Each palette change triggers a single batched request with `noduplicates=true`, so names are re-resolved for the whole palette in context (and can change as colors are added, removed, or edited).
+- Failed lookups fall back to the previous name or the hex value, per slot.

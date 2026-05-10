@@ -6,6 +6,7 @@ export interface PaletteContextProps {
   exportVisible: boolean;
   exportTemplate: string;
   resolvedTemplate: string;
+  nameList: string;
   addColor: (hex?: string) => void;
   deleteColor: (id: number) => void;
   updateColor: (id: number, hex: string) => void;
@@ -15,4 +16,5 @@ export interface PaletteContextProps {
   replaceAll: (hexes: string[]) => void;
   setExportTemplate: (template: string) => void;
   setExportVisible: (visible: boolean) => void;
+  setNameList: (list: string) => void;
 }

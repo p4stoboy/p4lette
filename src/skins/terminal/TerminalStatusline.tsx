@@ -1,14 +1,17 @@
+import { ReactNode } from "react";
 import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
 import { TERMINAL } from "./tokens";
+import { TerminalNamingPicker } from "./TerminalNamingPicker";
 
 interface Props {
   palette: Palette;
   ink: string;
+  bg: string;
   accent: string;
 }
 
-export const TerminalStatusline = ({ palette, ink, accent }: Props) => {
+export const TerminalStatusline = ({ palette, ink, bg, accent }: Props) => {
   let worst = 99;
   for (let i = 0; i < palette.length; i++) {
     for (let j = i + 1; j < palette.length; j++) {
@@ -20,7 +23,7 @@ export const TerminalStatusline = ({ palette, ink, accent }: Props) => {
     worst >= 7 ? "AAA" : worst >= 4.5 ? "AA" : worst >= 3 ? "AA-LG" : "FAIL";
 
   const cell = (
-    text: string,
+    children: ReactNode,
     opts?: { right?: boolean; bold?: boolean; color?: string },
   ) => (
     <span
@@ -38,7 +41,7 @@ export const TerminalStatusline = ({ palette, ink, accent }: Props) => {
         alignItems: "center",
       }}
     >
-      {text}
+      {children}
     </span>
   );
 
@@ -56,7 +59,7 @@ export const TerminalStatusline = ({ palette, ink, accent }: Props) => {
     >
       {cell("READY_", { bold: true, color: accent })}
       {cell(`CONTRAST.MIN: ${worst.toFixed(2)} [${grade}]`)}
-      {cell("NAMES: color.pizza/v1")}
+      {cell(<TerminalNamingPicker ink={ink} bg={bg} accent={accent} />)}
       {cell("STORE: localStorage + url.hash")}
       <div style={{ flex: 1 }} />
       {cell("p4lette.app", { right: true })}

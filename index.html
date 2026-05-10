@@ -85,6 +85,24 @@
           animation: none !important;
         }
       }
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(128, 128, 128, 0.45) transparent;
+      }
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      *::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.45);
+        border-radius: 4px;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background: rgba(128, 128, 128, 0.7);
+      }
     </style>
     <title>P4LETTE</title>
   </head>
