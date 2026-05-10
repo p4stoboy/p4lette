@@ -1,4 +1,4 @@
-import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import { DragEvent, useCallback, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import {
   SavedPalette,
@@ -80,16 +80,10 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
   const [copyLabel, setCopyLabel] = useState("COPY!");
-  const [tickRoll, setTickRoll] = useState(0);
 
   const isDark = theme === "dark";
   const bg = isDark ? POSTER.bgDark : POSTER.bg;
   const ink = isDark ? POSTER.inkDark : POSTER.ink;
-
-  useEffect(() => {
-    const i = window.setInterval(() => setTickRoll((t) => t + 1), 50);
-    return () => window.clearInterval(i);
-  }, []);
 
   const onCopy = useCallback(async () => {
     try {
@@ -221,9 +215,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         savedCount={savedList.length}
       />
 
-      {!isMobile && (
-        <PosterTicker ink={ink} roll={tickRoll} palette={palette} />
-      )}
+      {!isMobile && <PosterTicker ink={ink} palette={palette} />}
 
       {isMobile ? (
         <div
