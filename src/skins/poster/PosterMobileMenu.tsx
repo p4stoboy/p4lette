@@ -12,16 +12,13 @@ interface MenuProps {
   onTheme: () => void;
   onAdd: () => void;
   onRandomize: () => void;
-  onSave: () => void;
   onSaved: () => void;
   onHarmony: () => void;
   onTones: () => void;
   onExport: () => void;
-  onTemplates: () => void;
   onAbout: () => void;
   onNaming: () => void;
   onToggleTicker: () => void;
-  templateCount: number;
 }
 
 export const PosterMobileMenu = ({
@@ -35,16 +32,13 @@ export const PosterMobileMenu = ({
   onTheme,
   onAdd,
   onRandomize,
-  onSave,
   onSaved,
   onHarmony,
   onTones,
   onExport,
-  onTemplates,
   onAbout,
   onNaming,
   onToggleTicker,
-  templateCount,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -124,11 +118,8 @@ export const PosterMobileMenu = ({
         <Row ink={ink} onClick={fire(onRandomize)}>
           ⚄ SHUFFLE UNLOCKED
         </Row>
-        <Row ink={ink} onClick={fire(onSave)}>
-          ♥ SAVE PALETTE
-        </Row>
         <Row ink={ink} onClick={fire(onSaved)}>
-          VAULT [{savedCount}]
+          SAVE / LOAD [{savedCount}]
         </Row>
         <Row ink={ink} onClick={fire(onHarmony)}>
           HARMONY
@@ -138,9 +129,6 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
-        </Row>
-        <Row ink={ink} onClick={fire(onTemplates)}>
-          TEMPLATES [{templateCount}]
         </Row>
         <Row ink={ink} onClick={fire(onNaming)}>
           NAMES · {nameList}
