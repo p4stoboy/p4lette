@@ -1,5 +1,5 @@
 import { Palette } from "../types/Palette";
-import { hexToHsl, hexToRgb } from "./color_converters";
+import { hexToHsl, hexToHsv, hexToOklch, hexToRgb } from "./color_converters";
 
 export const DEFAULT_TEMPLATE =
   "// refer to a color by its 1-based id:\n" +
@@ -19,10 +19,15 @@ interface ResolvedColor {
   hex: string;
   rgb: { r: number; g: number; b: number };
   hsl: { h: number; s: number; l: number };
+  hsv: { h: number; s: number; v: number };
+  oklch: { l: number; c: number; h: number };
 }
 
 const fmt = (v: unknown): string =>
   typeof v === "object" ? JSON.stringify(v) : String(v);
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+const round3 = (n: number): number => Math.round(n * 1000) / 1000;
 
 export const resolveTemplate = (
   template: string,
@@ -34,11 +39,15 @@ export const resolveTemplate = (
     if (!c) return null;
     const rgb = hexToRgb(c.hex);
     const hsl = hexToHsl(c.hex);
+    const hsv = hexToHsv(c.hex);
+    const oklch = hexToOklch(c.hex);
     return {
       name: names[i - 1] || c.hex,
       hex: c.hex,
       rgb: { r: Math.round(rgb.r), g: Math.round(rgb.g), b: Math.round(rgb.b) },
       hsl: { h: Math.round(hsl.h), s: Math.round(hsl.s), l: Math.round(hsl.l) },
+      hsv: { h: Math.round(hsv.h), s: Math.round(hsv.s), v: Math.round(hsv.v) },
+      oklch: { l: round1(oklch.l), c: round3(oklch.c), h: round1(oklch.h) },
     };
   };
 

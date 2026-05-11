@@ -1,3 +1,4 @@
+import { ColorMode } from "./Colors";
 import { Palette } from "./Palette";
 
 export interface PaletteContextProps {
@@ -7,6 +8,7 @@ export interface PaletteContextProps {
   exportTemplate: string;
   resolvedTemplate: string;
   nameList: string;
+  colorMode: ColorMode;
   addColor: (hex?: string) => void;
   deleteColor: (id: number) => void;
   updateColor: (id: number, hex: string) => void;
@@ -17,4 +19,5 @@ export interface PaletteContextProps {
   setExportTemplate: (template: string) => void;
   setExportVisible: (visible: boolean) => void;
   setNameList: (list: string) => void;
+  setColorMode: (mode: ColorMode) => void;
 }
