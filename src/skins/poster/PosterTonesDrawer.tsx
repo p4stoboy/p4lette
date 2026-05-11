@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Backdrop, SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
-import { tones } from "../../functions/tones";
+import { TONE_METHODS, tones } from "../../functions/tones";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -23,7 +23,6 @@ export const PosterTonesDrawer = ({
 }: Props) => {
   const baseHex = palette[0]?.hex ?? "#ff3d00";
   const [base, setBase] = useState(baseHex);
-  const scale = tones(base);
 
   return (
     <Backdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
@@ -138,53 +137,61 @@ export const PosterTonesDrawer = ({
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
-          <div style={{ border: `2px solid ${ink}` }}>
-            <div style={{ display: "flex", height: isMobile ? 76 : 56 }}>
-              {scale.map((h, i) => (
-                <div key={i} style={{ flex: 1, background: h }} />
-              ))}
-            </div>
-            <div
-              style={{
-                padding: "10px 12px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderTop: `2px solid ${ink}`,
-              }}
-            >
+          {TONE_METHODS.map((m) => {
+            const scale = tones(base, m.id);
+            return (
               <div
-                style={{
-                  fontFamily: POSTER.display,
-                  fontSize: 16,
-                  letterSpacing: "0.02em",
-                }}
+                key={m.id}
+                style={{ marginBottom: 14, border: `2px solid ${ink}` }}
               >
-                11-STEP SCALE
+                <div style={{ display: "flex", height: isMobile ? 64 : 48 }}>
+                  {scale.map((h, i) => (
+                    <div key={i} style={{ flex: 1, background: h }} />
+                  ))}
+                </div>
+                <div
+                  style={{
+                    padding: "10px 12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                    borderTop: `2px solid ${ink}`,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: POSTER.display,
+                        fontSize: 16,
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {m.label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: POSTER.body,
+                        fontSize: 10,
+                        letterSpacing: "0.04em",
+                        opacity: 0.6,
+                        marginTop: 2,
+                      }}
+                    >
+                      {m.caption}
+                    </div>
+                  </div>
+                  <SmallBtn
+                    ink={ink}
+                    tall={isMobile}
+                    onClick={() => onApply(scale)}
+                  >
+                    USE
+                  </SmallBtn>
+                </div>
               </div>
-              <SmallBtn
-                ink={ink}
-                tall={isMobile}
-                onClick={() => onApply(scale)}
-              >
-                USE
-              </SmallBtn>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 14,
-              fontSize: 11,
-              lineHeight: 1.5,
-              opacity: 0.6,
-              letterSpacing: "0.04em",
-            }}
-          >
-            Perceptual tonal scale, blended from Tailwind v4 reference ramps via
-            dittoTones. The closest hue family in the reference data drives the
-            chroma curve; lightness is anchored to the 11 standard steps.
-          </div>
+            );
+          })}
         </div>
       </div>
     </Backdrop>
