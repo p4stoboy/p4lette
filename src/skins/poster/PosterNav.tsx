@@ -113,7 +113,7 @@ export const PosterNav = ({
         ＋ ADD
       </NavBtn>
       <NavBtn ink={ink} onClick={onRandomize}>
-        ⚄ SHUFFLE
+        SHUFFLE
       </NavBtn>
       <NavBtn ink={ink} onClick={onSaved}>
         SAVE / LOAD [{savedCount}]
