@@ -126,13 +126,31 @@ export const PosterSavedDrawer = ({
                 borderTop: `2px solid ${ink}`,
               }}
             >
-              <div
-                style={{ fontFamily: POSTER.mono, fontSize: 11, opacity: 0.7 }}
-              >
-                {new Date(s.createdAt).toLocaleDateString()} · {s.hexes.length}{" "}
-                colors
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontFamily: POSTER.display,
+                    fontSize: 16,
+                    letterSpacing: "0.02em",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {s.name}
+                </div>
+                <div
+                  style={{
+                    fontFamily: POSTER.mono,
+                    fontSize: 11,
+                    opacity: 0.6,
+                  }}
+                >
+                  {new Date(s.createdAt).toLocaleDateString()} ·{" "}
+                  {s.hexes.length} colors
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                 <SmallBtn
                   ink={ink}
                   tall={isMobile}

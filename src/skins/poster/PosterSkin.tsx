@@ -1,7 +1,9 @@
 import { DragEvent, useCallback, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import {
+  SAVED_LIMIT,
   SavedPalette,
+  defaultPaletteName,
   loadSaved,
   newSavedId,
   persistSaved,
@@ -128,12 +130,19 @@ export const PosterSkin = () => {
   }, [resolvedTemplate]);
 
   const handleSavePalette = useCallback(() => {
+    const fallback = defaultPaletteName(Date.now());
+    const raw =
+      typeof window !== "undefined"
+        ? window.prompt("Name this palette", fallback)
+        : fallback;
+    if (raw === null) return;
     const entry: SavedPalette = {
       id: newSavedId(),
+      name: raw.trim() || fallback,
       hexes: palette.map((c) => c.hex),
       createdAt: Date.now(),
     };
-    const next = [entry, ...savedList].slice(0, 20);
+    const next = [entry, ...savedList].slice(0, SAVED_LIMIT);
     setSavedList(next);
     persistSaved(next);
   }, [palette, savedList]);
