@@ -1,6 +1,12 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
-import { hexToHsl, hslToHex } from "../../functions/color_converters";
+import {
+  formatColor,
+  hexToHsl,
+  hslToHex,
+  parseColor,
+} from "../../functions/color_converters";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -16,8 +22,14 @@ export const PosterEditTray = ({
   onUpdate,
   onClose,
 }: Props) => {
+  const { colorMode } = usePalette();
   const [hex, setHex] = useState(color.hex);
+  const [input, setInput] = useState(() => formatColor(color.hex, colorMode));
   const trayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setInput(formatColor(hex, colorMode));
+  }, [colorMode, hex]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -40,10 +52,14 @@ export const PosterEditTray = ({
   };
   const hsl = hexToHsl(hex);
 
-  const onHexInput = (e: ChangeEvent<HTMLInputElement>) => {
+  const onInput = (e: ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    setHex(v);
-    if (/^#[0-9a-f]{6}$/i.test(v)) onUpdate(v);
+    setInput(v);
+    const parsed = parseColor(v, colorMode);
+    if (parsed) {
+      setHex(parsed);
+      onUpdate(parsed);
+    }
   };
 
   return (
@@ -104,11 +120,11 @@ export const PosterEditTray = ({
           marginBottom: 4,
         }}
       >
-        HEX
+        {colorMode.toUpperCase()}
       </label>
       <input
-        value={hex}
-        onChange={onHexInput}
+        value={input}
+        onChange={onInput}
         style={{
           fontFamily: POSTER.mono,
           fontSize: 18,

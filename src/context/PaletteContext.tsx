@@ -8,6 +8,7 @@ import {
   useReducer,
   useRef,
 } from "react";
+import { ColorMode } from "../types/Colors";
 import { PaletteContextProps } from "../types/PaletteContextProps";
 import {
   DEFAULT_TEMPLATE,
@@ -26,9 +27,12 @@ import {
 
 const EXPORT_KEY = "p4lette_export_template_v1";
 const NAME_LIST_KEY = "p4lette_name_list_v1";
+const COLOR_MODE_KEY = "p4lette_color_mode_v1";
 const NAMES_DEBOUNCE_MS = 500;
 const HASH_DEBOUNCE_MS = 150;
 const NAME_PLACEHOLDER = "...";
+
+const VALID_MODES = ["hex", "rgb", "hsl", "hsv", "oklch"] as const;
 
 export const PaletteContext = createContext<PaletteContextProps | undefined>(
   undefined,
@@ -58,6 +62,16 @@ const readInitialNameList = (): string => {
   }
 };
 
+const readInitialColorMode = (): ColorMode => {
+  if (typeof localStorage === "undefined") return "hex";
+  try {
+    const raw = localStorage.getItem(COLOR_MODE_KEY);
+    return VALID_MODES.includes(raw as ColorMode) ? (raw as ColorMode) : "hex";
+  } catch {
+    return "hex";
+  }
+};
+
 const readInitialHash = (): string | null => {
   if (typeof window === "undefined") return null;
   return window.location.hash || null;
@@ -78,9 +92,11 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
         exportTemplate: readInitialTemplate(),
         hash: readInitialHash(),
         nameList: readInitialNameList(),
+        colorMode: readInitialColorMode(),
       }),
   );
-  const { palette, names, exportVisible, exportTemplate, nameList } = state;
+  const { palette, names, exportVisible, exportTemplate, nameList, colorMode } =
+    state;
   const namesRef = useRef<string[]>(names);
 
   useEffect(() => {
@@ -103,10 +119,13 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       const fallbacks = palette.map((c, i) =>
         current[i] && current[i] !== NAME_PLACEHOLDER ? current[i] : c.hex,
       );
-      const next = await getColorNames(palette.map((c) => c.hex), {
-        list: nameList,
-        fallbacks,
-      });
+      const next = await getColorNames(
+        palette.map((c) => c.hex),
+        {
+          list: nameList,
+          fallbacks,
+        },
+      );
       if (alive) dispatch({ type: "setNames", names: next });
     }, NAMES_DEBOUNCE_MS);
     return () => {
@@ -145,6 +164,15 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       /* ignore quota */
     }
   }, [nameList]);
+
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(COLOR_MODE_KEY, colorMode);
+    } catch {
+      /* ignore quota */
+    }
+  }, [colorMode]);
 
   const addColor = useCallback(
     (hex?: string) => dispatch({ type: "addColor", hex }),
@@ -187,6 +215,10 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     (list: string) => dispatch({ type: "setNameList", list }),
     [],
   );
+  const setColorMode = useCallback(
+    (mode: ColorMode) => dispatch({ type: "setColorMode", mode }),
+    [],
+  );
 
   const itf = useMemo<PaletteContextProps>(
     () => ({
@@ -196,6 +228,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       exportTemplate,
       resolvedTemplate,
       nameList,
+      colorMode,
       addColor,
       deleteColor,
       updateColor,
@@ -206,6 +239,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportTemplate,
       setExportVisible,
       setNameList,
+      setColorMode,
     }),
     [
       palette,
@@ -214,6 +248,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       exportTemplate,
       resolvedTemplate,
       nameList,
+      colorMode,
       addColor,
       deleteColor,
       updateColor,
@@ -224,6 +259,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportTemplate,
       setExportVisible,
       setNameList,
+      setColorMode,
     ],
   );
 

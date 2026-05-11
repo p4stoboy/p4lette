@@ -150,4 +150,27 @@ describe("paletteReducer", () => {
     });
     expect(result).toBe(state);
   });
+
+  it("default colorMode is hex", () => {
+    const state = createPaletteState({ exportTemplate: "t", initialCount: 0 });
+    expect(state.colorMode).toBe("hex");
+  });
+
+  it("setColorMode updates the mode", () => {
+    const state = baseState();
+    const result = paletteReducer(state, {
+      type: "setColorMode",
+      mode: "oklch",
+    });
+    expect(result.colorMode).toBe("oklch");
+  });
+
+  it("setColorMode is a no-op when the mode is unchanged", () => {
+    const state = baseState({ colorMode: "rgb" });
+    const result = paletteReducer(state, {
+      type: "setColorMode",
+      mode: "rgb",
+    });
+    expect(result).toBe(state);
+  });
 });

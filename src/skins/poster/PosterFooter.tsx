@@ -3,6 +3,7 @@ import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
 import { POSTER } from "./tokens";
 import { PosterNamingPicker } from "./PosterNamingPicker";
+import { PosterModePicker } from "./PosterModePicker";
 
 interface Props {
   palette: Palette;
@@ -62,7 +63,7 @@ export const PosterFooter = ({ palette, ink, bg }: Props) => {
         </span>
       </Stat>
       <Stat ink={ink} label="MODE">
-        HSL · 6 DIGIT HEX
+        <PosterModePicker ink={ink} bg={bg} />
       </Stat>
       <Stat ink={ink} label="NAMING">
         <PosterNamingPicker ink={ink} bg={bg} />

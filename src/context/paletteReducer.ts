@@ -1,4 +1,5 @@
 import { ColorCardProps } from "../types/ColorCardProps";
+import { ColorMode } from "../types/Colors";
 import { Palette } from "../types/Palette";
 import { randomHex } from "../functions/color_converters";
 import { DEFAULT_NAME_LIST } from "../functions/get_color_card_props";
@@ -10,6 +11,7 @@ export type PaletteState = {
   exportVisible: boolean;
   exportTemplate: string;
   nameList: string;
+  colorMode: ColorMode;
 };
 
 export type PaletteAction =
@@ -23,7 +25,8 @@ export type PaletteAction =
   | { type: "setNames"; names: string[] }
   | { type: "setExportTemplate"; template: string }
   | { type: "setExportVisible"; visible: boolean }
-  | { type: "setNameList"; list: string };
+  | { type: "setNameList"; list: string }
+  | { type: "setColorMode"; mode: ColorMode };
 
 const NAME_PLACEHOLDER = "...";
 
@@ -63,6 +66,7 @@ export interface CreatePaletteOptions {
   exportTemplate: string;
   hash?: string | null;
   nameList?: string;
+  colorMode?: ColorMode;
 }
 
 export const createPaletteState = ({
@@ -70,6 +74,7 @@ export const createPaletteState = ({
   exportTemplate,
   hash,
   nameList = DEFAULT_NAME_LIST,
+  colorMode = "hex",
 }: CreatePaletteOptions): PaletteState => {
   const decoded = decodePalette(hash ?? null);
   const seed =
@@ -80,6 +85,7 @@ export const createPaletteState = ({
     exportVisible: false,
     exportTemplate,
     nameList,
+    colorMode,
   };
 };
 
@@ -173,5 +179,8 @@ export const paletteReducer = (
         nameList: action.list,
         names: state.palette.map(() => NAME_PLACEHOLDER),
       };
+    case "setColorMode":
+      if (action.mode === state.colorMode) return state;
+      return { ...state, colorMode: action.mode };
   }
 };
