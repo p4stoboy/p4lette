@@ -164,6 +164,27 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
             </a>
             . The naming layer of this tool exists because theirs does.
           </AboutBlock>
+          <AboutBlock ink={ink} title="SEE ALSO">
+            More from @meodai in the same neighbourhood:{" "}
+            <a
+              href="https://pickypalette.color.pizza/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              pickypalette
+            </a>{" "}
+            (interactive palette picker) and{" "}
+            <a
+              href="https://palettarium.color.pizza/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              palettarium
+            </a>{" "}
+            (a curated palette gallery).
+          </AboutBlock>
         </div>
       </div>
     </div>
