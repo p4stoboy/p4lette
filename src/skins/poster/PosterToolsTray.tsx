@@ -1,7 +1,14 @@
 import { ReactNode, useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
-import { HarmonyKind, harmony, harmonyRyb } from "../../functions/harmony";
+import {
+  HARMONY_STYLES,
+  HarmonyKind,
+  PaletteStyle,
+  RYB_CUBES,
+  harmony,
+  harmonyRyb,
+} from "../../functions/harmony";
 import { TONE_METHODS, tones } from "../../functions/tones";
 import { POSTER } from "./tokens";
 
@@ -14,7 +21,7 @@ interface Props {
   onApply: (hexes: string[]) => void;
 }
 
-type Wheel = "oklch" | "ryb";
+type HarmonySpace = "oklch" | "ryb";
 
 const HARMONIES: ReadonlyArray<readonly [string, HarmonyKind]> = [
   ["ANALOGOUS", "analogous"],
@@ -163,7 +170,23 @@ const rowsStyle = (isMobile: boolean) => ({
 
 const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#ff3d00");
-  const [wheel, setWheel] = useState<Wheel>("oklch");
+  const [space, setSpace] = useState<HarmonySpace>("oklch");
+  const [style, setStyle] = useState<PaletteStyle>("default");
+  const [cube, setCube] = useState("itten");
+  const variants =
+    space === "oklch"
+      ? HARMONY_STYLES.map((s) => ({
+          key: s,
+          label: s,
+          active: style === s,
+          pick: () => setStyle(s),
+        }))
+      : RYB_CUBES.map((c) => ({
+          key: c.key,
+          label: c.label,
+          active: cube === c.key,
+          pick: () => setCube(c.key),
+        }));
   return (
     <div style={sectionStyle(ink, isMobile, true)}>
       <div style={subHeaderStyle(ink)}>HARMONY</div>
@@ -175,32 +198,48 @@ const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         value={base}
         onChange={setBase}
       >
-        <div
-          style={{ display: "flex", marginTop: 12, border: `2px solid ${ink}` }}
-        >
-          <Toggle
-            ink={ink}
-            active={wheel === "oklch"}
-            tall={isMobile}
-            divide
-            onClick={() => setWheel("oklch")}
-          >
-            OKLCH
-          </Toggle>
-          <Toggle
-            ink={ink}
-            active={wheel === "ryb"}
-            tall={isMobile}
-            onClick={() => setWheel("ryb")}
-          >
-            RYB · ITTEN
-          </Toggle>
+        <div style={{ marginTop: 12, border: `2px solid ${ink}` }}>
+          <div style={{ display: "flex" }}>
+            <Toggle
+              ink={ink}
+              active={space === "oklch"}
+              tall={isMobile}
+              divide
+              onClick={() => setSpace("oklch")}
+            >
+              OKLCH
+            </Toggle>
+            <Toggle
+              ink={ink}
+              active={space === "ryb"}
+              tall={isMobile}
+              onClick={() => setSpace("ryb")}
+            >
+              RYB
+            </Toggle>
+          </div>
+          <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
+            {variants.map((v, i) => (
+              <Toggle
+                key={v.key}
+                ink={ink}
+                active={v.active}
+                tall={isMobile}
+                divide={i < variants.length - 1}
+                onClick={v.pick}
+              >
+                {v.label}
+              </Toggle>
+            ))}
+          </div>
         </div>
       </BasePicker>
       <div style={rowsStyle(isMobile)}>
         {HARMONIES.map(([label, kind]) => {
           const colors =
-            wheel === "ryb" ? harmonyRyb(base, kind) : harmony(base, kind);
+            space === "ryb"
+              ? harmonyRyb(base, kind, cube)
+              : harmony(base, kind, style);
           return (
             <SwatchRow
               key={kind}
@@ -440,6 +479,9 @@ const Toggle = ({
         fontSize: 10,
         letterSpacing: "0.12em",
         textTransform: "uppercase",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         border: "none",
         borderRight: divide ? `2px solid ${ink}` : "none",
         background: active ? ink : "transparent",
