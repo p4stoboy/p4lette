@@ -17,9 +17,11 @@ interface MenuProps {
   onHarmony: () => void;
   onTones: () => void;
   onExport: () => void;
+  onTemplates: () => void;
   onAbout: () => void;
   onNaming: () => void;
   onToggleTicker: () => void;
+  templateCount: number;
 }
 
 export const PosterMobileMenu = ({
@@ -38,9 +40,11 @@ export const PosterMobileMenu = ({
   onHarmony,
   onTones,
   onExport,
+  onTemplates,
   onAbout,
   onNaming,
   onToggleTicker,
+  templateCount,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -134,6 +138,9 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
+        </Row>
+        <Row ink={ink} onClick={fire(onTemplates)}>
+          TEMPLATES [{templateCount}]
         </Row>
         <Row ink={ink} onClick={fire(onNaming)}>
           NAMES · {nameList}

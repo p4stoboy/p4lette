@@ -11,6 +11,7 @@ interface Props {
   copyLabel: string;
   onCopy: () => void;
   onReset: () => void;
+  onSaveTemplate: () => void;
   onClose: () => void;
 }
 
@@ -24,6 +25,7 @@ export const PosterExportSheet = ({
   copyLabel,
   onCopy,
   onReset,
+  onSaveTemplate,
   onClose,
 }: Props) => (
   <div
@@ -81,6 +83,9 @@ export const PosterExportSheet = ({
         )}
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <SmallBtn ink={ink} tall={isMobile} onClick={onSaveTemplate}>
+          ♥ SAVE
+        </SmallBtn>
         <SmallBtn ink={ink} tall={isMobile} onClick={onReset}>
           RESET
         </SmallBtn>
