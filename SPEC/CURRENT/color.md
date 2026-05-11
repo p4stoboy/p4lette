@@ -1,6 +1,6 @@
 # SPEC · color — pure color & data functions
 
-`src/functions/*` (excluding `*.test.ts`). No React, no JSX — pure functions plus three thin I/O shims (the two `color.pizza` clients and the localStorage stores). Color libraries used: `culori`, `pro-color-harmonies`, `rybitten`, `dittotones`, `rampensau`.
+`src/functions/*` (excluding `*.test.ts`). No React, no JSX — pure functions plus three thin I/O shims (the two `color.pizza` clients and the localStorage stores). Color libraries used: `culori`, `pro-color-harmonies`, `rybitten`, `dittotones`, `rampensau`, `fettepalette`.
 
 ## Verbal outline
 
@@ -30,15 +30,16 @@
 - **`harmonyRyb(hex, kind, cubeKey = "itten"): string[]`** — RYB/pigment-wheel path. `monochrome`/`shades` delegate to `harmony`. Else: `deltas = RYB_DELTAS[kind]`; `parsed = oklch(hex)`; either missing → fill with `hex`. `cube = cubes.get(cubeKey)?.cube` (unknown key → `undefined` → Itten default); `seedHue = hexToHsl(hex).h`; `deltas.map(d => toHex({ l: parsed.l, c: parsed.c ?? 0, h: rybHueRotate(seedHue, d, cube) ?? parsed.h }))`.
 - Consumed by `PosterToolsTray` (`HarmonyBody`: `harmony`, `harmonyRyb`, `HarmonyKind`, `PaletteStyle`, `HARMONY_STYLES`, `RYB_CUBES`).
 
-### `tones.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`, `parse`) + **`dittotones`** (`DittoTones`); reads `tones_tailwind_data.ts`
+### `tones.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`, `parse`) + **`dittotones`** (`DittoTones`) + **`fettepalette`** (`generateRandomColorRamp`); reads `tones_tailwind_data.ts`
 
-- `STEPS = 11`. `ToneMethod = "ditto"|"oklch"|"hsv"`. `interface ToneMethodInfo { id: ToneMethod; label: string; caption: string }`. `TONE_METHODS: readonly ToneMethodInfo[]` in row order: `ditto` ("DITTOTONES" / "perceptual scale blended from Tailwind v4 reference ramps"), `oklch` ("OKLCH RAMP" / "perceptually-even lightness; hue held, chroma bowed to the mids"), `hsv` ("HSV CURVE" / "value curve through the HSV model — brighter, richer mids").
+- `STEPS = 11`. `ToneMethod = "ditto"|"oklch"|"hsv"`. `interface ToneMethodInfo { id: ToneMethod; label: string; caption: string }`. `TONE_METHODS: readonly ToneMethodInfo[]` in row order: `ditto` ("DITTOTONES" / "perceptual scale blended from Tailwind v4 reference ramps"), `oklch` ("OKLCH RAMP" / "perceptually-even lightness; hue held, chroma bowed to the mids"), `hsv` ("HSV CURVE" / "curve through the HSV model via fettepalette — brighter mids").
 - Private `toHexOklch(l,c,h)` → `formatHex(clampChroma({mode:"oklch",l,c,h},"oklch")) ?? "#000000"`. Module-level: `buildRamps()` → `Map<familyName, Record<step,{l,c,h}>>` by `culori`'s `oklch(parse(cssStr))` over every entry in `tailwindColors`; `dt = new DittoTones({ ramps: buildRamps() as any, gamutMap: true })`.
 - Three scalers (`(hex) → string[]`, length 11, lightest→darkest):
   - `dittoScale(hex)` — `Object.entries(dt.generate(hex).scale)` sorted by numeric Tailwind shade key (`50…950`), mapped through `toHexOklch`.
   - `oklchScale(hex)` — `oklch(hex)`; null → `Array(11).fill(hex)`. Even lightness `L ∈ [0.97, 0.13]`, hue held, chroma `baseC * (0.2 + 0.8*sin(πt))` (bell — full at the centre, 0.2× at the ends), via `toHexOklch`.
-  - `hsvScale(hex)` — `{h,s} = hexToHsv(hex)`; value `V ∈ [98, 14]` via `smoothstep(t) = t*t*(3-2t)`; saturation `clamp(s*(0.25 + 0.75*t), 0, 100)` (rises light→dark); `hsvToHex`.
-- `SCALERS: Record<ToneMethod, fn>`; **`tones(hex: string, method: ToneMethod): string[]` = `SCALERS[method](hex)`**. Consumed by `PosterTonesDrawer` (`tones`, `TONE_METHODS`).
+  - `fetteHsvScale(hex)` — `{h} = hexToHsv(hex)` → `generateRandomColorRamp({ total:5, centerHue:h, hueCycle:0, curveMethod:"lamé", curveAccent:0.2, offsetTint/Shade:0.05, tintShadeHueShift:0, minSaturationLight:[0.3,0.06], maxSaturationLight:[1,0.96], colorModel:"hsv" })`; takes `.all`'s value channel (clamped to `[0,1]`), sorts desc, resamples to 11, **stretches** the value range to `[0.99, 0.1]`; saturation bowed `100*(0.25 + 0.75*sin(πt))`; `hsvToHex`; finally re-sorts the 11 hexes by `oklch(.).l` desc to guarantee monotonic light→dark. (fettepalette supplies the curve shape; the range stretch makes the ramp always span; hue is held — `hueCycle:0`.)
+- `dittoMatch(hex) → { shade: string; method: "exact"|"single"|"blend" }` — `dt.generate(hex)`; `shade` = `${dominant source ramp}-${matchedShade}` (e.g. `"amber-700"`; dominant = highest-weight `sources` entry), `method` straight from the result. Caption-only helper.
+- `SCALERS: Record<ToneMethod, fn>`; **`tones(hex: string, method: ToneMethod): string[]` = `SCALERS[method](hex)`**. Consumed by `PosterToolsTray` (`TonesBody`: `tones`, `TONE_METHODS`, `dittoMatch`).
 
 ### `tones_tailwind_data.ts` — pure data
 
@@ -159,18 +160,23 @@
     "consumers": ["PosterToolsTray (HarmonyBody)"]
   },
   "tones.ts": {
-    "lib": ["culori", "dittotones"],
+    "lib": ["culori", "dittotones", "fettepalette"],
     "STEPS": 11,
     "ToneMethod": ["ditto", "oklch", "hsv"],
-    "TONE_METHODS": "ordered [{ditto,DITTOTONES,…},{oklch,OKLCH RAMP,…},{hsv,HSV CURVE,…}]",
+    "TONE_METHODS": "ordered [{ditto,DITTOTONES,…},{oklch,OKLCH RAMP,…},{hsv,HSV CURVE via fettepalette,…}]",
     "scalers": {
       "ditto": "dt.generate(hex).scale sorted 50→950 → toHexOklch",
       "oklch": "L 0.97→0.13 even, hue held, chroma baseC*(0.2+0.8sin(πt))",
-      "hsv": "V 98→14 via smoothstep, sat s*(0.25+0.75t) clamped"
+      "hsv": "fettepalette generateRandomColorRamp (hueCycle:0, colorModel:hsv) → value channel resampled to 11, range stretched 0.99→0.1, sat bowed 0.25+0.75sin(πt); re-sorted by oklch L desc"
     },
-    "exports": ["tones(hex,method)→string[]", "TONE_METHODS", "ToneMethod"],
+    "exports": [
+      "tones(hex,method)→string[]",
+      "dittoMatch(hex)→{shade:'<ramp>-<step>',method:'exact'|'single'|'blend'}",
+      "TONE_METHODS",
+      "ToneMethod"
+    ],
     "reads": "tones_tailwind_data.ts",
-    "consumers": ["PosterTonesDrawer"]
+    "consumers": ["PosterToolsTray (TonesBody)"]
   },
   "tones_tailwind_data.ts": {
     "lib": "none",
@@ -287,7 +293,7 @@ flowchart LR
     cc["color_converters.ts"]
     gp["generate_palette.ts → rampensau"]
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes"]
-    tn["tones.ts → culori · dittotones"]
+    tn["tones.ts → culori · dittotones · fettepalette"]
     td["tones_tailwind_data.ts"]
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
@@ -308,7 +314,7 @@ flowchart LR
   gcn --> pctx
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
-  tn --> tld["PosterTonesDrawer — spa.md"]
+  tn --> tld["PosterToolsTray TonesBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
   sp --> skin
