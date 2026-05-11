@@ -15,6 +15,7 @@ interface MenuProps {
   onSave: () => void;
   onSaved: () => void;
   onHarmony: () => void;
+  onTones: () => void;
   onExport: () => void;
   onAbout: () => void;
   onNaming: () => void;
@@ -35,6 +36,7 @@ export const PosterMobileMenu = ({
   onSave,
   onSaved,
   onHarmony,
+  onTones,
   onExport,
   onAbout,
   onNaming,
@@ -126,6 +128,9 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onHarmony)}>
           HARMONY
+        </Row>
+        <Row ink={ink} onClick={fire(onTones)}>
+          TONES
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT

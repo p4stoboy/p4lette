@@ -22,6 +22,7 @@ import { PosterWelcome } from "./PosterWelcome";
 import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
+import { PosterTonesDrawer } from "./PosterTonesDrawer";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
@@ -80,6 +81,7 @@ export const PosterSkin = () => {
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
+  const [showTones, setShowTones] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -146,6 +148,7 @@ export const PosterSkin = () => {
     else if (showNaming) setShowNaming(false);
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
+    else if (showTones) setShowTones(false);
     else if (showSaved) setShowSaved(false);
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
@@ -155,6 +158,7 @@ export const PosterSkin = () => {
     showNaming,
     showExport,
     showHarmony,
+    showTones,
     showSaved,
     showAbout,
     editingId,
@@ -227,6 +231,7 @@ export const PosterSkin = () => {
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
         onHarmony={() => setShowHarmony(true)}
+        onTones={() => setShowTones(true)}
         onExport={() => setShowExport(true)}
         onSave={handleSavePalette}
         onRandomize={randomizeUnlocked}
@@ -383,6 +388,19 @@ export const PosterSkin = () => {
           }}
         />
       )}
+      {showTones && (
+        <PosterTonesDrawer
+          ink={ink}
+          bg={bg}
+          isMobile={isMobile}
+          palette={palette}
+          onClose={() => setShowTones(false)}
+          onApply={(hexes) => {
+            replaceAll(hexes);
+            setShowTones(false);
+          }}
+        />
+      )}
       {showExport && (
         <PosterExportSheet
           ink={ink}
@@ -412,6 +430,7 @@ export const PosterSkin = () => {
           onSave={handleSavePalette}
           onSaved={() => setShowSaved(true)}
           onHarmony={() => setShowHarmony(true)}
+          onTones={() => setShowTones(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
