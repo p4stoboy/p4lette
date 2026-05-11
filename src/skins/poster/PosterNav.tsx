@@ -15,7 +15,6 @@ interface NavProps {
   onRandomize: () => void;
   onAdd: () => void;
   onMenu: () => void;
-  onSwapSkin: () => void;
   savedCount: number;
 }
 
@@ -32,7 +31,6 @@ export const PosterNav = ({
   onRandomize,
   onAdd,
   onMenu,
-  onSwapSkin,
   savedCount,
 }: NavProps) => {
   if (compact) {
@@ -131,9 +129,6 @@ export const PosterNav = ({
       </NavBtn>
       <NavBtn ink={ink} onClick={onTheme}>
         {isDark ? "☀" : "☾"} {isDark ? "LIGHT" : "DARK"}
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onSwapSkin}>
-        ▷ TERMINAL
       </NavBtn>
     </div>
   );

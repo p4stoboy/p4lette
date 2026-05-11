@@ -45,11 +45,7 @@ const markWelcomeSeen = () => {
   }
 };
 
-interface SkinProps {
-  onSwapSkin: () => void;
-}
-
-export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
+export const PosterSkin = () => {
   const {
     palette,
     names,
@@ -211,7 +207,6 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
-        onSwapSkin={onSwapSkin}
         savedCount={savedList.length}
       />
 
@@ -391,7 +386,6 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
-          onSwapSkin={onSwapSkin}
         />
       )}
       {showNaming && (

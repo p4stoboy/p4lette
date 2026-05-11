@@ -17,7 +17,6 @@ interface MenuProps {
   onExport: () => void;
   onAbout: () => void;
   onNaming: () => void;
-  onSwapSkin: () => void;
 }
 
 export const PosterMobileMenu = ({
@@ -36,7 +35,6 @@ export const PosterMobileMenu = ({
   onExport,
   onAbout,
   onNaming,
-  onSwapSkin,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -136,9 +134,6 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onTheme)}>
           {isDark ? "LIGHT MODE" : "DARK MODE"}
-        </Row>
-        <Row ink={ink} onClick={fire(onSwapSkin)}>
-          ▷ TERMINAL SKIN
         </Row>
       </div>
     </div>
