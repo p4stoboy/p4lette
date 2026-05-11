@@ -1,6 +1,11 @@
 import { ReactNode, useState } from "react";
 import { POSTER } from "./tokens";
 
+// Fixed widths so each nav cluster reads as a uniform block: the three
+// left-side toggles share LEFT_W, the right-side actions share RIGHT_W.
+const LEFT_W = 124;
+const RIGHT_W = 172;
+
 interface NavProps {
   ink: string;
   bg: string;
@@ -95,42 +100,42 @@ export const PosterNav = ({
       <div
         style={{
           fontFamily: POSTER.display,
-          fontSize: 56,
+          fontSize: 40,
           lineHeight: 1,
           letterSpacing: "-0.02em",
-          padding: "14px 24px",
+          padding: "9px 24px",
           borderRight: `${POSTER.borderW}px solid ${ink}`,
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 6,
         }}
       >
         P4<span style={{ color: POSTER.accent }}>★</span>LETTE
       </div>
-      <NavBtn ink={ink} onClick={onAdd} bold>
-        ＋ ADD
+      <NavBtn ink={ink} onClick={onTheme} width={LEFT_W}>
+        {isDark ? "☀" : "☾"} {isDark ? "LIGHT" : "DARK"}
       </NavBtn>
-      <NavBtn ink={ink} onClick={onRandomize}>
-        SHUFFLE
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onSaved}>
-        SAVE / LOAD [{savedCount}]
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onTools}>
-        TOOLS
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onExport}>
-        EXPORT
-      </NavBtn>
-      <div style={{ flex: 1 }} />
-      <NavBtn ink={ink} onClick={onToggleTicker}>
-        {tickerVisible ? "▼" : "▶"} TICKER
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onAbout}>
+      <NavBtn ink={ink} onClick={onAbout} width={LEFT_W}>
         ABOUT
       </NavBtn>
-      <NavBtn ink={ink} onClick={onTheme}>
-        {isDark ? "☀" : "☾"} {isDark ? "LIGHT" : "DARK"}
+      <NavBtn ink={ink} onClick={onToggleTicker} width={LEFT_W}>
+        {tickerVisible ? "▼" : "▶"} TICKER
+      </NavBtn>
+      <div style={{ flex: 1, minWidth: 40 }} />
+      <NavBtn ink={ink} onClick={onAdd} bold large borderLeft width={RIGHT_W}>
+        ＋ ADD COLOR
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onRandomize} width={RIGHT_W}>
+        SHUFFLE
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onTools} width={RIGHT_W}>
+        TOOLS
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onSaved} width={RIGHT_W}>
+        SAVE / LOAD [{savedCount}]
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onExport} width={RIGHT_W}>
+        EXPORT
       </NavBtn>
     </div>
   );
@@ -141,11 +146,23 @@ interface NavBtnProps {
   onClick: () => void;
   children: ReactNode;
   bold?: boolean;
+  large?: boolean;
+  borderLeft?: boolean;
+  width?: number;
 }
 
-const NavBtn = ({ ink, onClick, children, bold }: NavBtnProps) => {
+const NavBtn = ({
+  ink,
+  onClick,
+  children,
+  bold,
+  large,
+  borderLeft,
+  width,
+}: NavBtnProps) => {
   const [hov, setHov] = useState(false);
   const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
+  const edge = `${POSTER.borderW}px solid ${ink}`;
   return (
     <button
       onClick={onClick}
@@ -154,12 +171,18 @@ const NavBtn = ({ ink, onClick, children, bold }: NavBtnProps) => {
       style={{
         fontFamily: POSTER.body,
         fontWeight: bold ? 700 : 600,
-        fontSize: 13,
+        fontSize: large ? 16 : 13,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         padding: "0 18px",
+        width,
+        boxSizing: "border-box",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         border: "none",
-        borderRight: `${POSTER.borderW}px solid ${ink}`,
+        borderRight: edge,
+        borderLeft: borderLeft ? edge : "none",
         background: hov ? ink : "transparent",
         color: hov ? invert : ink,
         cursor: "pointer",
