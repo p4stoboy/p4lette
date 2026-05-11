@@ -13,8 +13,7 @@ interface MenuProps {
   onAdd: () => void;
   onRandomize: () => void;
   onSaved: () => void;
-  onHarmony: () => void;
-  onTones: () => void;
+  onTools: () => void;
   onExport: () => void;
   onAbout: () => void;
   onNaming: () => void;
@@ -33,8 +32,7 @@ export const PosterMobileMenu = ({
   onAdd,
   onRandomize,
   onSaved,
-  onHarmony,
-  onTones,
+  onTools,
   onExport,
   onAbout,
   onNaming,
@@ -121,11 +119,8 @@ export const PosterMobileMenu = ({
         <Row ink={ink} onClick={fire(onSaved)}>
           SAVE / LOAD [{savedCount}]
         </Row>
-        <Row ink={ink} onClick={fire(onHarmony)}>
-          HARMONY
-        </Row>
-        <Row ink={ink} onClick={fire(onTones)}>
-          TONES
+        <Row ink={ink} onClick={fire(onTools)}>
+          TOOLS
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
