@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Backdrop, SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
-import { HarmonyKind, harmony } from "../../functions/harmony";
+import { HarmonyKind, harmony, harmonyRyb } from "../../functions/harmony";
+
+type Wheel = "oklch" | "ryb";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -33,6 +35,7 @@ export const PosterHarmonyDrawer = ({
 }: Props) => {
   const baseHex = palette[0]?.hex ?? "#ff3d00";
   const [base, setBase] = useState(baseHex);
+  const [wheel, setWheel] = useState<Wheel>("oklch");
 
   return (
     <Backdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
@@ -145,11 +148,37 @@ export const PosterHarmonyDrawer = ({
               />
             ))}
           </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 12,
+              border: `2px solid ${ink}`,
+            }}
+          >
+            <WheelTab
+              ink={ink}
+              active={wheel === "oklch"}
+              tall={isMobile}
+              divide
+              onClick={() => setWheel("oklch")}
+            >
+              OKLCH
+            </WheelTab>
+            <WheelTab
+              ink={ink}
+              active={wheel === "ryb"}
+              tall={isMobile}
+              onClick={() => setWheel("ryb")}
+            >
+              RYB · ITTEN
+            </WheelTab>
+          </div>
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
           {HARMONIES.map(([label, kind]) => {
-            const colors = harmony(base, kind);
+            const colors =
+              wheel === "ryb" ? harmonyRyb(base, kind) : harmony(base, kind);
             return (
               <div
                 key={kind}
@@ -178,7 +207,11 @@ export const PosterHarmonyDrawer = ({
                   >
                     {label}
                   </div>
-                  <SmallBtn ink={ink} tall={isMobile} onClick={() => onApply(colors)}>
+                  <SmallBtn
+                    ink={ink}
+                    tall={isMobile}
+                    onClick={() => onApply(colors)}
+                  >
                     USE
                   </SmallBtn>
                 </div>
@@ -188,5 +221,48 @@ export const PosterHarmonyDrawer = ({
         </div>
       </div>
     </Backdrop>
+  );
+};
+
+interface WheelTabProps {
+  ink: string;
+  active: boolean;
+  tall: boolean;
+  divide?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}
+
+const WheelTab = ({
+  ink,
+  active,
+  tall,
+  divide,
+  onClick,
+  children,
+}: WheelTabProps) => {
+  const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1,
+        padding: tall ? "12px 14px" : "8px 12px",
+        minHeight: tall ? 44 : undefined,
+        fontFamily: POSTER.body,
+        fontWeight: 700,
+        fontSize: 10,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        border: "none",
+        borderRight: divide ? `2px solid ${ink}` : "none",
+        background: active ? ink : "transparent",
+        color: active ? invert : ink,
+        cursor: "pointer",
+        touchAction: "manipulation",
+      }}
+    >
+      {children}
+    </button>
   );
 };

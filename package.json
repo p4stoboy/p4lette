@@ -6,7 +6,8 @@
     "culori": "^4.0.2",
     "pro-color-harmonies": "^0.8.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "rybitten": "^1.0.0"
   },
   "scripts": {
     "dev": "vite",
