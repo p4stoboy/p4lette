@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
 import { HarmonyKind, harmony, harmonyRyb } from "../../functions/harmony";
-import { TONE_METHODS, tones } from "../../functions/tones";
+import { TONE_METHODS, dittoMatch, tones } from "../../functions/tones";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -229,6 +229,7 @@ const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
 
 const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#ff3d00");
+  const match = dittoMatch(base);
   return (
     <div style={sectionStyle(ink, isMobile, false)}>
       <div style={subHeaderStyle(ink)}>TONES</div>
@@ -243,6 +244,10 @@ const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
       <div style={rowsStyle(isMobile)}>
         {TONE_METHODS.map((m) => {
           const scale = tones(base, m.id);
+          const caption =
+            m.id === "ditto"
+              ? `${m.caption} · matched ${match.shade} (${match.method})`
+              : m.caption;
           return (
             <SwatchRow
               key={m.id}
@@ -271,7 +276,7 @@ const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
                     marginTop: 2,
                   }}
                 >
-                  {m.caption}
+                  {caption}
                 </div>
               </div>
             </SwatchRow>
