@@ -26,6 +26,7 @@ import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
+const TICKER_KEY = "p4lette_ticker_v1";
 
 const readSeenWelcome = (): boolean => {
   if (typeof localStorage === "undefined") return true;
@@ -42,6 +43,15 @@ const markWelcomeSeen = () => {
     localStorage.setItem(WELCOME_KEY, "1");
   } catch {
     /* ignore */
+  }
+};
+
+const readTickerVisible = (): boolean => {
+  if (typeof localStorage === "undefined") return true;
+  try {
+    return localStorage.getItem(TICKER_KEY) !== "0";
+  } catch {
+    return true;
   }
 };
 
@@ -76,6 +86,20 @@ export const PosterSkin = () => {
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
   const [copyLabel, setCopyLabel] = useState("COPY!");
+  const [tickerVisible, setTickerVisible] = useState(readTickerVisible);
+
+  const toggleTicker = useCallback(() => {
+    setTickerVisible((v) => {
+      const next = !v;
+      try {
+        if (typeof localStorage !== "undefined")
+          localStorage.setItem(TICKER_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const isDark = theme === "dark";
   const bg = isDark ? POSTER.bgDark : POSTER.bg;
@@ -198,6 +222,7 @@ export const PosterSkin = () => {
         bg={bg}
         isDark={isDark}
         compact={isMobile}
+        tickerVisible={tickerVisible}
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
@@ -207,10 +232,13 @@ export const PosterSkin = () => {
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
+        onToggleTicker={toggleTicker}
         savedCount={savedList.length}
       />
 
-      {!isMobile && <PosterTicker ink={ink} palette={palette} />}
+      {!isMobile && tickerVisible && (
+        <PosterTicker ink={ink} palette={palette} nameList={nameList} />
+      )}
 
       {isMobile ? (
         <div
@@ -376,6 +404,7 @@ export const PosterSkin = () => {
           isDark={isDark}
           savedCount={savedList.length}
           nameList={nameList}
+          tickerVisible={tickerVisible}
           onClose={() => setShowMenu(false)}
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
@@ -386,6 +415,7 @@ export const PosterSkin = () => {
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
+          onToggleTicker={toggleTicker}
         />
       )}
       {showNaming && (
