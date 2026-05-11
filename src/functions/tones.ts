@@ -1,5 +1,6 @@
 import { clampChroma, formatHex, oklch, parse } from "culori";
 import { DittoTones } from "dittotones";
+import { generateRandomColorRamp } from "fettepalette";
 import { clamp, hexToHsv, hsvToHex } from "./color_converters";
 import { tailwindColors } from "./tones_tailwind_data";
 
@@ -27,7 +28,7 @@ export const TONE_METHODS: readonly ToneMethodInfo[] = [
   {
     id: "hsv",
     label: "HSV CURVE",
-    caption: "value curve through the HSV model — brighter, richer mids",
+    caption: "curve through the HSV model via fettepalette — brighter mids",
   },
 ];
 
@@ -68,6 +69,19 @@ const dittoScale = (hex: string): string[] => {
   return entries.map(([, c]) => toHexOklch(c.l, c.c, c.h ?? 0));
 };
 
+export interface DittoMatch {
+  /** the dominant reference ramp + shade dittoTones matched, e.g. "amber-700" */
+  shade: string;
+  method: "exact" | "single" | "blend";
+}
+
+export const dittoMatch = (hex: string): DittoMatch => {
+  const r = dt.generate(hex);
+  const dominant = [...r.sources].sort((a, b) => b.weight - a.weight)[0];
+  const ramp = dominant?.name ?? "neutral";
+  return { shade: `${ramp}-${r.matchedShade}`, method: r.method };
+};
+
 // --- plain perceptual OKLCH ramp: even lightness, hue held, chroma bowed ---
 const oklchScale = (hex: string): string[] => {
   const parsed = oklch(hex);
@@ -84,25 +98,58 @@ const oklchScale = (hex: string): string[] => {
   });
 };
 
-// --- HSV value curve: smoothstep on value, saturation ramped light → dark ---
-const smoothstep = (t: number): number => t * t * (3 - 2 * t);
-
-const hsvScale = (hex: string): string[] => {
-  const { h, s } = hexToHsv(hex); // s in 0..100
-  const Vmax = 98;
-  const Vmin = 14;
-  return Array.from({ length: STEPS }, (_, i) => {
-    const t = i / (STEPS - 1);
-    const v = Vmax - smoothstep(t) * (Vmax - Vmin);
-    const sat = clamp(s * (0.25 + 0.75 * t), 0, 100);
-    return hsvToHex({ h, s: sat, v });
+// --- HSV-curve ramp via fettepalette: the lib's curve shape (hue held), value
+//     range stretched so the scale always spans light → dark, chroma bowed ---
+const fetteHsvScale = (hex: string): string[] => {
+  const { h: seedH } = hexToHsv(hex);
+  const ramp = generateRandomColorRamp({
+    total: 5,
+    centerHue: seedH,
+    hueCycle: 0, // single hue — keep it a tone scale, not a rainbow
+    curveMethod: "lamé",
+    curveAccent: 0.2,
+    offsetTint: 0.05,
+    offsetShade: 0.05,
+    tintShadeHueShift: 0,
+    offsetCurveModTint: 0,
+    offsetCurveModShade: 0,
+    minSaturationLight: [0.3, 0.06],
+    maxSaturationLight: [1, 0.96],
+    colorModel: "hsv",
   });
+  // each entry is [h, s, v]; fettepalette's offsets can push v slightly out of
+  // [0,1] — clamp, then sort lightest → darkest by value.
+  const vs = ramp.all.map(([, , v]) => clamp(v, 0, 1)).sort((a, b) => b - a);
+  const sampleV = (t: number): number => {
+    const p = t * (vs.length - 1);
+    const lo = Math.floor(p);
+    const hi = Math.min(lo + 1, vs.length - 1);
+    return vs[lo] + (vs[hi] - vs[lo]) * (p - lo);
+  };
+  const raw = Array.from({ length: STEPS }, (_, i) => sampleV(i / (STEPS - 1)));
+  const vMin = Math.min(...raw);
+  const vMax = Math.max(...raw);
+  const span = vMax - vMin || 1;
+  const VHI = 0.99;
+  const VLO = 0.1;
+  const out = raw.map((v, i) => {
+    const t = i / (STEPS - 1);
+    const value = VLO + ((v - vMin) / span) * (VHI - VLO);
+    const bell = Math.sin(Math.PI * t); // chroma bows to the mids
+    return hsvToHex({
+      h: seedH,
+      s: 100 * (0.25 + 0.75 * bell),
+      v: 100 * value,
+    });
+  });
+  // guarantee a monotonic light → dark OKLCH ramp regardless of the curve
+  return out.sort((a, b) => (oklch(b)?.l ?? 0) - (oklch(a)?.l ?? 0));
 };
 
 const SCALERS: Record<ToneMethod, (hex: string) => string[]> = {
   ditto: dittoScale,
   oklch: oklchScale,
-  hsv: hsvScale,
+  hsv: fetteHsvScale,
 };
 
 export const tones = (hex: string, method: ToneMethod): string[] =>
