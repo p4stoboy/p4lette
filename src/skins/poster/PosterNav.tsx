@@ -11,6 +11,7 @@ interface NavProps {
   onAbout: () => void;
   onSaved: () => void;
   onHarmony: () => void;
+  onTones: () => void;
   onExport: () => void;
   onSave: () => void;
   onRandomize: () => void;
@@ -29,6 +30,7 @@ export const PosterNav = ({
   onAbout,
   onSaved,
   onHarmony,
+  onTones,
   onExport,
   onSave,
   onRandomize,
@@ -123,6 +125,9 @@ export const PosterNav = ({
       </NavBtn>
       <NavBtn ink={ink} onClick={onHarmony}>
         HARMONY
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onTones}>
+        TONES
       </NavBtn>
       <NavBtn ink={ink} onClick={onExport}>
         EXPORT
