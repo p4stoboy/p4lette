@@ -78,6 +78,41 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
           name, and export. No accounts. No newsletters. No &quot;premium
           tier.&quot;
         </p>
+        <a
+          href="https://github.com/p4stoboy/p4lette"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 22,
+            padding: "12px 18px",
+            border: `${POSTER.borderW}px solid ${ink}`,
+            background: ink,
+            color: bg,
+            fontFamily: POSTER.body,
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            textDecoration: "none",
+            boxShadow: `4px 4px 0 ${POSTER.accent}`,
+          }}
+        >
+          → View source on GitHub
+        </a>
+        <div
+          style={{
+            marginTop: 6,
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            opacity: 0.6,
+          }}
+        >
+          made by p4stoboy · pull requests welcome
+        </div>
         <div
           style={{
             marginTop: 24,
@@ -91,22 +126,43 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
             the unlocked ones. Save what you love to the vault. Export as code,
             JSON, CSS — whatever your project needs.
           </AboutBlock>
-          <AboutBlock ink={ink} title="UNDER THE HOOD">
-            React + Vite. Color names from <em>color.pizza</em>. State persists
-            to URL and localStorage. Open source on GitHub.
-          </AboutBlock>
           <AboutBlock ink={ink} title="WHY">
-            Because the existing palette tools all want your email. This one
-            just wants you to make something.
+            Export templates are the point. Write{" "}
+            <code style={{ fontFamily: POSTER.mono, fontSize: 12 }}>
+              $1.hex$
+            </code>{" "}
+            for the first hex,{" "}
+            <code style={{ fontFamily: POSTER.mono, fontSize: 12 }}>
+              $[all].name$
+            </code>{" "}
+            for every color name, and the template resolves at copy time. Most
+            palette tools lock you into their export shapes; this one lets you
+            shape it.
           </AboutBlock>
-          <AboutBlock ink={ink} title="MADE BY">
+          <AboutBlock ink={ink} title="UNDER THE HOOD">
+            React + Vite. State persists to URL hash and localStorage so any
+            palette is a shareable link. Open source on GitHub.
+          </AboutBlock>
+          <AboutBlock ink={ink} title="BUILT WITH">
+            Color names and lists from{" "}
             <a
-              href="https://github.com/p4stoboy/p4lette"
+              href="https://color.pizza/"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ color: ink, textDecoration: "underline" }}
             >
-              p4stoboy
+              color.pizza
+            </a>{" "}
+            by{" "}
+            <a
+              href="https://github.com/meodai"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              @meodai
             </a>
-            . Pull requests welcome.
+            . The naming layer of this tool exists because theirs does.
           </AboutBlock>
         </div>
       </div>
