@@ -100,14 +100,14 @@ export const PosterNav = ({
       <div
         style={{
           fontFamily: POSTER.display,
-          fontSize: 56,
+          fontSize: 40,
           lineHeight: 1,
           letterSpacing: "-0.02em",
-          padding: "14px 24px",
+          padding: "9px 24px",
           borderRight: `${POSTER.borderW}px solid ${ink}`,
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 6,
         }}
       >
         P4<span style={{ color: POSTER.accent }}>★</span>LETTE
@@ -122,7 +122,7 @@ export const PosterNav = ({
         {tickerVisible ? "▼" : "▶"} TICKER
       </NavBtn>
       <div style={{ flex: 1 }} />
-      <NavBtn ink={ink} onClick={onAdd} bold width={RIGHT_W}>
+      <NavBtn ink={ink} onClick={onAdd} bold large borderLeft width={RIGHT_W}>
         ＋ ADD
       </NavBtn>
       <NavBtn ink={ink} onClick={onRandomize} width={RIGHT_W}>
@@ -146,10 +146,20 @@ interface NavBtnProps {
   onClick: () => void;
   children: ReactNode;
   bold?: boolean;
+  large?: boolean;
+  borderLeft?: boolean;
   width?: number;
 }
 
-const NavBtn = ({ ink, onClick, children, bold, width }: NavBtnProps) => {
+const NavBtn = ({
+  ink,
+  onClick,
+  children,
+  bold,
+  large,
+  borderLeft,
+  width,
+}: NavBtnProps) => {
   const [hov, setHov] = useState(false);
   const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
   return (
@@ -160,7 +170,7 @@ const NavBtn = ({ ink, onClick, children, bold, width }: NavBtnProps) => {
       style={{
         fontFamily: POSTER.body,
         fontWeight: bold ? 700 : 600,
-        fontSize: 13,
+        fontSize: large ? 18 : 13,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         padding: "0 18px",
@@ -171,6 +181,7 @@ const NavBtn = ({ ink, onClick, children, bold, width }: NavBtnProps) => {
         textOverflow: "ellipsis",
         border: "none",
         borderRight: `${POSTER.borderW}px solid ${ink}`,
+        borderLeft: borderLeft ? `${POSTER.borderW}px solid ${ink}` : undefined,
         background: hov ? ink : "transparent",
         color: hov ? invert : ink,
         cursor: "pointer",
