@@ -30,8 +30,7 @@ import { PosterFooter } from "./PosterFooter";
 import { PosterWelcome } from "./PosterWelcome";
 import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
-import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
-import { PosterTonesDrawer } from "./PosterTonesDrawer";
+import { PosterToolsTray } from "./PosterToolsTray";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
@@ -89,8 +88,7 @@ export const PosterSkin = () => {
   const [showWelcome, setShowWelcome] = useState(() => !readSeenWelcome());
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [showHarmony, setShowHarmony] = useState(false);
-  const [showTones, setShowTones] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -196,8 +194,7 @@ export const PosterSkin = () => {
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
     else if (showExport) setShowExport(false);
-    else if (showHarmony) setShowHarmony(false);
-    else if (showTones) setShowTones(false);
+    else if (showTools) setShowTools(false);
     else if (showSaved) setShowSaved(false);
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
@@ -206,8 +203,7 @@ export const PosterSkin = () => {
     showMenu,
     showNaming,
     showExport,
-    showHarmony,
-    showTones,
+    showTools,
     showSaved,
     showAbout,
     editingId,
@@ -223,7 +219,7 @@ export const PosterSkin = () => {
     onShuffle: randomizeUnlocked,
     onLock: handleLockShortcut,
     onExport: () => setShowExport((v) => !v),
-    onHarmony: () => setShowHarmony((v) => !v),
+    onHarmony: () => setShowTools((v) => !v),
     onAbout: () => setShowAbout((v) => !v),
     onEsc: closeAllOverlays,
   });
@@ -279,8 +275,7 @@ export const PosterSkin = () => {
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
-        onHarmony={() => setShowHarmony(true)}
-        onTones={() => setShowTones(true)}
+        onTools={() => setShowTools(true)}
         onExport={() => setShowExport(true)}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
@@ -424,29 +419,16 @@ export const PosterSkin = () => {
           onDelete={removeSaved}
         />
       )}
-      {showHarmony && (
-        <PosterHarmonyDrawer
+      {showTools && (
+        <PosterToolsTray
           ink={ink}
           bg={bg}
           isMobile={isMobile}
           palette={palette}
-          onClose={() => setShowHarmony(false)}
+          onClose={() => setShowTools(false)}
           onApply={(hexes) => {
             replaceAll(hexes);
-            setShowHarmony(false);
-          }}
-        />
-      )}
-      {showTones && (
-        <PosterTonesDrawer
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          palette={palette}
-          onClose={() => setShowTones(false)}
-          onApply={(hexes) => {
-            replaceAll(hexes);
-            setShowTones(false);
+            setShowTools(false);
           }}
         />
       )}
@@ -481,8 +463,7 @@ export const PosterSkin = () => {
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
           onSaved={() => setShowSaved(true)}
-          onHarmony={() => setShowHarmony(true)}
-          onTones={() => setShowTones(true)}
+          onTools={() => setShowTools(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
