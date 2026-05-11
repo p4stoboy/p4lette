@@ -30,7 +30,6 @@ import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
 import { PosterTonesDrawer } from "./PosterTonesDrawer";
-import { PosterTemplatesDrawer } from "./PosterTemplatesDrawer";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
@@ -90,7 +89,6 @@ export const PosterSkin = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
   const [showTones, setShowTones] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -191,7 +189,6 @@ export const PosterSkin = () => {
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showTones) setShowTones(false);
-    else if (showTemplates) setShowTemplates(false);
     else if (showSaved) setShowSaved(false);
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
@@ -202,7 +199,6 @@ export const PosterSkin = () => {
     showExport,
     showHarmony,
     showTones,
-    showTemplates,
     showSaved,
     showAbout,
     editingId,
@@ -277,14 +273,11 @@ export const PosterSkin = () => {
         onHarmony={() => setShowHarmony(true)}
         onTones={() => setShowTones(true)}
         onExport={() => setShowExport(true)}
-        onTemplates={() => setShowTemplates(true)}
-        onSave={handleSavePalette}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
         onToggleTicker={toggleTicker}
         savedCount={savedList.length}
-        templateCount={templateList.length}
       />
 
       {!isMobile && tickerVisible && (
@@ -414,6 +407,7 @@ export const PosterSkin = () => {
           isMobile={isMobile}
           list={savedList}
           onClose={() => setShowSaved(false)}
+          onSave={handleSavePalette}
           onLoad={(hexes) => {
             replaceAll(hexes);
             setShowSaved(false);
@@ -456,25 +450,13 @@ export const PosterSkin = () => {
           setTpl={setExportTemplate}
           resolved={resolvedTemplate}
           copyLabel={copyLabel}
+          templates={templateList}
           onCopy={onCopy}
           onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
           onSaveTemplate={handleSaveTemplate}
+          onLoadTemplate={(body) => setExportTemplate(body)}
+          onDeleteTemplate={removeTemplate}
           onClose={() => setShowExport(false)}
-        />
-      )}
-      {showTemplates && (
-        <PosterTemplatesDrawer
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          list={templateList}
-          onClose={() => setShowTemplates(false)}
-          onLoad={(body) => {
-            setExportTemplate(body);
-            setShowTemplates(false);
-            setShowExport(true);
-          }}
-          onDelete={removeTemplate}
         />
       )}
       {showMenu && (
@@ -489,16 +471,13 @@ export const PosterSkin = () => {
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
-          onSave={handleSavePalette}
           onSaved={() => setShowSaved(true)}
           onHarmony={() => setShowHarmony(true)}
           onTones={() => setShowTones(true)}
           onExport={() => setShowExport(true)}
-          onTemplates={() => setShowTemplates(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
           onToggleTicker={toggleTicker}
-          templateCount={templateList.length}
         />
       )}
       {showNaming && (

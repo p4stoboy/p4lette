@@ -8,6 +8,7 @@ interface Props {
   isMobile: boolean;
   list: SavedPalette[];
   onClose: () => void;
+  onSave: () => void;
   onLoad: (hexes: string[]) => void;
   onDelete: (id: string) => void;
 }
@@ -18,6 +19,7 @@ export const PosterSavedDrawer = ({
   isMobile,
   list,
   onClose,
+  onSave,
   onLoad,
   onDelete,
 }: Props) => (
@@ -47,7 +49,9 @@ export const PosterSavedDrawer = ({
           flexShrink: 0,
         }}
       >
-        <div style={{ fontFamily: POSTER.display, fontSize: 28 }}>VAULT</div>
+        <div style={{ fontFamily: POSTER.display, fontSize: 28 }}>
+          SAVE / LOAD
+        </div>
         <button
           onClick={onClose}
           aria-label="close"
@@ -67,14 +71,21 @@ export const PosterSavedDrawer = ({
       </div>
       <div
         style={{
-          padding: "8px 22px 14px",
-          fontSize: 12,
-          opacity: 0.7,
+          padding: isMobile ? "12px 18px" : "10px 22px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
           borderBottom: `2px solid ${ink}`,
           flexShrink: 0,
         }}
       >
-        {list.length} SAVED · STORED LOCALLY
+        <span style={{ fontSize: 12, opacity: 0.7 }}>
+          {list.length} SAVED · LOCAL
+        </span>
+        <SmallBtn ink={ink} tall={isMobile} onClick={onSave}>
+          ♥ SAVE PALETTE
+        </SmallBtn>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
         {list.length === 0 && (
@@ -122,10 +133,18 @@ export const PosterSavedDrawer = ({
                 colors
               </div>
               <div style={{ display: "flex", gap: 6 }}>
-                <SmallBtn ink={ink} tall={isMobile} onClick={() => onLoad(s.hexes)}>
+                <SmallBtn
+                  ink={ink}
+                  tall={isMobile}
+                  onClick={() => onLoad(s.hexes)}
+                >
                   LOAD
                 </SmallBtn>
-                <SmallBtn ink={ink} tall={isMobile} onClick={() => onDelete(s.id)}>
+                <SmallBtn
+                  ink={ink}
+                  tall={isMobile}
+                  onClick={() => onDelete(s.id)}
+                >
                   DEL
                 </SmallBtn>
               </div>
