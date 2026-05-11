@@ -6,6 +6,13 @@ import {
   newSavedId,
   persistSaved,
 } from "../../functions/saved_palettes";
+import {
+  SAVED_TEMPLATES_LIMIT,
+  SavedTemplate,
+  loadSavedTemplates,
+  newSavedTemplateId,
+  persistSavedTemplates,
+} from "../../functions/saved_templates";
 import { DEFAULT_TEMPLATE } from "../../functions/resolve_export_template";
 import { useFitNameSize } from "../../hooks/use_fit_name_size";
 import { useGlobalShortcuts } from "../../hooks/use_global_shortcuts";
@@ -23,6 +30,7 @@ import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
 import { PosterTonesDrawer } from "./PosterTonesDrawer";
+import { PosterTemplatesDrawer } from "./PosterTemplatesDrawer";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
@@ -82,11 +90,15 @@ export const PosterSkin = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [showHarmony, setShowHarmony] = useState(false);
   const [showTones, setShowTones] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
+  const [templateList, setTemplateList] = useState<SavedTemplate[]>(() =>
+    loadSavedTemplates(),
+  );
   const [copyLabel, setCopyLabel] = useState("COPY!");
   const [tickerVisible, setTickerVisible] = useState(readTickerVisible);
 
@@ -137,6 +149,36 @@ export const PosterSkin = () => {
     [savedList],
   );
 
+  const handleSaveTemplate = useCallback(() => {
+    const stamp = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fallback = `template-${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}`;
+    const raw =
+      typeof window !== "undefined"
+        ? window.prompt("Name this template", fallback)
+        : fallback;
+    if (raw === null) return;
+    const name = raw.trim() || fallback;
+    const entry: SavedTemplate = {
+      id: newSavedTemplateId(),
+      name,
+      body: exportTemplate,
+      createdAt: Date.now(),
+    };
+    const next = [entry, ...templateList].slice(0, SAVED_TEMPLATES_LIMIT);
+    setTemplateList(next);
+    persistSavedTemplates(next);
+  }, [exportTemplate, templateList]);
+
+  const removeTemplate = useCallback(
+    (id: string) => {
+      const next = templateList.filter((t) => t.id !== id);
+      setTemplateList(next);
+      persistSavedTemplates(next);
+    },
+    [templateList],
+  );
+
   const dismissWelcome = useCallback(() => {
     setShowWelcome(false);
     markWelcomeSeen();
@@ -149,6 +191,7 @@ export const PosterSkin = () => {
     else if (showExport) setShowExport(false);
     else if (showHarmony) setShowHarmony(false);
     else if (showTones) setShowTones(false);
+    else if (showTemplates) setShowTemplates(false);
     else if (showSaved) setShowSaved(false);
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
@@ -159,6 +202,7 @@ export const PosterSkin = () => {
     showExport,
     showHarmony,
     showTones,
+    showTemplates,
     showSaved,
     showAbout,
     editingId,
@@ -233,12 +277,14 @@ export const PosterSkin = () => {
         onHarmony={() => setShowHarmony(true)}
         onTones={() => setShowTones(true)}
         onExport={() => setShowExport(true)}
+        onTemplates={() => setShowTemplates(true)}
         onSave={handleSavePalette}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
         onToggleTicker={toggleTicker}
         savedCount={savedList.length}
+        templateCount={templateList.length}
       />
 
       {!isMobile && tickerVisible && (
@@ -412,7 +458,23 @@ export const PosterSkin = () => {
           copyLabel={copyLabel}
           onCopy={onCopy}
           onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
+          onSaveTemplate={handleSaveTemplate}
           onClose={() => setShowExport(false)}
+        />
+      )}
+      {showTemplates && (
+        <PosterTemplatesDrawer
+          ink={ink}
+          bg={bg}
+          isMobile={isMobile}
+          list={templateList}
+          onClose={() => setShowTemplates(false)}
+          onLoad={(body) => {
+            setExportTemplate(body);
+            setShowTemplates(false);
+            setShowExport(true);
+          }}
+          onDelete={removeTemplate}
         />
       )}
       {showMenu && (
@@ -432,9 +494,11 @@ export const PosterSkin = () => {
           onHarmony={() => setShowHarmony(true)}
           onTones={() => setShowTones(true)}
           onExport={() => setShowExport(true)}
+          onTemplates={() => setShowTemplates(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
           onToggleTicker={toggleTicker}
+          templateCount={templateList.length}
         />
       )}
       {showNaming && (

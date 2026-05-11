@@ -13,12 +13,14 @@ interface NavProps {
   onHarmony: () => void;
   onTones: () => void;
   onExport: () => void;
+  onTemplates: () => void;
   onSave: () => void;
   onRandomize: () => void;
   onAdd: () => void;
   onMenu: () => void;
   onToggleTicker: () => void;
   savedCount: number;
+  templateCount: number;
 }
 
 export const PosterNav = ({
@@ -32,12 +34,14 @@ export const PosterNav = ({
   onHarmony,
   onTones,
   onExport,
+  onTemplates,
   onSave,
   onRandomize,
   onAdd,
   onMenu,
   onToggleTicker,
   savedCount,
+  templateCount,
 }: NavProps) => {
   if (compact) {
     return (
@@ -131,6 +135,9 @@ export const PosterNav = ({
       </NavBtn>
       <NavBtn ink={ink} onClick={onExport}>
         EXPORT
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onTemplates}>
+        TEMPLATES [{templateCount}]
       </NavBtn>
       <div style={{ flex: 1 }} />
       <NavBtn ink={ink} onClick={onToggleTicker}>
