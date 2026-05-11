@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
 import { POSTER } from "./tokens";
@@ -69,9 +69,51 @@ export const PosterFooter = ({ palette, ink, bg }: Props) => {
       </Stat>
       <div style={{ flex: 1 }} />
       <Stat ink={ink} label="SHARE" right>
-        URL ↗
+        <ShareButton ink={ink} />
       </Stat>
     </div>
+  );
+};
+
+const ShareButton = ({ ink }: { ink: string }) => {
+  const [label, setLabel] = useState("URL ↗");
+  const handleClick = async () => {
+    const url = window.location.href;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ url, title: "P4LETTE" });
+      } catch {
+        /* user dismissed or share unavailable — share sheet is sufficient UI */
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLabel("COPIED ✓");
+    } catch {
+      setLabel("FAILED");
+    }
+    window.setTimeout(() => setLabel("URL ↗"), 1500);
+  };
+  return (
+    <button
+      onClick={handleClick}
+      aria-label="share palette URL"
+      style={{
+        background: "transparent",
+        border: "none",
+        color: ink,
+        font: "inherit",
+        letterSpacing: "inherit",
+        textTransform: "inherit",
+        padding: 0,
+        cursor: "pointer",
+        textDecoration: "underline",
+        textUnderlineOffset: 2,
+      }}
+    >
+      {label}
+    </button>
   );
 };
 
