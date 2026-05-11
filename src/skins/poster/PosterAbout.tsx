@@ -140,8 +140,9 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
             shape it.
           </AboutBlock>
           <AboutBlock ink={ink} title="UNDER THE HOOD">
-            React + Vite. State persists to URL hash and localStorage so any
-            palette is a shareable link. Open source on GitHub.
+            React + Vite, with an OKLCH-first color engine (see below). State
+            persists to URL hash and localStorage, so any palette is a shareable
+            link. Open source on GitHub.
           </AboutBlock>
           <AboutBlock ink={ink} title="BUILT WITH">
             Color names and lists from{" "}
@@ -163,6 +164,54 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
               @meodai
             </a>
             . The naming layer of this tool exists because theirs does.
+          </AboutBlock>
+          <AboutBlock ink={ink} title="COLOR ENGINE">
+            HARMONY, TONES and SHUFFLE run on small libraries:{" "}
+            <a
+              href="https://github.com/Evercoder/culori"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              culori
+            </a>{" "}
+            for the OKLCH math,{" "}
+            <a
+              href="https://github.com/meodai/pro-color-harmonies"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              pro-color-harmonies
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://meodai.github.io/RYBitten/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              rybitten
+            </a>{" "}
+            (the painter&apos;s wheel) for harmony,{" "}
+            <a
+              href="https://www.npmjs.com/package/dittotones"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              dittotones
+            </a>{" "}
+            for tones, and{" "}
+            <a
+              href="https://github.com/meodai/rampensau"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: ink, textDecoration: "underline" }}
+            >
+              rampensau
+            </a>{" "}
+            for coherent shuffle — most of them @meodai&apos;s too.
           </AboutBlock>
           <AboutBlock ink={ink} title="SEE ALSO">
             More from @meodai in the same neighbourhood:{" "}
