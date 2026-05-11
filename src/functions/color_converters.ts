@@ -1,7 +1,9 @@
+import { formatHex, okhsl } from "culori";
 import {
   ColorMode,
   HSLColor,
   HSVColor,
+  OkhslColor,
   OKLCHColor,
   RGBColor,
 } from "../types/Colors";
@@ -202,6 +204,19 @@ export const hexToOklch = (hex: string): OKLCHColor =>
   rgbToOklch(hexToRgb(hex));
 export const oklchToHex = (oklch: OKLCHColor): string =>
   rgbToHex(oklchToRgb(oklch));
+
+// Okhsl — perceptually-even hue/sat/lum. Hand-rolling the gamut-aware S
+// normalisation is a footgun, so this pair leans on culori. `h` is 0 for
+// achromatic colours (culori leaves it undefined there). s/l are 0–1.
+export const hexToOkhsl = (hex: string): OkhslColor => {
+  const o = okhsl(hex);
+  return o
+    ? { h: o.h ?? 0, s: clamp(o.s, 0, 1), l: clamp(o.l, 0, 1) }
+    : { h: 0, s: 0, l: 0 };
+};
+export const okhslToHex = ({ h, s, l }: OkhslColor): string =>
+  formatHex({ mode: "okhsl", h, s: clamp(s, 0, 1), l: clamp(l, 0, 1) }) ??
+  "#000000";
 
 export const formatColor = (hex: string, mode: ColorMode): string => {
   switch (mode) {
