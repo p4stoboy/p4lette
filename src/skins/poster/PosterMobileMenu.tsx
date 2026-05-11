@@ -7,6 +7,7 @@ interface MenuProps {
   isDark: boolean;
   savedCount: number;
   nameList: string;
+  tickerVisible: boolean;
   onClose: () => void;
   onTheme: () => void;
   onAdd: () => void;
@@ -17,6 +18,7 @@ interface MenuProps {
   onExport: () => void;
   onAbout: () => void;
   onNaming: () => void;
+  onToggleTicker: () => void;
 }
 
 export const PosterMobileMenu = ({
@@ -25,6 +27,7 @@ export const PosterMobileMenu = ({
   isDark,
   savedCount,
   nameList,
+  tickerVisible,
   onClose,
   onTheme,
   onAdd,
@@ -35,6 +38,7 @@ export const PosterMobileMenu = ({
   onExport,
   onAbout,
   onNaming,
+  onToggleTicker,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -131,6 +135,9 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onAbout)}>
           ABOUT
+        </Row>
+        <Row ink={ink} onClick={fire(onToggleTicker)}>
+          {tickerVisible ? "▼" : "▶"} TICKER
         </Row>
         <Row ink={ink} onClick={fire(onTheme)}>
           {isDark ? "LIGHT MODE" : "DARK MODE"}

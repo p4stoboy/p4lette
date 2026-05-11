@@ -6,6 +6,7 @@ interface NavProps {
   bg: string;
   isDark: boolean;
   compact: boolean;
+  tickerVisible: boolean;
   onTheme: () => void;
   onAbout: () => void;
   onSaved: () => void;
@@ -15,6 +16,7 @@ interface NavProps {
   onRandomize: () => void;
   onAdd: () => void;
   onMenu: () => void;
+  onToggleTicker: () => void;
   savedCount: number;
 }
 
@@ -22,6 +24,7 @@ export const PosterNav = ({
   ink,
   isDark,
   compact,
+  tickerVisible,
   onTheme,
   onAbout,
   onSaved,
@@ -31,6 +34,7 @@ export const PosterNav = ({
   onRandomize,
   onAdd,
   onMenu,
+  onToggleTicker,
   savedCount,
 }: NavProps) => {
   if (compact) {
@@ -124,6 +128,9 @@ export const PosterNav = ({
         EXPORT
       </NavBtn>
       <div style={{ flex: 1 }} />
+      <NavBtn ink={ink} onClick={onToggleTicker}>
+        {tickerVisible ? "▼" : "▶"} TICKER
+      </NavBtn>
       <NavBtn ink={ink} onClick={onAbout}>
         ABOUT
       </NavBtn>
