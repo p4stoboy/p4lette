@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { oklch } from "culori";
-import { HarmonyKind, harmony } from "./harmony";
+import { HarmonyKind, harmony, harmonyRyb } from "./harmony";
+import { hexToHsl } from "./color_converters";
 
 const expectations: Record<HarmonyKind, number> = {
   complementary: 2,
@@ -75,5 +76,35 @@ describe("harmony", () => {
     const ls = colors.map((c) => oklch(c)!.l);
     const sorted = [...ls].sort((a, b) => a - b);
     expect(ls).toEqual(sorted);
+  });
+});
+
+describe("harmonyRyb", () => {
+  it.each(Object.entries(expectations) as Array<[HarmonyKind, number]>)(
+    "%s returns %i valid hex strings",
+    (kind, count) => {
+      const result = harmonyRyb(BASE, kind);
+      expect(result).toHaveLength(count);
+      for (const h of result) {
+        expect(h).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    },
+  );
+
+  it("complementary of red lands in the green family (Itten)", () => {
+    const [, comp] = harmonyRyb("#ff0000", "complementary");
+    const { h } = hexToHsl(comp);
+    // Itten complement of red sits between green (120°) and cyan (180°);
+    // crucially not red-orange (0–60°) and not magenta (300°+).
+    expect(h).toBeGreaterThan(90);
+    expect(h).toBeLessThan(200);
+  });
+
+  it("triadic of red includes blue-ish and yellow-ish on Itten wheel", () => {
+    const [, two, three] = harmonyRyb("#ff0000", "triadic");
+    // Itten triadic of red: yellow (~60°) and blue (~240°)
+    const hues = [two, three].map((h) => hexToHsl(h).h).sort((a, b) => a - b);
+    expect(hues[0]).toBeLessThan(120);
+    expect(hues[1]).toBeGreaterThan(180);
   });
 });

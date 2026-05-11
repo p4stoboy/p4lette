@@ -1,5 +1,7 @@
 import { clampChroma, formatHex, oklch } from "culori";
 import { ColorPaletteGenerator } from "pro-color-harmonies";
+import { rybHsl2rgb } from "rybitten";
+import { clamp, hexToHsl, rgbToHex } from "./color_converters";
 
 export type HarmonyKind =
   | "complementary"
@@ -99,4 +101,34 @@ export const harmony = (hex: string, kind: HarmonyKind): string[] => {
     COUNTS[kind],
   );
   return picked.map(toHex);
+};
+
+const RYB_DELTAS: Partial<Record<HarmonyKind, readonly number[]>> = {
+  complementary: [0, 180],
+  analogous: [-30, 0, 30],
+  triadic: [0, 120, 240],
+  tetradic: [0, 90, 180, 270],
+  split: [0, 150, 210],
+};
+
+const rybRotate = (h: number, s: number, l: number, delta: number): string => {
+  const newH = (((h + delta) % 360) + 360) % 360;
+  const [r, g, b] = rybHsl2rgb([newH, s, l]);
+  return rgbToHex({
+    r: clamp(r * 255, 0, 255),
+    g: clamp(g * 255, 0, 255),
+    b: clamp(b * 255, 0, 255),
+  });
+};
+
+export const harmonyRyb = (hex: string, kind: HarmonyKind): string[] => {
+  if (kind === "monochrome" || kind === "shades") {
+    return harmony(hex, kind);
+  }
+  const deltas = RYB_DELTAS[kind];
+  if (!deltas) return Array(COUNTS[kind]).fill(hex);
+  const { h, s, l } = hexToHsl(hex);
+  const sNorm = clamp(s, 0, 100) / 100;
+  const lNorm = clamp(l, 0, 100) / 100;
+  return deltas.map((d) => rybRotate(h, sNorm, lNorm, d));
 };
