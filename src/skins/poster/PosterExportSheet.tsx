@@ -20,11 +20,6 @@ interface Props {
   onClose: () => void;
 }
 
-const previewOf = (body: string): string => {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return flat.length > 80 ? flat.slice(0, 80) + "…" : flat;
-};
-
 const formatDate = (ms: number): string => new Date(ms).toLocaleDateString();
 
 const labelRow = (ink: string) => ({
@@ -53,7 +48,7 @@ export const PosterExportSheet = ({
   onDeleteTemplate,
   onClose,
 }: Props) => {
-  const [showSaved, setShowSaved] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
 
   return (
     <div
@@ -110,9 +105,23 @@ export const PosterExportSheet = ({
             </span>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            position: "relative",
+          }}
+        >
           <SmallBtn ink={ink} tall={isMobile} onClick={onSaveTemplate}>
             ♥ SAVE
+          </SmallBtn>
+          <SmallBtn
+            ink={ink}
+            tall={isMobile}
+            onClick={() => setLoadOpen((v) => !v)}
+          >
+            LOAD ▾
           </SmallBtn>
           <SmallBtn ink={ink} tall={isMobile} onClick={onReset}>
             RESET
@@ -151,128 +160,121 @@ export const PosterExportSheet = ({
           >
             ×
           </button>
-        </div>
-      </div>
 
-      <button
-        onClick={() => setShowSaved((v) => !v)}
-        style={{
-          border: "none",
-          ...labelRow(ink),
-          width: "100%",
-          textAlign: "left",
-          textTransform: "uppercase",
-          background: "transparent",
-          color: ink,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          touchAction: "manipulation",
-        }}
-      >
-        {showSaved ? "▼" : "▶"} SAVED TEMPLATES [{templates.length}]
-      </button>
-
-      {showSaved && (
-        <div
-          style={{
-            maxHeight: isMobile ? "40vh" : 220,
-            overflowY: "auto",
-            borderBottom: `2px solid ${ink}`,
-            flexShrink: 0,
-            padding: "12px 16px",
-          }}
-        >
-          {templates.length === 0 ? (
+          {loadOpen && (
             <div
+              role="menu"
               style={{
-                fontFamily: POSTER.display,
-                fontSize: 22,
-                letterSpacing: "-0.01em",
-                opacity: 0.4,
-                padding: "10px 4px",
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                zIndex: 5,
+                width: isMobile ? "min(280px, 86vw)" : 300,
+                maxHeight: "min(52vh, 320px)",
+                overflowY: "auto",
+                background: bg,
+                color: ink,
+                border: `${POSTER.borderW}px solid ${ink}`,
+                boxShadow: `0 8px 0 ${POSTER.accent}`,
               }}
             >
-              NO SAVED TEMPLATES YET.
-            </div>
-          ) : (
-            templates.map((t) => (
               <div
-                key={t.id}
-                style={{ marginBottom: 10, border: `2px solid ${ink}` }}
+                style={{
+                  ...labelRow(ink),
+                  textTransform: "uppercase",
+                }}
               >
+                SAVED TEMPLATES [{templates.length}]
+              </div>
+              {templates.length === 0 ? (
                 <div
                   style={{
-                    padding: "10px 12px",
-                    borderBottom: `2px solid ${ink}`,
-                    fontFamily: POSTER.mono,
-                    fontSize: 12,
-                    lineHeight: 1.45,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    opacity: 0.85,
+                    fontFamily: POSTER.display,
+                    fontSize: 22,
+                    letterSpacing: "-0.01em",
+                    opacity: 0.4,
+                    padding: "16px 14px",
                   }}
                 >
-                  {previewOf(t.body)}
+                  NOTHING SAVED.
                 </div>
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div
-                      style={{
-                        fontFamily: POSTER.display,
-                        fontSize: 15,
-                        letterSpacing: "0.02em",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {t.name}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: POSTER.mono,
-                        fontSize: 11,
-                        opacity: 0.6,
-                      }}
-                    >
-                      {formatDate(t.createdAt)}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                    <SmallBtn
-                      ink={ink}
-                      tall={isMobile}
+              ) : (
+                templates.map((t, i) => (
+                  <div
+                    key={t.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "stretch",
+                      borderBottom:
+                        i === templates.length - 1
+                          ? "none"
+                          : `1px solid ${ink}`,
+                    }}
+                  >
+                    <button
                       onClick={() => {
                         onLoadTemplate(t.body);
-                        setShowSaved(false);
+                        setLoadOpen(false);
+                      }}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        textAlign: "left",
+                        padding: "10px 12px",
+                        border: "none",
+                        background: "transparent",
+                        color: ink,
+                        cursor: "pointer",
+                        touchAction: "manipulation",
                       }}
                     >
-                      LOAD
-                    </SmallBtn>
-                    <SmallBtn
-                      ink={ink}
-                      tall={isMobile}
+                      <div
+                        style={{
+                          fontFamily: POSTER.display,
+                          fontSize: 15,
+                          letterSpacing: "0.02em",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {t.name}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: POSTER.mono,
+                          fontSize: 11,
+                          opacity: 0.6,
+                        }}
+                      >
+                        {formatDate(t.createdAt)}
+                      </div>
+                    </button>
+                    <button
                       onClick={() => onDeleteTemplate(t.id)}
+                      aria-label={`delete ${t.name}`}
+                      style={{
+                        flexShrink: 0,
+                        width: isMobile ? 44 : 34,
+                        border: "none",
+                        borderLeft: `1px solid ${ink}`,
+                        background: "transparent",
+                        color: ink,
+                        fontSize: 16,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        touchAction: "manipulation",
+                      }}
                     >
-                      DEL
-                    </SmallBtn>
+                      ×
+                    </button>
                   </div>
-                </div>
-              </div>
-            ))
+                ))
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       <div
         style={{

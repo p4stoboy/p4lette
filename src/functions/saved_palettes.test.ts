@@ -3,6 +3,7 @@ import {
   SAVED_KEY,
   SAVED_LIMIT,
   SavedPalette,
+  defaultPaletteName,
   loadSaved,
   newSavedId,
   persistSaved,
@@ -10,6 +11,7 @@ import {
 
 const sample = (id: string): SavedPalette => ({
   id,
+  name: `palette ${id}`,
   hexes: ["#ff0000", "#00ff00"],
   createdAt: 1700000000000,
 });
@@ -27,7 +29,7 @@ describe("saved_palettes", () => {
     expect(loadSaved()).toEqual([]);
   });
 
-  it("persistSaved + loadSaved round-trips entries", () => {
+  it("persistSaved + loadSaved round-trips entries (name included)", () => {
     const list = [sample("a"), sample("b")];
     persistSaved(list);
     expect(loadSaved()).toEqual(list);
@@ -47,6 +49,27 @@ describe("saved_palettes", () => {
     expect(loadSaved()).toEqual([valid]);
   });
 
+  it("loadSaved backfills a name for legacy entries that lack one", () => {
+    const legacy = { id: "old", hexes: ["#abc123"], createdAt: 1700000000000 };
+    localStorage.setItem(SAVED_KEY, JSON.stringify([legacy]));
+    const [loaded] = loadSaved();
+    expect(loaded.id).toBe("old");
+    expect(loaded.hexes).toEqual(["#abc123"]);
+    expect(typeof loaded.name).toBe("string");
+    expect(loaded.name.length).toBeGreaterThan(0);
+  });
+
+  it("loadSaved replaces a blank/whitespace name with a default", () => {
+    const blank = {
+      id: "b",
+      name: "   ",
+      hexes: ["#000000"],
+      createdAt: 1700000000000,
+    };
+    localStorage.setItem(SAVED_KEY, JSON.stringify([blank]));
+    expect(loadSaved()[0].name.trim().length).toBeGreaterThan(0);
+  });
+
   it("persistSaved trims to SAVED_LIMIT entries", () => {
     const list = Array.from({ length: SAVED_LIMIT + 5 }, (_, i) =>
       sample(String(i)),
@@ -61,5 +84,11 @@ describe("saved_palettes", () => {
     expect(typeof a).toBe("string");
     expect(a.length).toBeGreaterThan(0);
     expect(a).not.toBe(b);
+  });
+
+  it("defaultPaletteName produces a palette-YYYY-MM-DD-HHmm stamp", () => {
+    expect(defaultPaletteName(1700000000000)).toMatch(
+      /^palette-\d{4}-\d{2}-\d{2}-\d{4}$/,
+    );
   });
 });

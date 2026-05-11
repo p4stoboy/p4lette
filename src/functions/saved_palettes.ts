@@ -3,11 +3,25 @@ export const SAVED_LIMIT = 20;
 
 export interface SavedPalette {
   id: string;
+  name: string;
   hexes: string[];
   createdAt: number;
 }
 
-const isValidEntry = (entry: unknown): entry is SavedPalette => {
+export const defaultPaletteName = (ms: number): string => {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `palette-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+};
+
+interface RawSavedPalette {
+  id: string;
+  hexes: string[];
+  createdAt: number;
+  name?: unknown;
+}
+
+const isValidEntry = (entry: unknown): entry is RawSavedPalette => {
   if (!entry || typeof entry !== "object") return false;
   const e = entry as Record<string, unknown>;
   return (
@@ -18,6 +32,16 @@ const isValidEntry = (entry: unknown): entry is SavedPalette => {
   );
 };
 
+const normalize = (e: RawSavedPalette): SavedPalette => ({
+  id: e.id,
+  name:
+    typeof e.name === "string" && e.name.trim() !== ""
+      ? e.name
+      : defaultPaletteName(e.createdAt),
+  hexes: e.hexes,
+  createdAt: e.createdAt,
+});
+
 export const loadSaved = (): SavedPalette[] => {
   if (typeof localStorage === "undefined") return [];
   try {
@@ -25,7 +49,7 @@ export const loadSaved = (): SavedPalette[] => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidEntry);
+    return parsed.filter(isValidEntry).map(normalize);
   } catch {
     return [];
   }
