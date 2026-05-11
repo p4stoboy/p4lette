@@ -58,4 +58,12 @@ describe("resolveTemplate", () => {
   it("filters missing ids out of array results", () => {
     expect(resolveTemplate("$[1,9].hex$", palette, names)).toBe('["#aabbcc"]');
   });
+
+  it("resolves hsv and oklch token properties", () => {
+    const result = resolveTemplate("$1$", palette, names);
+    expect(result).toContain('"hsv"');
+    expect(result).toContain('"oklch"');
+    expect(resolveTemplate("$[all].hsv$", palette, names)).toContain('{"h":');
+    expect(resolveTemplate("$[all].oklch$", palette, names)).toContain('{"l":');
+  });
 });
