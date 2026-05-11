@@ -116,7 +116,7 @@ export const PosterMobileMenu = ({
           ＋ ADD COLOR
         </Row>
         <Row ink={ink} onClick={fire(onRandomize)}>
-          ⚄ SHUFFLE UNLOCKED
+          SHUFFLE UNLOCKED
         </Row>
         <Row ink={ink} onClick={fire(onSaved)}>
           SAVE / LOAD [{savedCount}]
