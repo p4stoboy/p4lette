@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hexToHsl } from "./color_converters";
+import { oklch } from "culori";
 import { HarmonyKind, harmony } from "./harmony";
 
 const expectations: Record<HarmonyKind, number> = {
@@ -12,11 +12,16 @@ const expectations: Record<HarmonyKind, number> = {
   shades: 3,
 };
 
-const BASE = "#aa6f3c"; // saturation/lum already inside the [5,95]/[8,92] clamps
+const BASE = "#aa6f3c";
+
+const hueDelta = (a: number, b: number): number => {
+  const d = (((b - a) % 360) + 360) % 360;
+  return d > 180 ? 360 - d : d;
+};
 
 describe("harmony", () => {
   it.each(Object.entries(expectations) as Array<[HarmonyKind, number]>)(
-    "%s returns %i hexes",
+    "%s returns %i valid hex strings",
     (kind, count) => {
       const result = harmony(BASE, kind);
       expect(result).toHaveLength(count);
@@ -26,25 +31,49 @@ describe("harmony", () => {
     },
   );
 
-  it("preserves the base color when the (0,0,0) delta is in range", () => {
-    const triadic = harmony(BASE, "triadic");
-    expect(triadic[0].toLowerCase()).toBe(BASE);
-  });
-
-  it("complementary rotates hue by ~180°", () => {
+  it("complementary rotates OKLCH hue by ~180°", () => {
     const [a, b] = harmony(BASE, "complementary");
-    const ha = hexToHsl(a).h;
-    const hb = hexToHsl(b).h;
-    const normalized = (((hb - ha) % 360) + 360) % 360;
-    expect(Math.abs(normalized - 180)).toBeLessThan(2);
+    const ha = oklch(a)!.h!;
+    const hb = oklch(b)!.h!;
+    expect(hueDelta(ha, hb)).toBeGreaterThan(170);
   });
 
-  it("triadic spans three hues ~120° apart", () => {
+  it("triadic spreads OKLCH hues with every pair >100° apart", () => {
     const [a, b, c] = harmony(BASE, "triadic");
-    const hues = [a, b, c].map((h) => hexToHsl(h).h);
-    const ab = (hues[1] - hues[0] + 360) % 360;
-    const bc = (hues[2] - hues[1] + 360) % 360;
-    expect(ab).toBeCloseTo(120, 0);
-    expect(bc).toBeCloseTo(120, 0);
+    const hues = [a, b, c].map((h) => oklch(h)!.h!);
+    expect(hueDelta(hues[0], hues[1])).toBeGreaterThan(100);
+    expect(hueDelta(hues[1], hues[2])).toBeGreaterThan(100);
+    expect(hueDelta(hues[0], hues[2])).toBeGreaterThan(100);
+  });
+
+  it("tetradic spreads OKLCH hues with adjacent pairs >70° apart", () => {
+    const colors = harmony(BASE, "tetradic");
+    const hues = colors.map((h) => oklch(h)!.h!);
+    for (let i = 0; i < hues.length; i++) {
+      for (let j = i + 1; j < hues.length; j++) {
+        expect(hueDelta(hues[i], hues[j])).toBeGreaterThan(40);
+      }
+    }
+  });
+
+  it("monochrome holds hue and chroma, varies lightness monotonically", () => {
+    const colors = harmony(BASE, "monochrome");
+    const baseParsed = oklch(BASE)!;
+    const lightnesses = colors.map((c) => oklch(c)!.l);
+    for (const c of colors) {
+      const parsed = oklch(c)!;
+      if ((parsed.c ?? 0) > 0.001 && parsed.h !== undefined) {
+        expect(hueDelta(baseParsed.h!, parsed.h)).toBeLessThan(2);
+      }
+    }
+    const sorted = [...lightnesses].sort((x, y) => x - y);
+    expect(lightnesses).toEqual(sorted);
+  });
+
+  it("shades varies lightness monotonically", () => {
+    const colors = harmony(BASE, "shades");
+    const ls = colors.map((c) => oklch(c)!.l);
+    const sorted = [...ls].sort((a, b) => a - b);
+    expect(ls).toEqual(sorted);
   });
 });
