@@ -5,8 +5,10 @@ import {
   ReactNode,
   useState,
 } from "react";
+import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
 import { fontColorFor } from "../../functions/contrast";
+import { formatColor } from "../../functions/color_converters";
 import { PosterEditTray } from "./PosterEditTray";
 import { POSTER } from "./tokens";
 
@@ -47,6 +49,7 @@ export const PosterColumn = ({
   onPointerUp,
   onPointerCancel,
 }: Props) => {
+  const { colorMode } = usePalette();
   const [hov, setHov] = useState(false);
   const fontColor = fontColorFor(color.hex);
   const num = String(index + 1).padStart(2, "0");
@@ -140,7 +143,7 @@ export const PosterColumn = ({
             opacity: 0.85,
           }}
         >
-          {color.hex.toUpperCase()}
+          {formatColor(color.hex, colorMode)}
         </div>
       </div>
 

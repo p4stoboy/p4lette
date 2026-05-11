@@ -1,11 +1,20 @@
 import { DragEvent, useCallback, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import {
+  SAVED_LIMIT,
   SavedPalette,
+  defaultPaletteName,
   loadSaved,
   newSavedId,
   persistSaved,
 } from "../../functions/saved_palettes";
+import {
+  SAVED_TEMPLATES_LIMIT,
+  SavedTemplate,
+  loadSavedTemplates,
+  newSavedTemplateId,
+  persistSavedTemplates,
+} from "../../functions/saved_templates";
 import { DEFAULT_TEMPLATE } from "../../functions/resolve_export_template";
 import { useFitNameSize } from "../../hooks/use_fit_name_size";
 import { useGlobalShortcuts } from "../../hooks/use_global_shortcuts";
@@ -21,11 +30,12 @@ import { PosterFooter } from "./PosterFooter";
 import { PosterWelcome } from "./PosterWelcome";
 import { PosterAbout } from "./PosterAbout";
 import { PosterSavedDrawer } from "./PosterSavedDrawer";
-import { PosterHarmonyDrawer } from "./PosterHarmonyDrawer";
+import { PosterToolsTray } from "./PosterToolsTray";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
+const TICKER_KEY = "p4lette_ticker_v1";
 
 const readSeenWelcome = (): boolean => {
   if (typeof localStorage === "undefined") return true;
@@ -45,11 +55,16 @@ const markWelcomeSeen = () => {
   }
 };
 
-interface SkinProps {
-  onSwapSkin: () => void;
-}
+const readTickerVisible = (): boolean => {
+  if (typeof localStorage === "undefined") return true;
+  try {
+    return localStorage.getItem(TICKER_KEY) !== "0";
+  } catch {
+    return true;
+  }
+};
 
-export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
+export const PosterSkin = () => {
   const {
     palette,
     names,
@@ -73,13 +88,30 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   const [showWelcome, setShowWelcome] = useState(() => !readSeenWelcome());
   const [showExport, setShowExport] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [showHarmony, setShowHarmony] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
   const [savedList, setSavedList] = useState<SavedPalette[]>(() => loadSaved());
+  const [templateList, setTemplateList] = useState<SavedTemplate[]>(() =>
+    loadSavedTemplates(),
+  );
   const [copyLabel, setCopyLabel] = useState("COPY!");
+  const [tickerVisible, setTickerVisible] = useState(readTickerVisible);
+
+  const toggleTicker = useCallback(() => {
+    setTickerVisible((v) => {
+      const next = !v;
+      try {
+        if (typeof localStorage !== "undefined")
+          localStorage.setItem(TICKER_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const isDark = theme === "dark";
   const bg = isDark ? POSTER.bgDark : POSTER.bg;
@@ -96,12 +128,19 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
   }, [resolvedTemplate]);
 
   const handleSavePalette = useCallback(() => {
+    const fallback = defaultPaletteName(Date.now());
+    const raw =
+      typeof window !== "undefined"
+        ? window.prompt("Name this palette", fallback)
+        : fallback;
+    if (raw === null) return;
     const entry: SavedPalette = {
       id: newSavedId(),
+      name: raw.trim() || fallback,
       hexes: palette.map((c) => c.hex),
       createdAt: Date.now(),
     };
-    const next = [entry, ...savedList].slice(0, 20);
+    const next = [entry, ...savedList].slice(0, SAVED_LIMIT);
     setSavedList(next);
     persistSaved(next);
   }, [palette, savedList]);
@@ -115,6 +154,36 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
     [savedList],
   );
 
+  const handleSaveTemplate = useCallback(() => {
+    const stamp = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fallback = `template-${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}`;
+    const raw =
+      typeof window !== "undefined"
+        ? window.prompt("Name this template", fallback)
+        : fallback;
+    if (raw === null) return;
+    const name = raw.trim() || fallback;
+    const entry: SavedTemplate = {
+      id: newSavedTemplateId(),
+      name,
+      body: exportTemplate,
+      createdAt: Date.now(),
+    };
+    const next = [entry, ...templateList].slice(0, SAVED_TEMPLATES_LIMIT);
+    setTemplateList(next);
+    persistSavedTemplates(next);
+  }, [exportTemplate, templateList]);
+
+  const removeTemplate = useCallback(
+    (id: string) => {
+      const next = templateList.filter((t) => t.id !== id);
+      setTemplateList(next);
+      persistSavedTemplates(next);
+    },
+    [templateList],
+  );
+
   const dismissWelcome = useCallback(() => {
     setShowWelcome(false);
     markWelcomeSeen();
@@ -125,7 +194,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
     else if (showExport) setShowExport(false);
-    else if (showHarmony) setShowHarmony(false);
+    else if (showTools) setShowTools(false);
     else if (showSaved) setShowSaved(false);
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
@@ -134,7 +203,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
     showMenu,
     showNaming,
     showExport,
-    showHarmony,
+    showTools,
     showSaved,
     showAbout,
     editingId,
@@ -150,7 +219,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
     onShuffle: randomizeUnlocked,
     onLock: handleLockShortcut,
     onExport: () => setShowExport((v) => !v),
-    onHarmony: () => setShowHarmony((v) => !v),
+    onHarmony: () => setShowTools((v) => !v),
     onAbout: () => setShowAbout((v) => !v),
     onEsc: closeAllOverlays,
   });
@@ -202,20 +271,22 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
         bg={bg}
         isDark={isDark}
         compact={isMobile}
+        tickerVisible={tickerVisible}
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
-        onHarmony={() => setShowHarmony(true)}
+        onTools={() => setShowTools(true)}
         onExport={() => setShowExport(true)}
-        onSave={handleSavePalette}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
-        onSwapSkin={onSwapSkin}
+        onToggleTicker={toggleTicker}
         savedCount={savedList.length}
       />
 
-      {!isMobile && <PosterTicker ink={ink} palette={palette} />}
+      {!isMobile && tickerVisible && (
+        <PosterTicker ink={ink} palette={palette} nameList={nameList} />
+      )}
 
       {isMobile ? (
         <div
@@ -340,6 +411,7 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           isMobile={isMobile}
           list={savedList}
           onClose={() => setShowSaved(false)}
+          onSave={handleSavePalette}
           onLoad={(hexes) => {
             replaceAll(hexes);
             setShowSaved(false);
@@ -347,16 +419,16 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           onDelete={removeSaved}
         />
       )}
-      {showHarmony && (
-        <PosterHarmonyDrawer
+      {showTools && (
+        <PosterToolsTray
           ink={ink}
           bg={bg}
           isMobile={isMobile}
           palette={palette}
-          onClose={() => setShowHarmony(false)}
+          onClose={() => setShowTools(false)}
           onApply={(hexes) => {
             replaceAll(hexes);
-            setShowHarmony(false);
+            setShowTools(false);
           }}
         />
       )}
@@ -369,8 +441,12 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           setTpl={setExportTemplate}
           resolved={resolvedTemplate}
           copyLabel={copyLabel}
+          templates={templateList}
           onCopy={onCopy}
           onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
+          onSaveTemplate={handleSaveTemplate}
+          onLoadTemplate={(body) => setExportTemplate(body)}
+          onDeleteTemplate={removeTemplate}
           onClose={() => setShowExport(false)}
         />
       )}
@@ -381,17 +457,17 @@ export const PosterSkin = ({ onSwapSkin }: SkinProps) => {
           isDark={isDark}
           savedCount={savedList.length}
           nameList={nameList}
+          tickerVisible={tickerVisible}
           onClose={() => setShowMenu(false)}
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
-          onSave={handleSavePalette}
           onSaved={() => setShowSaved(true)}
-          onHarmony={() => setShowHarmony(true)}
+          onTools={() => setShowTools(true)}
           onExport={() => setShowExport(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
-          onSwapSkin={onSwapSkin}
+          onToggleTicker={toggleTicker}
         />
       )}
       {showNaming && (

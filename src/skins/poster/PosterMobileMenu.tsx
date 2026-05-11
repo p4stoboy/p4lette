@@ -7,17 +7,17 @@ interface MenuProps {
   isDark: boolean;
   savedCount: number;
   nameList: string;
+  tickerVisible: boolean;
   onClose: () => void;
   onTheme: () => void;
   onAdd: () => void;
   onRandomize: () => void;
-  onSave: () => void;
   onSaved: () => void;
-  onHarmony: () => void;
+  onTools: () => void;
   onExport: () => void;
   onAbout: () => void;
   onNaming: () => void;
-  onSwapSkin: () => void;
+  onToggleTicker: () => void;
 }
 
 export const PosterMobileMenu = ({
@@ -26,17 +26,17 @@ export const PosterMobileMenu = ({
   isDark,
   savedCount,
   nameList,
+  tickerVisible,
   onClose,
   onTheme,
   onAdd,
   onRandomize,
-  onSave,
   onSaved,
-  onHarmony,
+  onTools,
   onExport,
   onAbout,
   onNaming,
-  onSwapSkin,
+  onToggleTicker,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -110,35 +110,32 @@ export const PosterMobileMenu = ({
           overflowY: "auto",
         }}
       >
-        <Row ink={ink} onClick={fire(onAdd)} bold>
-          ＋ ADD COLOR
-        </Row>
-        <Row ink={ink} onClick={fire(onRandomize)}>
-          ⚄ SHUFFLE UNLOCKED
-        </Row>
-        <Row ink={ink} onClick={fire(onSave)}>
-          ♥ SAVE PALETTE
-        </Row>
-        <Row ink={ink} onClick={fire(onSaved)}>
-          VAULT [{savedCount}]
-        </Row>
-        <Row ink={ink} onClick={fire(onHarmony)}>
-          HARMONY
-        </Row>
-        <Row ink={ink} onClick={fire(onExport)}>
-          EXPORT
-        </Row>
-        <Row ink={ink} onClick={fire(onNaming)}>
-          NAMES · {nameList}
+        <Row ink={ink} onClick={fire(onTheme)}>
+          {isDark ? "LIGHT MODE" : "DARK MODE"}
         </Row>
         <Row ink={ink} onClick={fire(onAbout)}>
           ABOUT
         </Row>
-        <Row ink={ink} onClick={fire(onTheme)}>
-          {isDark ? "LIGHT MODE" : "DARK MODE"}
+        <Row ink={ink} onClick={fire(onToggleTicker)}>
+          {tickerVisible ? "▼" : "▶"} TICKER
         </Row>
-        <Row ink={ink} onClick={fire(onSwapSkin)}>
-          ▷ TERMINAL SKIN
+        <Row ink={ink} onClick={fire(onNaming)}>
+          NAMES · {nameList}
+        </Row>
+        <Row ink={ink} onClick={fire(onAdd)} bold>
+          ＋ ADD COLOR
+        </Row>
+        <Row ink={ink} onClick={fire(onRandomize)}>
+          SHUFFLE UNLOCKED
+        </Row>
+        <Row ink={ink} onClick={fire(onTools)}>
+          TOOLS
+        </Row>
+        <Row ink={ink} onClick={fire(onSaved)}>
+          SAVE / LOAD [{savedCount}]
+        </Row>
+        <Row ink={ink} onClick={fire(onExport)}>
+          EXPORT
         </Row>
       </div>
     </div>

@@ -4,20 +4,23 @@ import { POSTER } from "./tokens";
 interface Props {
   ink: string;
   palette: Palette;
+  nameList: string;
 }
 
 const COPIES = 8;
 
-export const PosterTicker = ({ ink, palette }: Props) => {
+export const PosterTicker = ({ ink, palette, nameList }: Props) => {
+  const hexStrip = palette
+    .map((c) => c.hex.replace("#", "").toUpperCase())
+    .join("  ◇  ");
+  const lockedCount = palette.filter((c) => c.locked).length;
   const items = [
-    "COLOR-PIZZA NAMING ✺",
-    `${palette.length} COLORS LIVE ✺`,
-    "DRAG TO REORDER ✺",
-    "CLICK TO EDIT ✺",
-    "LOCK TO PROTECT ✺",
-    "SHUFFLE THE REST ✺",
+    hexStrip || "EMPTY PALETTE",
+    `${palette.length} COLOR${palette.length === 1 ? "" : "S"} LIVE`,
+    `${lockedCount} LOCKED`,
+    `NAMES · ${nameList.toUpperCase()}`,
   ];
-  const row = items.join("  ◇  ") + "  ◇  ";
+  const row = items.join("  ✺  ") + "  ✺  ";
 
   return (
     <div

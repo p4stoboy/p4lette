@@ -1,6 +1,8 @@
 import { ColorCardProps } from "../types/ColorCardProps";
+import { ColorMode } from "../types/Colors";
 import { Palette } from "../types/Palette";
 import { randomHex } from "../functions/color_converters";
+import { generatePalette } from "../functions/generate_palette";
 import { DEFAULT_NAME_LIST } from "../functions/get_color_card_props";
 import { decodePalette } from "../functions/share_url";
 
@@ -10,6 +12,7 @@ export type PaletteState = {
   exportVisible: boolean;
   exportTemplate: string;
   nameList: string;
+  colorMode: ColorMode;
 };
 
 export type PaletteAction =
@@ -23,7 +26,8 @@ export type PaletteAction =
   | { type: "setNames"; names: string[] }
   | { type: "setExportTemplate"; template: string }
   | { type: "setExportVisible"; visible: boolean }
-  | { type: "setNameList"; list: string };
+  | { type: "setNameList"; list: string }
+  | { type: "setColorMode"; mode: ColorMode };
 
 const NAME_PLACEHOLDER = "...";
 
@@ -63,6 +67,7 @@ export interface CreatePaletteOptions {
   exportTemplate: string;
   hash?: string | null;
   nameList?: string;
+  colorMode?: ColorMode;
 }
 
 export const createPaletteState = ({
@@ -70,16 +75,17 @@ export const createPaletteState = ({
   exportTemplate,
   hash,
   nameList = DEFAULT_NAME_LIST,
+  colorMode = "hex",
 }: CreatePaletteOptions): PaletteState => {
   const decoded = decodePalette(hash ?? null);
-  const seed =
-    decoded ?? Array.from({ length: initialCount }, () => randomHex());
+  const seed = decoded ?? generatePalette(initialCount);
   return {
     palette: seed.map((hex, id) => makeColor(hex, id)),
     names: seed.map(() => NAME_PLACEHOLDER),
     exportVisible: false,
     exportTemplate,
     nameList,
+    colorMode,
   };
 };
 
@@ -137,10 +143,13 @@ export const paletteReducer = (
       };
     }
     case "randomizeUnlocked": {
+      // One coherent palette; unlocked slot i takes its colour at the same
+      // index, so locked slots stay put and the rest still read as a set.
+      const fresh = generatePalette(state.palette.length);
       return {
         ...state,
-        palette: state.palette.map((c) =>
-          c.locked ? c : { ...c, hex: randomHex() },
+        palette: state.palette.map((c, i) =>
+          c.locked ? c : { ...c, hex: fresh[i] ?? randomHex() },
         ),
         names: state.palette.map((c, i) =>
           c.locked ? (state.names[i] ?? NAME_PLACEHOLDER) : NAME_PLACEHOLDER,
@@ -173,5 +182,8 @@ export const paletteReducer = (
         nameList: action.list,
         names: state.palette.map(() => NAME_PLACEHOLDER),
       };
+    case "setColorMode":
+      if (action.mode === state.colorMode) return state;
+      return { ...state, colorMode: action.mode };
   }
 };
