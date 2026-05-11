@@ -7,35 +7,35 @@
 ### Tokens & shared bits
 
 - `tokens.ts` — `POSTER = { bg:"#FFF8E7", bgDark:"#0E0B08", ink:"#0E0B08", inkDark:"#FFF8E7", accent:"#FF3D00", display:'"Anton",…', body:'"Space Grotesk",…', mono:'"JetBrains Mono",…', borderW:3 } as const`. `PosterSkin` picks `ink`/`bg` from the light/dark pair per `theme`; nearly every component takes `ink`/`bg` props.
-- `Backdrop.tsx` — `Backdrop({children,onClose,align="center"|"right"|"bottom"})`: fixed `inset:0` scrim (`rgba(14,11,8,.5)`, `zIndex:100`, fade-in); clicking the scrim → `onClose` (children `stopPropagation`). `align` controls where the panel sits. `SmallBtn({ink,onClick,children,tall})`: bordered button, hover-inverts to `ink`/`POSTER.bg`; `tall` bumps size + `minHeight:44` for touch. Used by the export sheet and all three drawers.
+- `Backdrop.tsx` — `Backdrop({children,onClose,align="center"|"right"|"bottom"})`: fixed `inset:0` scrim (`rgba(14,11,8,.5)`, `zIndex:100`, fade-in); clicking the scrim → `onClose` (children `stopPropagation`). `align` controls where the panel sits. `SmallBtn({ink,onClick,children,tall})`: bordered button, hover-inverts to `ink`/`POSTER.bg`; `tall` bumps size + `minHeight:44` for touch. `Backdrop` is used by `PosterAbout` / `PosterWelcome` (center), `PosterSavedDrawer` (right/bottom), `PosterNamingSheet` (bottom); `SmallBtn` by `PosterExportSheet`, `PosterSavedDrawer`, `PosterToolsTray`. (`PosterExportSheet`, `PosterMobileMenu`, `PosterToolsTray` are `position:fixed`/`absolute` directly, not `Backdrop`-wrapped.)
 
 ### `PosterSkin.tsx` — root component
 
 - Reads from `usePalette()`: `palette, names, resolvedTemplate, addColor, deleteColor, updateColor, reorderColor, toggleLock, randomizeUnlocked, replaceAll, exportTemplate, setExportTemplate, nameList`. Reads `isMobile` from `useViewport()`.
 - **Local state** (the entire view-state surface):
   - `theme` `"light"|"dark"` (default light) → derives `isDark`, `bg`, `ink`.
-  - overlays (all booleans): `showAbout`, `showWelcome` (init `!readSeenWelcome()`), `showExport`, `showSaved`, `showHarmony`, `showTones`, `showNaming` (mobile only), `showMenu` (mobile nav).
+  - overlays (all booleans): `showAbout`, `showWelcome` (init `!readSeenWelcome()`), `showExport`, `showSaved`, `showTools`, `showNaming` (mobile only), `showMenu` (mobile nav).
   - `editingId: number|null` — which tile/column is in inline edit. `lastEditedId: number|null` — last-touched color id (for the `L` lock shortcut + re-marking on edit/update/lock).
   - `savedList: SavedPalette[]` (init `loadSaved()`), `templateList: SavedTemplate[]` (init `loadSavedTemplates()`).
   - `copyLabel` (`"COPY!"` → `"COPIED ✓"`/`"FAILED"` for 1.5 s).
   - `tickerVisible` (init `readTickerVisible()` — true unless `localStorage["p4lette_ticker_v1"] === "0"`); `toggleTicker` flips it and writes the key.
-- **`closeAllOverlays`** (`useCallback`, wired to `onEsc`) — an **ordered cascade, one layer per call**: `showWelcome`→`dismissWelcome()`; else `showMenu`→false; else `showNaming`→false; else `showExport`→false; else `showHarmony`→false; else `showTones`→false; else `showSaved`→false; else `showAbout`→false; else `editingId!==null`→`setEditingId(null)`.
-- **`useGlobalShortcuts`** wired: `onShuffle: randomizeUnlocked`, `onLock: handleLockShortcut` (toggles `lastEditedId ?? palette[0]?.id`), `onExport: ()=>setShowExport(v=>!v)`, `onHarmony: ()=>setShowHarmony(v=>!v)`, `onAbout: ()=>setShowAbout(v=>!v)`, `onEsc: closeAllOverlays`.
+- **`closeAllOverlays`** (`useCallback`, wired to `onEsc`) — an **ordered cascade, one layer per call**: `showWelcome`→`dismissWelcome()`; else `showMenu`→false; else `showNaming`→false; else `showExport`→false; else `showTools`→false; else `showSaved`→false; else `showAbout`→false; else `editingId!==null`→`setEditingId(null)`.
+- **`useGlobalShortcuts`** wired: `onShuffle: randomizeUnlocked`, `onLock: handleLockShortcut` (toggles `lastEditedId ?? palette[0]?.id`), `onExport: ()=>setShowExport(v=>!v)`, `onHarmony: ()=>setShowTools(v=>!v)` (the `h` key opens the TOOLS tray), `onAbout: ()=>setShowAbout(v=>!v)`, `onEsc: closeAllOverlays`.
 - **Helpers** (`useCallback`): `onCopy` (clipboard ← `resolvedTemplate`, cycles `copyLabel`); `handleSavePalette` (`window.prompt("Name this palette", defaultPaletteName(now))` → prepend `{id:newSavedId(),name,hexes:palette.map(c=>c.hex),createdAt}` → `slice(0,SAVED_LIMIT)` → `persistSaved`); `removeSaved(id)`; `handleSaveTemplate` (`window.prompt` → prepend `{id:newSavedTemplateId(),name,body:exportTemplate,createdAt}` → `slice(0,SAVED_TEMPLATES_LIMIT)` → `persistSavedTemplates`); `removeTemplate(id)`; `dismissWelcome` (`setShowWelcome(false)` + `markWelcomeSeen()`).
 - **Reorder**: desktop = HTML5 DnD — `dragFrom = useRef`; `onDragStart(i)`/`onDragOver(i)` (`preventDefault` + `reorderColor(dragFrom.current, i)` then update ref). Touch = `touchHandlers = useTouchDragReorder({ onReorder: reorderColor })`, spread onto every tile/column (which carry `data-column-index`).
 - **Name fit**: `paletteRef = useRef`; `nameFontSize = useFitNameSize({ names, containerRef: paletteRef, columnCount: isMobile?2:palette.length, paddingX: isMobile?16:20, maxFontSize: isMobile?28:38, minFontSize: isMobile?12:14, fontFamily: POSTER.display, fontWeight:400, letterSpacing:"-0.02em" })`.
 - **Render** (root flex column, `bg`/`ink`/`POSTER.body`, `overflow:hidden`):
-  1. `<PosterNav ink bg isDark compact={isMobile} tickerVisible onTheme onAbout onSaved onHarmony onTones onExport onRandomize onAdd onMenu onToggleTicker savedCount={savedList.length}/>`.
+  1. `<PosterNav ink bg isDark compact={isMobile} tickerVisible onTheme onAbout onSaved onTools onExport onRandomize onAdd onMenu onToggleTicker savedCount={savedList.length}/>`.
   2. `{!isMobile && tickerVisible && <PosterTicker ink palette nameList/>}`.
   3. Palette grid (`ref=paletteRef`) — **mobile**: scrollable 2-col CSS grid of `<PosterTile>` (key `c.dataId`) then `<PosterAddTile ink onAdd>` (local sub-component). **desktop**: flex row of `<PosterColumn>` (no add-tile). Shared per-swatch props: `color={c}, name={names[i]||"..."}, index={i}, editing={editingId===c.id}, nameFontSize, onEdit (sets editingId+lastEditedId), onCloseEdit, onUpdate (updateColor(c.id,hex)+lastEditedId), onDelete (deleteColor(c.id)+setEditingId(null)), onLock (toggleLock(c.id)+lastEditedId)`, + drag/pointer handlers; `PosterTile` also gets `ink`.
   4. `{!isMobile && <PosterFooter palette ink bg/>}`.
-  5. Conditionally-mounted overlays — `PosterWelcome` (`ink bg isMobile onClose=dismissWelcome`), `PosterAbout` (`ink bg isMobile onClose`), `PosterSavedDrawer` (`ink bg isMobile list=savedList onClose onSave=handleSavePalette onLoad=(hexes)=>{replaceAll(hexes);setShowSaved(false)} onDelete=removeSaved`), `PosterHarmonyDrawer` (`ink bg isMobile palette onClose onApply=(hexes)=>{replaceAll(hexes);setShowHarmony(false)}`), `PosterTonesDrawer` (same shape, closes `showTones`), `PosterExportSheet` (`ink bg isMobile tpl=exportTemplate setTpl=setExportTemplate resolved=resolvedTemplate copyLabel templates=templateList onCopy onReset=()=>setExportTemplate(DEFAULT_TEMPLATE) onSaveTemplate=handleSaveTemplate onLoadTemplate=(body)=>setExportTemplate(body) onDeleteTemplate=removeTemplate onClose`), `PosterMobileMenu` (`ink bg isDark savedCount nameList tickerVisible onClose onTheme onAdd onRandomize onSaved onHarmony onTones onExport onAbout onNaming=()=>setShowNaming(true) onToggleTicker`), `PosterNamingSheet` (`ink bg onClose`).
+  5. Conditionally-mounted overlays — `PosterWelcome` (`ink bg isMobile onClose=dismissWelcome`), `PosterAbout` (`ink bg isMobile onClose`), `PosterSavedDrawer` (`ink bg isMobile list=savedList onClose onSave=handleSavePalette onLoad=(hexes)=>{replaceAll(hexes);setShowSaved(false)} onDelete=removeSaved`), `PosterToolsTray` (`ink bg isMobile palette onClose=()=>setShowTools(false) onApply=(hexes)=>{replaceAll(hexes);setShowTools(false)}`), `PosterExportSheet` (`ink bg isMobile tpl=exportTemplate setTpl=setExportTemplate resolved=resolvedTemplate copyLabel templates=templateList onCopy onReset=()=>setExportTemplate(DEFAULT_TEMPLATE) onSaveTemplate=handleSaveTemplate onLoadTemplate=(body)=>setExportTemplate(body) onDeleteTemplate=removeTemplate onClose`), `PosterMobileMenu` (`ink bg isDark savedCount nameList tickerVisible onClose onTheme onAdd onRandomize onSaved onTools onExport onAbout onNaming=()=>setShowNaming(true) onToggleTicker`), `PosterNamingSheet` (`ink bg onClose`).
 - Local helpers: `readSeenWelcome` (`localStorage["p4lette_seen_welcome_v1"]==="1"`), `markWelcomeSeen`, `readTickerVisible`.
 
 ### Nav surfaces
 
-- `PosterNav.tsx` — `compact===true` (mobile): just the `P4★LETTE` wordmark + a `≡` button → `onMenu`. **Desktop, left→right**: wordmark `P4★LETTE` · `＋ ADD` (bold, `onAdd`) · `⚄ SHUFFLE` (`onRandomize`) · `SAVE / LOAD [{savedCount}]` (`onSaved`) · `HARMONY` (`onHarmony`) · `TONES` (`onTones`) · `EXPORT` (`onExport`) · `<flex:1 spacer>` · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`) · `ABOUT` (`onAbout`) · `{isDark?"☀ LIGHT":"☾ DARK"}` (`onTheme`). Local `NavBtn`: hover inverts bg/fg, `borderRight: borderW solid ink`.
-- `PosterMobileMenu.tsx` — full-screen `role="dialog"` (`zIndex:60`). Header: wordmark + `×`(`onClose`). **Rows top→bottom**, each fires its handler then `onClose` (local `fire()`): `＋ ADD COLOR` (bold) · `⚄ SHUFFLE UNLOCKED` · `SAVE / LOAD [{savedCount}]` · `HARMONY` · `TONES` · `EXPORT` · `NAMES · {nameList}` (`onNaming`) · `ABOUT` · `{tickerVisible?"▼":"▶"} TICKER` · `{isDark?"LIGHT MODE":"DARK MODE"}` (`onTheme`). Local `Row`: press-down inverts.
+- `PosterNav.tsx` — `compact===true` (mobile): just the `P4★LETTE` wordmark + a `≡` button → `onMenu`. **Desktop, left→right**: wordmark `P4★LETTE` · `{isDark?"☀ LIGHT":"☾ DARK"}` (`onTheme`) · `ABOUT` (`onAbout`) · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`) · `<flex:1 spacer>` · `＋ ADD` (bold, `onAdd`) · `SHUFFLE` (`onRandomize`) · `TOOLS` (`onTools`) · `SAVE / LOAD [{savedCount}]` (`onSaved`) · `EXPORT` (`onExport`). The three left toggles share a fixed `width = LEFT_W (124)`; the five right actions share `width = RIGHT_W (178)` — so each cluster reads as a uniform block (`NavBtn` is `box-sizing:border-box`, `white-space:nowrap`, `overflow:hidden`, `text-overflow:ellipsis`). Local `NavBtn`: hover inverts bg/fg, `borderRight: borderW solid ink`.
+- `PosterMobileMenu.tsx` — full-screen `role="dialog"` (`zIndex:60`). Header: wordmark + `×`(`onClose`). **Rows top→bottom** (mirrors the desktop left→right order), each fires its handler then `onClose` (local `fire()`): `{isDark?"LIGHT MODE":"DARK MODE"}` (`onTheme`) · `ABOUT` (`onAbout`) · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`) · `NAMES · {nameList}` (`onNaming`) · `＋ ADD COLOR` (bold) · `SHUFFLE UNLOCKED` · `TOOLS` · `SAVE / LOAD [{savedCount}]` · `EXPORT`. Local `Row`: press-down inverts; rows are full-width.
 
 ### Swatch components
 
@@ -45,8 +45,10 @@
 
 ### Tool / sheet overlays
 
-- `PosterHarmonyDrawer.tsx` — `<Backdrop align={isMobile?"bottom":"right"}>`, panel `width: isMobile?"100%":520`. State `base` (init `palette[0]?.hex ?? "#ff3d00"`), `wheel: "oklch"|"ryb"` (init `"oklch"`). `BASE COLOR` section: swatch + text input + a row of buttons to pick `base` from current palette colors + a 2-tab toggle `OKLCH` / `RYB · ITTEN` (local `WheelTab`). `HARMONIES` rows in order `ANALOGOUS, COMPLEMENTARY, TRIADIC, TETRADIC, SPLIT-COMP, MONOCHROME, SHADES` — each: `colors = wheel==="ryb" ? harmonyRyb(base,kind) : harmony(base,kind)` → swatch strip + label + `USE` (`SmallBtn` → `onApply(colors)`). Imports `harmony, harmonyRyb, HarmonyKind` from `../../functions/harmony`.
-- `PosterTonesDrawer.tsx` — same prop shape; `<Backdrop align={isMobile?"bottom":"right"}>`, width `520`. State `base` (init as above; no wheel toggle). `SEED COLOR` section: swatch + input + palette-pick row. Maps `TONE_METHODS` (from `../../functions/tones`) — for each `m`: `scale = tones(base, m.id)` → 11-swatch strip + `m.label` + `m.caption` + `USE` (`onApply(scale)`).
+- `PosterToolsTray.tsx` — `position:fixed inset:0` full-surface overlay (`zIndex:55`, fade-in `toolsIn`), header `TOOLS` (+ a hint line on desktop) + `×`. Two sections, **side by side on desktop (50/50, each scrolls independently); stacked on mobile (the tray scrolls through both)**:
+  - **HARMONY** — `BASE COLOR` picker (swatch + hex `<input>` + a row of buttons to pick `base` from the current palette) + a 2-tab `OKLCH` / `RYB · ITTEN` toggle + rows `ANALOGOUS, COMPLEMENTARY, TRIADIC, TETRADIC, SPLIT-COMP, MONOCHROME, SHADES` — each `colors = wheel==="ryb" ? harmonyRyb(base,kind) : harmony(base,kind)` → swatch strip + label + `USE` (`SmallBtn` → `onApply(colors)`). Holds local `base` + `wheel`.
+  - **TONES** — `SEED COLOR` picker (same shape, no wheel toggle) + the `TONE_METHODS` rows — each `scale = tones(base, m.id)` → 11-swatch strip + `m.label` + `m.caption` + `USE` (`onApply(scale)`). Holds local `base`.
+  - Imports `harmony, harmonyRyb, HarmonyKind` from `../../functions/harmony`, `TONE_METHODS, tones` from `../../functions/tones`, `SmallBtn` from `./Backdrop`. (Replaced the former `PosterHarmonyDrawer` + `PosterTonesDrawer`.)
 - `PosterSavedDrawer.tsx` — `<Backdrop align={isMobile?"bottom":"right"}>`, width `460`. Header `SAVE / LOAD` + `×`; sub-bar `{list.length} SAVED · LOCAL` + `♥ SAVE PALETTE` (`onSave`). Body: empty → big `NOTHING / HERE / YET.`; else per `s`: swatch strip + `s.name` + `new Date(s.createdAt).toLocaleDateString() · {n} colors` + `LOAD` (`onLoad(s.hexes)`) / `DEL` (`onDelete(s.id)`).
 - `PosterExportSheet.tsx` — bottom sheet (`height: isMobile?"92%":"62%"`, slide-up, `boxShadow: 0 -10px 0 accent`, `zIndex:50`). Header `EXPORT` + (desktop) hint `$1.hex$ · $[1,3].name$ · $[all].hex$` + buttons `♥ SAVE`(`onSaveTemplate`) / `LOAD ▾`(toggles local `loadOpen`) / `RESET`(`onReset`) / accent `{copyLabel}`(`onCopy`) / `×`(`onClose`). `LOAD` dropdown: `SAVED TEMPLATES [{n}]` (or `NOTHING SAVED.`), each row a load-button (name + `formatDate(createdAt)`) + a `×` delete (`onDeleteTemplate(id)`). Body: `INPUT — EDIT ME` `<textarea value={tpl} onChange/>` | `OUTPUT — COPY ME` `<pre>{resolved}</pre>` (stacked on mobile).
 - `PosterModePicker.tsx` — used **only by `PosterFooter`** (desktop). Reads `colorMode, setColorMode`. `MODES`: `hex/rgb/hsl/hsv/oklch`, each `{key,title,sample}`. Button `active.title · active.sample ▾` opens a `position:fixed` `role="listbox"` popover anchored via `getBoundingClientRect` (re-measured on resize/scroll in `useLayoutEffect`); outside-`mousedown`/`Escape` close; pick → `setColorMode(m.key)`.
@@ -55,12 +57,12 @@
 - `PosterTicker.tsx` — desktop-only marquee (rendered by `PosterSkin` when `tickerVisible`). Builds items: uppercased hex strip (joined `◇`, or `EMPTY PALETTE`), `{n} COLOR(S) LIVE`, `{lockedCount} LOCKED`, `NAMES · {nameList.toUpperCase()}`; joins `✺`; renders `COPIES=8` of the row in a flex strip with CSS `animation: p4l-marquee 60s linear infinite` (keyframe in `index.html`; respects `prefers-reduced-motion`); `aria-hidden`.
 - `PosterFooter.tsx` — desktop-only bottom bar. Computes worst pairwise `contrast(...)` over all palette pairs → `grade` (`AAA≥7`, `AA≥4.5`, `AA Lg≥3`, else `FAIL`) + color. Stats: `LIVE` (`STREAMING`) · `CONTRAST` (`{ratio}:1 · {grade}`) · `MODE` (`<PosterModePicker>`) · `NAMING` (`<PosterNamingPicker>`) · spacer · `SHARE` (`<ShareButton>`: `navigator.share` if present, else copies `location.href`; label cycles). Imports `contrast` from `../../functions/contrast`.
 - `PosterWelcome.tsx` — first-visit modal in `<Backdrop>` (center). `WELCOME, COLORIST.` + `MAKE A RACKET WITH COLOR.` + blurb + (desktop) `KEYMAP` (`SPACE`→shuffle, `TAP`→edit, `DRAG`→reorder, `L`→lock, `E`→export) + `LET'S GO →`(`onClose`).
-- `PosterAbout.tsx` — about modal in `<Backdrop>`. `ABOUT` + `COLOR WITHOUT CEREMONY.` + blurb + GitHub link + `made by p4stoboy · pull requests welcome` + a grid of `AboutBlock`s: `HOW TO`, `WHY` (export-template pitch, mentions `$1.hex$`/`$[all].name$`), `UNDER THE HOOD`, `BUILT WITH` (credits `color.pizza`/@meodai), `SEE ALSO` (pickypalette, palettarium). _(The `COLOR ENGINE` block crediting `culori`/`pro-color-harmonies`/`rybitten`/`dittotones`/`rampensau` lands with the open ABOUT-credits PR — sync this bullet when it merges.)_
+- `PosterAbout.tsx` — about modal in `<Backdrop>`. `ABOUT` + `COLOR WITHOUT CEREMONY.` + blurb + GitHub link + `made by p4stoboy · pull requests welcome` + a grid of `AboutBlock`s: `HOW TO`, `WHY` (export-template pitch, mentions `$1.hex$`/`$[all].name$`), `UNDER THE HOOD` (React + Vite, OKLCH-first colour engine, URL hash + localStorage), `BUILT WITH` (credits `color.pizza`/@meodai), `COLOR ENGINE` (credits `culori`, `pro-color-harmonies`, `rybitten`, `dittotones`, `rampensau`, each linked), `SEE ALSO` (pickypalette, palettarium).
 
 ### Hooks (`src/hooks/*`)
 
 - `use_viewport.ts` — `useViewport(): { isMobile, isLandscape }`. `MOBILE_MAX=768`. SSR-safe default `{isMobile:false,isLandscape:true}`; else `matchMedia("(max-width:768px)")` / `("(orientation:landscape)")`, subscribed to both `change` events. Used by `PosterSkin` (`isMobile` only; `isLandscape` has no consumer).
-- `use_global_shortcuts.ts` — `useGlobalShortcuts(handlers)`. Optional `onShuffle/onLock/onExport/onHarmony/onAbout/onEsc`. Handlers kept in a `useRef` refreshed each render; one `keydown` listener (no deps). **Ignores keys when focus is in INPUT/TEXTAREA/contentEditable, except `Escape`.** ` `→`preventDefault`+`onShuffle`; `l`/`L`→`onLock`; `e`/`E`→`onExport`; `h`/`H`→`onHarmony`; `?`→`onAbout`; `Escape`→`onEsc`. Used once by `PosterSkin`.
+- `use_global_shortcuts.ts` — `useGlobalShortcuts(handlers)`. Optional `onShuffle/onLock/onExport/onHarmony/onAbout/onEsc`. Handlers kept in a `useRef` refreshed each render; one `keydown` listener (no deps). **Ignores keys when focus is in INPUT/TEXTAREA/contentEditable, except `Escape`.** ` `→`preventDefault`+`onShuffle`; `l`/`L`→`onLock`; `e`/`E`→`onExport`; `h`/`H`→`onHarmony` (wired to open the TOOLS tray); `?`→`onAbout`; `Escape`→`onEsc`. Used once by `PosterSkin`. (The handler is still named `onHarmony` — it's the `h`-key binding.)
 - `use_touch_drag_reorder.ts` — `useTouchDragReorder({onReorder, longPressMs=350}) → { onPointerDown:(i)=>(e), onPointerMove, onPointerUp, onPointerCancel(=up) }`. Only `pointerType "touch"|"pen"`. `onPointerDown` starts the long-press timer; on fire records `from`/`pointerId` + `setPointerCapture`. `onPointerMove`: any move before long-press cancels the timer; after, `preventDefault` + `document.elementFromPoint(...).closest("[data-column-index]")` and `onReorder(from, idx)` when it crosses into a new column (chains by updating `from`). `onPointerUp` clears + `releasePointerCapture` + resets. Used once by `PosterSkin`, spread onto Column/Tile.
 - `use_fit_name_size.ts` — `useFitNameSize(opts) → number` (px). `opts: { names, containerRef, columnCount, paddingX, maxFontSize, minFontSize, fontFamily, fontWeight, letterSpacing, uppercase?=true }`. `useLayoutEffect` (deps = `names.join("")` + the scalars + `containerRef`): finds the longest _word_ across names, measures its width at `100px` via a hidden `<span>` appended to `document.body`, `ideal = (el.clientWidth/cols - paddingX*2) / widthAt100 * 100`, clamps `[min,max]` (`Math.floor`); re-runs on a container `ResizeObserver`; bails to `maxFontSize` if no word, returns early if widths ≤ 0. **Touches the DOM directly.** Used once by `PosterSkin`.
 - `use_color_lists.ts` — `useColorLists(enabled) → { lists, loading, error }`. Effect (deps `[enabled, lists.length]`): when `enabled && lists.length===0`, `loadColorLists()` (`../functions/color_lists`, module-memoised) → set `lists` / `failed`; `alive` guard. `loading = enabled && lists.length===0 && !failed`. Used by `PosterNamingPicker` (lazy) and `PosterNamingSheet` (eager).
@@ -99,8 +101,7 @@
       "showWelcome",
       "showExport",
       "showSaved",
-      "showHarmony",
-      "showTones",
+      "showTools",
       "showNaming",
       "showMenu",
       "editingId",
@@ -115,8 +116,7 @@
       "menu",
       "naming",
       "export",
-      "harmony",
-      "tones",
+      "tools",
       "saved",
       "about",
       "editingId→null"
@@ -125,7 +125,7 @@
       "space": "randomizeUnlocked",
       "l": "toggle lastEditedId??palette[0]",
       "e": "toggle showExport",
-      "h": "toggle showHarmony",
+      "h": "toggle showTools",
       "?": "toggle showAbout",
       "esc": "closeAllOverlays"
     },
@@ -134,7 +134,7 @@
       "(desktop&tickerVisible) PosterTicker",
       "palette grid (PosterTile×n+PosterAddTile mobile | PosterColumn×n desktop)",
       "(desktop) PosterFooter",
-      "overlays: Welcome/About/SavedDrawer/HarmonyDrawer/TonesDrawer/ExportSheet/MobileMenu/NamingSheet"
+      "overlays: Welcome/About/SavedDrawer/ToolsTray/ExportSheet/MobileMenu/NamingSheet"
     ],
     "localStorageOwned": {
       "p4lette_seen_welcome_v1": "readSeenWelcome/markWelcomeSeen",
@@ -144,37 +144,34 @@
   "navItems": {
     "PosterNav.desktop": [
       "P4★LETTE",
-      "＋ ADD→onAdd",
-      "⚄ SHUFFLE→onRandomize",
-      "SAVE / LOAD [n]→onSaved",
-      "HARMONY→onHarmony",
-      "TONES→onTones",
-      "EXPORT→onExport",
+      "☀/☾ LIGHT|DARK→onTheme (LEFT_W=124)",
+      "ABOUT→onAbout (LEFT_W)",
+      "▼/▶ TICKER→onToggleTicker (LEFT_W)",
       "<spacer>",
-      "▼/▶ TICKER→onToggleTicker",
-      "ABOUT→onAbout",
-      "☀/☾ LIGHT|DARK→onTheme"
+      "＋ ADD→onAdd (RIGHT_W=178, bold)",
+      "SHUFFLE→onRandomize (RIGHT_W)",
+      "TOOLS→onTools (RIGHT_W)",
+      "SAVE / LOAD [n]→onSaved (RIGHT_W)",
+      "EXPORT→onExport (RIGHT_W)"
     ],
     "PosterNav.compact": ["P4★LETTE", "≡→onMenu"],
     "PosterMobileMenu.rows": [
-      "＋ ADD COLOR",
-      "⚄ SHUFFLE UNLOCKED",
-      "SAVE / LOAD [n]",
-      "HARMONY",
-      "TONES",
-      "EXPORT",
+      "LIGHT|DARK MODE→onTheme",
+      "ABOUT→onAbout",
+      "▼/▶ TICKER→onToggleTicker",
       "NAMES · {list}→onNaming",
-      "ABOUT",
-      "▼/▶ TICKER",
-      "LIGHT|DARK MODE→onTheme"
+      "＋ ADD COLOR (bold)",
+      "SHUFFLE UNLOCKED→onRandomize",
+      "TOOLS→onTools",
+      "SAVE / LOAD [n]→onSaved",
+      "EXPORT→onExport"
     ]
   },
   "components": {
     "PosterColumn": "desktop swatch; data-column-index; hover actions EDIT/LOCK/REMOVE; PosterEditTray when editing",
     "PosterTile": "mobile swatch; editing→full-row expand (gridColumn 1/-1, minHeight 540); lock+delete chips; PosterEditTray when editing",
     "PosterEditTray": "shared inline editor; text input(parseColor) + HUE/SAT/LUM sliders + QUICK 6 hues; outside-click closes; LINE 31 = known lint error",
-    "PosterHarmonyDrawer": "right/bottom drawer; base picker + OKLCH|RYB·ITTEN tabs; rows ANALOGOUS/COMPLEMENTARY/TRIADIC/TETRADIC/SPLIT-COMP/MONOCHROME/SHADES → onApply",
-    "PosterTonesDrawer": "right/bottom drawer; seed picker; maps TONE_METHODS → 11-swatch scale + USE→onApply",
+    "PosterToolsTray": "full-surface overlay (fixed inset:0, zIndex 55); HARMONY section (base picker + OKLCH|RYB·ITTEN toggle + 7 harmony rows) and TONES section (seed picker + TONE_METHODS rows) — side-by-side on desktop / stacked on mobile; USE→onApply; replaced PosterHarmonyDrawer + PosterTonesDrawer",
     "PosterSavedDrawer": "right/bottom drawer; ♥ SAVE PALETTE; entries name+date+swatches → LOAD/DEL",
     "PosterExportSheet": "bottom sheet; ♥ SAVE / LOAD▾ / RESET / COPY; INPUT textarea | OUTPUT pre(resolvedTemplate)",
     "PosterModePicker": "footer-only; colorMode listbox popover",
@@ -183,12 +180,12 @@
     "PosterTicker": "desktop marquee; aria-hidden; CSS p4l-marquee 60s",
     "PosterFooter": "desktop bar; worst-pair contrast grade + ModePicker + NamingPicker + ShareButton",
     "PosterWelcome": "first-visit modal + KEYMAP",
-    "PosterAbout": "about modal; AboutBlocks HOW TO/WHY/UNDER THE HOOD/BUILT WITH(color.pizza)/SEE ALSO (+ COLOR ENGINE block lands with the open ABOUT-credits PR)",
+    "PosterAbout": "about modal; AboutBlocks HOW TO/WHY/UNDER THE HOOD/BUILT WITH(color.pizza)/COLOR ENGINE(culori,pro-color-harmonies,rybitten,dittotones,rampensau)/SEE ALSO",
     "Backdrop / SmallBtn": "shared scrim (center/right/bottom) + bordered hover-invert button"
   },
   "hooks": {
     "use_viewport": "{isMobile,isLandscape}; matchMedia 768px + orientation",
-    "use_global_shortcuts": "ref'd handlers; one keydown; skips inputs except Escape; space/l/e/h/?/Escape",
+    "use_global_shortcuts": "ref'd handlers; one keydown; skips inputs except Escape; space/l/e/h(→TOOLS)/?/Escape",
     "use_touch_drag_reorder": "long-press(350ms) then pointermove→elementFromPoint→[data-column-index]→onReorder; chains",
     "use_fit_name_size": "measures longest word via hidden span; (colW-2pad)/w100*100 clamped [min,max]; ResizeObserver",
     "use_color_lists": "{lists,loading,error}; loadColorLists() once when enabled"
@@ -208,7 +205,7 @@ flowchart TD
   grid --> tray["PosterEditTray (when editing)"]
   skin --> foot["PosterFooter → PosterModePicker · PosterNamingPicker · ShareButton"]
   skin --> tick["PosterTicker (desktop, tickerVisible)"]
-  skin --> ovl["overlays: Welcome · About · SavedDrawer · HarmonyDrawer · TonesDrawer · ExportSheet · MobileMenu · NamingSheet"]
+  skin --> ovl["overlays: Welcome · About · SavedDrawer · ToolsTray · ExportSheet · MobileMenu · NamingSheet"]
   nav -->|on*| skin
   grid -->|onEdit/onUpdate/onDelete/onLock + drag/pointer| skin
   tray -->|onUpdate(hex) → updateColor| ctx
