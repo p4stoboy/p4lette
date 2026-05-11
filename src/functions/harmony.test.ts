@@ -107,4 +107,36 @@ describe("harmonyRyb", () => {
     expect(hues[0]).toBeLessThan(120);
     expect(hues[1]).toBeGreaterThan(180);
   });
+
+  const ROTATION_KINDS: HarmonyKind[] = [
+    "analogous",
+    "complementary",
+    "triadic",
+    "tetradic",
+    "split",
+  ];
+
+  it("hue-rotation harmonies stay at the seed's lightness (no washout)", () => {
+    // The RYB toggle only rotates hue on the painter's wheel; it must not drag
+    // swatches toward white/black the way the raw rybitten cube roundtrip did.
+    const seeds = ["#e3242b", "#2b6cb0", "#1a202c", "#cbd5e0", "#f6ad55"];
+    for (const seed of seeds) {
+      const seedL = oklch(seed)!.l;
+      for (const kind of ROTATION_KINDS) {
+        for (const h of harmonyRyb(seed, kind)) {
+          expect(Math.abs(oklch(h)!.l - seedL)).toBeLessThan(0.05);
+        }
+      }
+    }
+  });
+
+  it("hue-rotation harmonies carry the seed's chroma, not a muddy roundtrip", () => {
+    const seed = "#2b6cb0";
+    const seedC = oklch(seed)!.c!;
+    for (const kind of ROTATION_KINDS) {
+      for (const h of harmonyRyb(seed, kind)) {
+        expect(oklch(h)!.c ?? 0).toBeGreaterThan(seedC * 0.7);
+      }
+    }
+  });
 });

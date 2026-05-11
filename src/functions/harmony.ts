@@ -1,7 +1,7 @@
 import { clampChroma, formatHex, oklch } from "culori";
 import { ColorPaletteGenerator } from "pro-color-harmonies";
 import { rybHsl2rgb } from "rybitten";
-import { clamp, hexToHsl, rgbToHex } from "./color_converters";
+import { clamp, hexToHsl } from "./color_converters";
 
 export type HarmonyKind =
   | "complementary"
@@ -111,14 +111,20 @@ const RYB_DELTAS: Partial<Record<HarmonyKind, readonly number[]>> = {
   split: [0, 150, 210],
 };
 
-const rybRotate = (h: number, s: number, l: number, delta: number): string => {
-  const newH = (((h + delta) % 360) + 360) % 360;
-  const [r, g, b] = rybHsl2rgb([newH, s, l]);
-  return rgbToHex({
-    r: clamp(r * 255, 0, 255),
-    g: clamp(g * 255, 0, 255),
-    b: clamp(b * 255, 0, 255),
-  });
+// Rotate `hue` (degrees) by `delta` on the RYB / Itten painter's wheel and
+// return the OKLCH hue of the resulting pigment. Saturation and lightness are
+// pinned so the cube yields the purest pigment for that angle — the seed's own
+// L and C are reapplied by the caller, which is what keeps the harmony vivid
+// and equiluminant instead of washed toward the cube's white/black corners.
+const rybHueRotate = (hue: number, delta: number): number | undefined => {
+  const angle = (((hue + delta) % 360) + 360) % 360;
+  const [r, g, b] = rybHsl2rgb([angle, 1, 0.5]);
+  return oklch({
+    mode: "rgb",
+    r: clamp(r, 0, 1),
+    g: clamp(g, 0, 1),
+    b: clamp(b, 0, 1),
+  })?.h;
 };
 
 export const harmonyRyb = (hex: string, kind: HarmonyKind): string[] => {
@@ -126,9 +132,11 @@ export const harmonyRyb = (hex: string, kind: HarmonyKind): string[] => {
     return harmony(hex, kind);
   }
   const deltas = RYB_DELTAS[kind];
-  if (!deltas) return Array(COUNTS[kind]).fill(hex);
-  const { h, s, l } = hexToHsl(hex);
-  const sNorm = clamp(s, 0, 100) / 100;
-  const lNorm = clamp(l, 0, 100) / 100;
-  return deltas.map((d) => rybRotate(h, sNorm, lNorm, d));
+  const parsed = oklch(hex);
+  if (!deltas || !parsed) return Array(COUNTS[kind]).fill(hex);
+  const base: OKLCH = { l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 };
+  const seedHue = hexToHsl(hex).h;
+  return deltas.map((d) =>
+    toHex({ l: base.l, c: base.c, h: rybHueRotate(seedHue, d) ?? base.h }),
+  );
 };
