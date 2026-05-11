@@ -34,7 +34,7 @@
 
 ### Nav surfaces
 
-- `PosterNav.tsx` — `compact===true` (mobile): just the `P4★LETTE` wordmark + a `≡` button → `onMenu`. **Desktop, left→right**: wordmark `P4★LETTE` · `{isDark?"☀ LIGHT":"☾ DARK"}` (`onTheme`) · `ABOUT` (`onAbout`) · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`, `noBorderRight`) · `<flex:1 spacer>` · `＋ ADD COLOR` (the emphasised primary action — `bold large borderLeft`: the biggest button, and the only one with a `borderLeft` — the sole line at the right-cluster boundary; `onAdd`) · `SHUFFLE` (`onRandomize`) · `TOOLS` (`onTools`) · `SAVE / LOAD [{savedCount}]` (`onSaved`) · `EXPORT` (`onExport`). The three left toggles share a fixed `width = LEFT_W (124)`; the five right actions share `width = RIGHT_W (184)` — so each cluster reads as a uniform block (`NavBtn` is `box-sizing:border-box`, `white-space:nowrap`, `overflow:hidden`, `text-overflow:ellipsis`; props `large`→`fontSize:17`, `borderLeft`→adds a left border, `noBorderRight`→drops the right border — `TICKER` uses it so the spacer isn't bracketed by two lines). The bar is kept compact — wordmark at `fontSize:40` (≈58 px tall). Local `NavBtn`: hover inverts bg/fg, `borderRight: borderW solid ink`.
+- `PosterNav.tsx` — `compact===true` (mobile): just the `P4★LETTE` wordmark + a `≡` button → `onMenu`. **Desktop, left→right**: wordmark `P4★LETTE` · `{isDark?"☀ LIGHT":"☾ DARK"}` (`onTheme`) · `ABOUT` (`onAbout`) · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`) · `<flex:1 spacer, minWidth 40>` · `＋ ADD COLOR` (the emphasised primary action — `bold large borderLeft`: the biggest button, and the only one with a `borderLeft` — the sole line at the right-cluster boundary; `onAdd`) · `SHUFFLE` (`onRandomize`) · `TOOLS` (`onTools`) · `SAVE / LOAD [{savedCount}]` (`onSaved`) · `EXPORT` (`onExport`). The three left toggles share a fixed `width = LEFT_W (124)`; the five right actions share `width = RIGHT_W (172)` — so each cluster reads as a uniform block (`NavBtn` is `box-sizing:border-box`, `white-space:nowrap`, `overflow:hidden`, `text-overflow:ellipsis`; props `large`→`fontSize:16`, `borderLeft`→adds a left border = the cluster-start divider on `＋ ADD COLOR`). The `<flex:1>` spacer has `minWidth:40` so a narrow viewport doesn't collapse the gap into a doubled-up border. The bar is kept compact — wordmark at `fontSize:40` (≈58 px tall). Local `NavBtn`: hover inverts bg/fg, `borderRight: borderW solid ink`.
 - `PosterMobileMenu.tsx` — full-screen `role="dialog"` (`zIndex:60`). Header: wordmark + `×`(`onClose`). **Rows top→bottom** (mirrors the desktop left→right order), each fires its handler then `onClose` (local `fire()`): `{isDark?"LIGHT MODE":"DARK MODE"}` (`onTheme`) · `ABOUT` (`onAbout`) · `{tickerVisible?"▼":"▶"} TICKER` (`onToggleTicker`) · `NAMES · {nameList}` (`onNaming`) · `＋ ADD COLOR` (bold) · `SHUFFLE UNLOCKED` · `TOOLS` · `SAVE / LOAD [{savedCount}]` · `EXPORT`. Local `Row`: press-down inverts; rows are full-width.
 
 ### Swatch components
@@ -146,9 +146,9 @@
       "P4★LETTE",
       "☀/☾ LIGHT|DARK→onTheme (LEFT_W=124)",
       "ABOUT→onAbout (LEFT_W)",
-      "▼/▶ TICKER→onToggleTicker (LEFT_W, noBorderRight)",
-      "<spacer>",
-      "＋ ADD COLOR→onAdd (RIGHT_W=184, bold+large+borderLeft — emphasised primary action)",
+      "▼/▶ TICKER→onToggleTicker (LEFT_W)",
+      "<spacer minWidth:40>",
+      "＋ ADD COLOR→onAdd (RIGHT_W=172, bold+large+borderLeft — emphasised primary action)",
       "SHUFFLE→onRandomize (RIGHT_W)",
       "TOOLS→onTools (RIGHT_W)",
       "SAVE / LOAD [n]→onSaved (RIGHT_W)",

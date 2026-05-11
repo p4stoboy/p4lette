@@ -4,7 +4,7 @@ import { POSTER } from "./tokens";
 // Fixed widths so each nav cluster reads as a uniform block: the three
 // left-side toggles share LEFT_W, the right-side actions share RIGHT_W.
 const LEFT_W = 124;
-const RIGHT_W = 184;
+const RIGHT_W = 172;
 
 interface NavProps {
   ink: string;
@@ -118,10 +118,10 @@ export const PosterNav = ({
       <NavBtn ink={ink} onClick={onAbout} width={LEFT_W}>
         ABOUT
       </NavBtn>
-      <NavBtn ink={ink} onClick={onToggleTicker} width={LEFT_W} noBorderRight>
+      <NavBtn ink={ink} onClick={onToggleTicker} width={LEFT_W}>
         {tickerVisible ? "▼" : "▶"} TICKER
       </NavBtn>
-      <div style={{ flex: 1 }} />
+      <div style={{ flex: 1, minWidth: 40 }} />
       <NavBtn ink={ink} onClick={onAdd} bold large borderLeft width={RIGHT_W}>
         ＋ ADD COLOR
       </NavBtn>
@@ -148,7 +148,6 @@ interface NavBtnProps {
   bold?: boolean;
   large?: boolean;
   borderLeft?: boolean;
-  noBorderRight?: boolean;
   width?: number;
 }
 
@@ -159,7 +158,6 @@ const NavBtn = ({
   bold,
   large,
   borderLeft,
-  noBorderRight,
   width,
 }: NavBtnProps) => {
   const [hov, setHov] = useState(false);
@@ -173,7 +171,7 @@ const NavBtn = ({
       style={{
         fontFamily: POSTER.body,
         fontWeight: bold ? 700 : 600,
-        fontSize: large ? 17 : 13,
+        fontSize: large ? 16 : 13,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         padding: "0 18px",
@@ -183,7 +181,7 @@ const NavBtn = ({
         overflow: "hidden",
         textOverflow: "ellipsis",
         border: "none",
-        borderRight: noBorderRight ? "none" : edge,
+        borderRight: edge,
         borderLeft: borderLeft ? edge : "none",
         background: hov ? ink : "transparent",
         color: hov ? invert : ink,
