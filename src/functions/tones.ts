@@ -1,12 +1,19 @@
 import { clampChroma, formatHex, oklch, parse } from "culori";
 import { DittoTones } from "dittotones";
 import { generateRandomColorRamp } from "fettepalette";
-import { clamp, hexToHsv, hsvToHex } from "./color_converters";
+import { generateColorRamp } from "rampensau";
+import {
+  clamp,
+  hexToHsl,
+  hexToHsv,
+  hslToHex,
+  hsvToHex,
+} from "./color_converters";
 import { tailwindColors } from "./tones_tailwind_data";
 
 const STEPS = 11;
 
-export type ToneMethod = "ditto" | "oklch" | "hsv";
+export type ToneMethod = "ditto" | "oklch" | "hsv" | "gen";
 
 export interface ToneMethodInfo {
   id: ToneMethod;
@@ -29,6 +36,11 @@ export const TONE_METHODS: readonly ToneMethodInfo[] = [
     id: "hsv",
     label: "HSV CURVE",
     caption: "curve through the HSV model via fettepalette — brighter mids",
+  },
+  {
+    id: "gen",
+    label: "GENERATIVE",
+    caption: "single-hue sweep via rampensau — even hue, swept sat & lightness",
   },
 ];
 
@@ -146,10 +158,29 @@ const fetteHsvScale = (hex: string): string[] => {
   return out.sort((a, b) => (oklch(b)?.l ?? 0) - (oklch(a)?.l ?? 0));
 };
 
+// --- generative single-hue sweep via rampensau: one hue, S & L swept across
+//     the lib's ramp; re-sorted light → dark like the HSV scale ---
+const genScale = (hex: string): string[] => {
+  const { h, s } = hexToHsl(hex);
+  const sat = clamp(s / 100, 0.15, 0.95);
+  const ramp = generateColorRamp({
+    total: STEPS,
+    hStart: h,
+    hCycles: 0, // single hue — a tone scale, not a rainbow
+    sRange: [sat * 0.55, sat],
+    lRange: [0.12, 0.97],
+  });
+  const out = ramp.map(([hh, ss, ll]) =>
+    hslToHex({ h: hh, s: ss * 100, l: ll * 100 }),
+  );
+  return out.sort((a, b) => (oklch(b)?.l ?? 0) - (oklch(a)?.l ?? 0));
+};
+
 const SCALERS: Record<ToneMethod, (hex: string) => string[]> = {
   ditto: dittoScale,
   oklch: oklchScale,
   hsv: fetteHsvScale,
+  gen: genScale,
 };
 
 export const tones = (hex: string, method: ToneMethod): string[] =>
