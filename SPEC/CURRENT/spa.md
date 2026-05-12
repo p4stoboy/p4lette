@@ -1,6 +1,6 @@
 # SPEC · spa — the poster UI
 
-`src/skins/poster/*` (all components), `src/hooks/*`, plus `src/App.tsx` / `src/index.tsx`. The app has exactly one skin; `PosterSkin` is the root component and owns all view state that isn't palette data (palette data lives in `state.md`'s context). Design tokens in `src/skins/poster/tokens.ts`.
+`src/skins/poster/*` (all components, incl. `share/*`), `src/hooks/*`, plus `src/App.tsx` / `src/index.tsx`. `src/App.tsx` is a tiny hash router — `…#/share?p=…` → the read-only `PosterSharePage` (no `PaletteContext`); anything else → `<Provider><PosterSkin/></Provider>`. The app has exactly one skin; `PosterSkin` is the root of the editor view and owns all view state that isn't palette data (palette data lives in `state.md`'s context). Design tokens in `src/skins/poster/tokens.ts`.
 
 ## Verbal outline
 
@@ -61,9 +61,15 @@
 - `PosterNamingPicker.tsx` — used **only by `PosterFooter`**. Reads `nameList, setNameList`; `useColorLists(open)` (lazy fetch). Button `color.pizza/{nameList} ▾`; popover (same pattern) shows `loading…`/`load failed`/list → `setNameList(l.key)`.
 - `PosterNamingSheet.tsx` — used **only via `PosterMobileMenu`** (mobile). Reads `nameList, setNameList`; `useColorLists(true)`. `<Backdrop align="bottom">` bottom sheet: `NAMES` header + `color.pizza/{nameList}` + scrollable list → `setNameList(l.key)` then `onClose()`.
 - `PosterTicker.tsx` — desktop-only marquee (rendered by `PosterSkin` when `tickerVisible`). Builds items: uppercased hex strip (joined `◇`, or `EMPTY PALETTE`), `{n} COLOR(S) LIVE`, `{lockedCount} LOCKED`, `NAMES · {nameList.toUpperCase()}`; joins `✺`; renders `COPIES=8` of the row in a flex strip with CSS `animation: p4l-marquee 60s linear infinite` (keyframe in `index.html`; respects `prefers-reduced-motion`); `aria-hidden`.
-- `PosterFooter.tsx` — desktop-only bottom bar. Computes worst pairwise `contrast(...)` over all palette pairs → `grade` (`AAA≥7`, `AA≥4.5`, `AA Lg≥3`, else `FAIL`) + color. Stats: `LIVE` (`STREAMING`) · `CONTRAST` (`{ratio}:1 · {grade}`) · `MODE` (`<PosterModePicker>`) · `NAMING` (`<PosterNamingPicker>`) · spacer · `SHARE` (`<ShareButton>`: `navigator.share` if present, else copies `location.href`; label cycles). Imports `contrast` from `../../functions/contrast`.
+- `PosterFooter.tsx` — desktop-only bottom bar. Computes worst pairwise `contrast(...)` over all palette pairs → `grade` (`AAA≥7`, `AA≥4.5`, `AA Lg≥3`, else `FAIL`) + color. Stats: `LIVE` (`STREAMING`) · `CONTRAST` (`{ratio}:1 · {grade}`) · `MODE` (`<PosterModePicker>`) · `NAMING` (`<PosterNamingPicker>`) · spacer · `SHARE` (`<ShareButton ink palette>`: builds the **share-page** URL — `location.origin + location.pathname + "#/share?p=" + encodePalette(palette)` — then `navigator.share` it if present, else copies it; label cycles). Imports `contrast` from `../../functions/contrast`, `encodePalette` from `../../functions/share_url`.
 - `PosterWelcome.tsx` — first-visit modal in `<Backdrop>` (center). `WELCOME, COLORIST.` + `MAKE A RACKET WITH COLOR.` + blurb + (desktop) `KEYMAP` (`SPACE`→shuffle, `TAP`→edit, `DRAG`→reorder, `L`→lock, `E`→export) + `LET'S GO →`(`onClose`).
 - `PosterAbout.tsx` — about modal in `<Backdrop>`. `ABOUT` + `COLOR WITHOUT CEREMONY.` + blurb + GitHub link + `made by p4stoboy · pull requests welcome` + a 2-col grid of `AboutBlock`s (`AboutBlock({ink,title,wide?,children})` — `wide` → `gridColumn:"1 / -1"`): `HOW TO`, `WHY` (export-template pitch, mentions `$1.hex$`/`$[all].name$`), `UNDER THE HOOD` (React + Vite, OKLCH-first colour engine, URL hash + localStorage), `SEE ALSO` (pickypalette, palettarium — by @meodai), and a **`CREDITS`** block (`wide`, spans both columns) = the tool → library → author map: `culori` by Evercoder is the OKLCH engine + the `FIXERS`/`EFFECTS`/`MIX` transforms; the rest are @meodai's — `pro-color-harmonies` (HARMONY styles + tints/shades), `rybitten` (the PIGMENT pigment wheels), `dittotones` + `fettepalette` (the two TONES ramps), `rampensau` (SHUFFLE/generation + HSV harmonies + the GENERATIVE tone), `poline` (the POLINE ANCHORS strategy), `color.pizza` (colour names — "the naming layer exists because theirs does") — each linked.
+
+### Share page (`src/skins/poster/share/*`)
+
+- `parseShareHash.ts` — `isShareHash(hash)` (true for `#/share`, `#/share?…`, `#/share/…`); `parseShareHash(hash) → string[]|null` — pulls the `?p=` value out (`URLSearchParams`) and runs **just that value** through `decodePalette` (`functions/share_url.ts`). **Never feeds the raw `#/share?p=…` string to `decodePalette`** — its `^#?p=` strip is anchored to `p=`, so a raw hash would split on `-` and silently drop colour 0. Almost pure (wraps the pure `decodePalette`); colocated `parseShareHash.test.ts`.
+- `PosterSharePage.tsx` — the route component (`App.tsx` renders it when `isShareHash(window.location.hash)`; re-renders on `hashchange`). Props `{ hash }`; `hexes = parseShareHash(hash)`; `null`/empty → a centred `NOTHING TO SHOW.` + `← open p4lette` link. Else a light-theme-only (`POSTER` tokens) scrollable card — **no `usePalette()`**: a header (the `P4★LETTE` wordmark + `SHOW NAMES` (lazy `getColorNames(hexes,{list:"bestOf"})` once) / `COPY LINK` (the `#/share?p=…` URL) / `open in p4lette →` (→ `#p=…`) buttons), then `SharePanel`-wrapped reps `GRID` / `ISO CUBE` / `CLASSIC BARS` / `LINE` / `DOTS`, then a footer (the hex list + `COPY HEXES` + a "made with p4lette" link). Local `CopyBtn` (clipboard + a 1.5 s `COPIED ✓` cycle); names off by default, fed (when shown) only into `ShareGrid`/`ShareBars`.
+- `ShareGrid.tsx` — a read-only echo of the editor columns: a flex row of `aspectRatio:3/4` cells (`fontColorFor` text), a faint `01` index, the name (when shown) over the hex. `ShareIsoCube.tsx` — a `<svg role="img">` of `iso_cube.ts#isoBlockStack(n,{unit:110,cube:64})` — N stacked iso blocks, three `<polygon>`s each (`left`/`right`/`top`, top drawn last) filled from colour `i` with Okhsl lightness steps (`+0.06`/`-0.10`/`-0.18`), hairline `stroke={ink}`; `viewBox` + `max-width` so it scales down. `ShareBars.tsx` — a tall horizontal strip, name+hex bottom-anchored in each block. `ShareLine.tsx` — two thin strips: hard-stop blocks + a `linear-gradient(90deg, …hexes)`. `ShareDots.tsx` — a centred wrapping row of N circles (hex on hover). None use `usePalette()`.
 
 ### Hooks (`src/hooks/*`)
 
@@ -78,7 +84,7 @@
 
 ```json
 {
-  "root": "src/skins/poster/PosterSkin.tsx",
+  "root": "src/App.tsx — hash router: #/share?p=… → src/skins/poster/share/PosterSharePage.tsx (no Provider) | else <Provider><PosterSkin/></Provider> (the editor)",
   "tokens": "src/skins/poster/tokens.ts — POSTER {bg,bgDark,ink,inkDark,accent,display,body,mono,borderW:3}",
   "posterSkin": {
     "fromContext": [
@@ -195,7 +201,8 @@
     "PosterNamingPicker": "footer-only; nameList listbox popover (useColorLists lazy)",
     "PosterNamingSheet": "mobile-only; nameList bottom sheet (useColorLists eager)",
     "PosterTicker": "desktop marquee; aria-hidden; CSS p4l-marquee 60s",
-    "PosterFooter": "desktop bar; worst-pair contrast grade + ModePicker + NamingPicker + ShareButton",
+    "PosterFooter": "desktop bar; worst-pair contrast grade + ModePicker + NamingPicker + ShareButton (emits the #/share?p= URL via encodePalette)",
+    "share": "src/skins/poster/share/* — PosterSharePage (the #/share?p= route component, no Provider; light-theme card) + reps GRID/ISO CUBE/CLASSIC BARS/LINE/DOTS via ShareGrid/ShareIsoCube/ShareBars/ShareLine/ShareDots + parseShareHash (isShareHash / parseShareHash — extracts ?p= then decodePalette)",
     "PosterWelcome": "first-visit modal + KEYMAP",
     "PosterAbout": "about modal; 2-col grid of AboutBlocks ({ink,title,wide?,children}, wide=gridColumn 1/-1): HOW TO / WHY / UNDER THE HOOD / SEE ALSO / CREDITS(wide) — the tool→library→author map: culori/Evercoder = OKLCH engine + FIXERS/EFFECTS/MIX transforms; @meodai's: pro-color-harmonies (HARMONY styles+tints/shades), rybitten (PIGMENT wheels), dittotones+fettepalette (TONES ramps), rampensau (SHUFFLE/gen+HSV harmonies+GENERATIVE tone), poline (POLINE ANCHORS), color.pizza (names) — all linked",
     "Backdrop / SmallBtn": "shared scrim (center/right/bottom) + bordered hover-invert button"
@@ -215,7 +222,10 @@
 
 ```mermaid
 flowchart TD
-  ctx["usePalette() — state.md"] --> skin["PosterSkin (root view state)"]
+  app["src/App.tsx — hash router"] -->|"#/share?p="| sharepg["PosterSharePage + Share* reps (share/*, no Provider)"]
+  app -->|else| skin["PosterSkin (root view state)"]
+  sharepg -->|"parseShareHash·iso_cube·fontColorFor·getColorNames"| fns["src/functions — color.md"]
+  ctx["usePalette() — state.md"] --> skin
   vp["useViewport"] --> skin
   sc["useGlobalShortcuts"] --> skin
   skin --> nav["PosterNav / PosterMobileMenu"]

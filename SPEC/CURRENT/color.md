@@ -12,7 +12,7 @@
 - `formatAll(hex) → { mode: ColorMode; label: string; value: string }[]` — the five `formatColor` outputs, **HEX first** (`label` = the mode uppercased) — for the `"all"` display MODE (`PosterColumn`/`PosterTile` stack them under the swatch).
 - `parseColor(input, mode: ColorMode) → string | null` — `hex`: `/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i` → normalised `#rrggbb`. `rgb`/`hsl`/`hsv`/`oklch`: pull ≥3 numbers via `extractNumbers`, **clamp** to range, convert to hex (oklch lightness `≤1` treated as 0..1 and ×100). `null` on empty/unparseable. **Quirk: out-of-range channels are clamped, not rejected** (`parseColor("rgb(999,0,0)","rgb") → "#ff0000"`).
 - `randomHex() → string` — random HSL `h∈[0,360)`, `s∈[35,90]`, `l∈[30,80]` → `hslToHex` (avoids near-black/white/grey). The per-slot random used by `addColor` and as the `randomizeUnlocked` fallback.
-- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`hexToHsl`, `hslToHex`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`, `formatAll`), `PosterEditTray` (`formatColor`, `parseColor`, and `hexToOkhsl`/`okhslToHex` + `hexToHsl`/`hslToHex` + `hexToHsv`/`hsvToHex` + `hexToRgb`/`rgbToHex` + `hexToOklch`/`oklchToHex` — the EDIT-tray sliders run in the picked `editSpace`).
+- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`hexToHsl`, `hslToHex`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`, `formatAll`), `PosterEditTray` (`formatColor`, `parseColor`, and `hexToOkhsl`/`okhslToHex` + `hexToHsl`/`hslToHex` + `hexToHsv`/`hsvToHex` + `hexToRgb`/`rgbToHex` + `hexToOklch`/`oklchToHex` — the EDIT-tray sliders run in the picked `editSpace`); `ShareIsoCube` (`hexToOkhsl`/`okhslToHex` for the iso face shading).
 
 ### `generate_palette.ts` — uses **`rampensau`** (`generateColorRamp`, `generateColorRampWithCurve`, `generateColorRampParams`) + **`poline`** (`Poline`)
 
@@ -83,7 +83,7 @@
 
 ### `contrast.ts` — pure, depends on `color_converters` only
 
-- `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` (`fontColorFor`) and `PosterFooter` (`contrast` grade).
+- `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` and the share-page `ShareGrid`/`ShareBars` (`fontColorFor`), and `PosterFooter` (`contrast` grade).
 
 ### `resolve_export_template.ts` — pure, depends on `color_converters` only
 
@@ -98,7 +98,12 @@
 
 ### `share_url.ts` — pure
 
-- `HEX_RE = /^#[0-9a-f]{6}$/i`. `encodePalette(palette): string` → `palette.map(c => c.hex.replace("#","")).join("-")` (e.g. `ff0000-00ff00-0000ff`; **6-digit only — assumes normalised hexes**). `decodePalette(raw): string[] | null` → strip a leading `#?p=`; `""` → null; split on `-`, drop empties, prefix `#`, **keep only `HEX_RE` matches**, lowercase; `null` if none survive. So a partly-garbage hash yields the valid subset; an all-garbage hash → `null`. Consumed by `PaletteContext` (`encodePalette` in the hash effect) and `paletteReducer` (`decodePalette` in `createPaletteState`).
+- `HEX_RE = /^#[0-9a-f]{6}$/i`. `encodePalette(palette): string` → `palette.map(c => c.hex.replace("#","")).join("-")` (e.g. `ff0000-00ff00-0000ff`; **6-digit only — assumes normalised hexes**). `decodePalette(raw): string[] | null` → strip a leading `#?p=`; `""` → null; split on `-`, drop empties, prefix `#`, **keep only `HEX_RE` matches**, lowercase; `null` if none survive. So a partly-garbage hash yields the valid subset; an all-garbage hash → `null`. Consumed by `PaletteContext` (`encodePalette` in the hash effect), `paletteReducer` (`decodePalette` in `createPaletteState`), `src/skins/poster/share/parseShareHash.ts` (`decodePalette` of just the `?p=` query value — **never the raw `#/share?p=…` string**; see `spa.md`), and `PosterFooter`'s `ShareButton` (`encodePalette` for the `#/share?p=…` link).
+
+### `iso_cube.ts` — pure (layout math, no deps)
+
+- `interface IsoBlock { top; left; right }` — SVG `<polygon>` `points` strings for the three visible faces. `interface IsoStack { width; height; blocks: IsoBlock[] }`.
+- **`isoBlockStack(count, opts?: { unit?=110; cube?=64 }) → IsoStack`** — a vertical stack of `count` flat-2:1 isometric blocks, one per palette colour, **block 0 on top**, laid out in a `(2·unit) × (unit + count·cube)` box (block `i`'s top rhombus is centred at `(unit, unit/2 + i·cube)`; the three faces per the formulae in the file header — the front faces of block `i` end exactly where block `i+1`'s top rhombus begins, so the stack reads as one extruded N-band bar). `count <= 0` → `{ width:0, height:0, blocks:[] }`. The **first non-colour** pure module in `src/functions/` — layout geometry for the share page's ISO-CUBE panel. Consumed by `src/skins/poster/share/ShareIsoCube.tsx` (which fills each block's faces from a colour with Okhsl lightness steps).
 
 ### `get_color_card_props.ts` — `fetch`, no color lib
 
@@ -348,8 +353,20 @@
       "PosterColumn",
       "PosterTile",
       "PosterEditTray",
-      "PosterFooter"
+      "PosterFooter",
+      "ShareGrid",
+      "ShareBars"
     ]
+  },
+  "iso_cube.ts": {
+    "lib": "none",
+    "exports": [
+      "IsoBlock {top,left,right} (SVG polygon points strings)",
+      "IsoStack {width,height,blocks}",
+      "isoBlockStack(count, {unit?=110,cube?=64})→IsoStack — vertical stack of N flat-2:1 iso blocks, block 0 on top, in a 2u×(u+N·c) box; count<=0→empty"
+    ],
+    "note": "the first non-color pure module — layout geometry for the share page's ISO-CUBE panel",
+    "consumers": ["ShareIsoCube"]
   },
   "resolve_export_template.ts": {
     "lib": "color_converters",
@@ -379,7 +396,9 @@
     ],
     "consumers": [
       "PaletteContext (encode, hash effect)",
-      "paletteReducer (decode, createPaletteState)"
+      "paletteReducer (decode, createPaletteState)",
+      "parseShareHash (decode of the ?p= value — never the raw #/share?p= string)",
+      "PosterFooter ShareButton (encode for the #/share?p= link)"
     ]
   },
   "get_color_card_props.ts": {
@@ -455,6 +474,7 @@ flowchart LR
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
     su["share_url.ts"]
+    iso["iso_cube.ts (layout, no deps)"]
   end
   subgraph io["thin I/O shims"]
     gcn["get_color_card_props.ts (fetch)"]
@@ -468,6 +488,8 @@ flowchart LR
   gp --> ttray["PosterToolsTray — spa.md"]
   su --> red
   su --> pctx["PaletteContext — state.md"]
+  su --> sharepg["share page (parseShareHash) + PosterFooter ShareButton — spa.md"]
+  iso --> sharepg
   rt --> pctx
   gcn --> pctx
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
