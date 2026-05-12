@@ -8,8 +8,8 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
 - **`src/setupTests.ts`** — a single line: `import "@testing-library/jest-dom/vitest"` (adds jest-dom matchers to Vitest's `expect`). React component tests use `@testing-library/react` (`render`, `renderHook`).
 - **Colocation rule** — tests live **next to the source file** as `src/.../X.test.ts(x)` — _not_ in a `tests/`/`__tests__/` mirror directory. This is the project convention and **deliberately overrides** the general "tests in mirror modules" rule. New tests for `src/foo/bar.ts` go in `src/foo/bar.test.ts`.
 - **Commands** — `npm test` (= `vitest run`, one-shot, CI mode), `npm run test:watch` (= `vitest`), `npm run typecheck` (= `tsc --noEmit`), `npm run lint` (= `eslint .` — **currently exits non-zero** on the single pre-existing `react-hooks/set-state-in-effect` error in `src/skins/poster/PosterEditTray.tsx` (the `setInput`-on-colour/space-change effect, ≈L145); a "tests + lint must be green" gate has to account for that one error). `npm run build` (= `tsc --noEmit && vite build`) is the full integrity check.
-- **What has tests** — all of `src/functions/*` except `color_lists.ts` and `tones_tailwind_data.ts`; both files in `src/context/*`; `src/hooks/use_viewport.ts`.
-- **What has no tests** — every UI component in `src/skins/poster/*`; the hooks `use_color_lists.ts`, `use_exit_animation.ts`, `use_fit_name_size.ts`, `use_global_shortcuts.ts`, `use_touch_drag_reorder.ts`; `src/functions/color_lists.ts`, the vendored `src/functions/tones_{tailwind,radix,flexoki,shoelace}_data.ts` (exercised indirectly via `tones.test.ts`); `src/App.tsx`, `src/index.tsx`; `scripts/generate-og.mjs`. (UI changes have to be verified by hand in a browser — there's no component-test harness for the poster skin.)
+- **What has tests** — all of `src/functions/*` except `color_lists.ts` and the vendored `tones_*_data.ts` files; both files in `src/context/*`; `src/hooks/use_viewport.ts`; `src/App.tsx` (the hash-route branch); `src/skins/poster/share/parseShareHash.ts`.
+- **What has no tests** — every UI component in `src/skins/poster/*` (incl. `PosterSharePage` + the `Share*` reps); the hooks `use_color_lists.ts`, `use_exit_animation.ts`, `use_fit_name_size.ts`, `use_global_shortcuts.ts`, `use_touch_drag_reorder.ts`; `src/functions/color_lists.ts`, the vendored `src/functions/tones_{tailwind,radix,flexoki,shoelace}_data.ts` (exercised indirectly via `tones.test.ts`); `src/index.tsx`; `scripts/generate-og.mjs`. (UI changes have to be verified by hand in a browser — there's no component-test harness for the poster skin.)
 - **TDD** — pure functions in `src/functions/*` (and reducer logic in `src/context/paletteReducer.ts`) are the natural TDD target: write the colocated `*.test.ts` first, watch it fail, then implement. The existing color/harmony/tones/template tests follow this shape (red test → minimal implementation → green).
 
 ### Coverage map (high level)
@@ -29,6 +29,9 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
 | `src/functions/share_url.test.ts`               | `encodePalette` → `ff0000-00ff00-0000ff`; `decodePalette` round-trips with/without `#p=` prefix; `null` for empty/null/`#p=`; filters invalid hexes; `null` when none survive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `src/functions/tones.test.ts`                   | `TONE_METHODS` ids in order `[ditto, oklch, hsv, gen]`, non-blank `label`/`caption`; `it.each` per method → 11 valid hexes; descending OKLCH lightness (lightest first); lightness span > 0.6; includes a swatch within 0.15 L of the seed; `hsv`/`gen` distinct seeds → distinct scales. `RAMP_SETS` — Tailwind v4 is the default (first) set; keys unique, labels non-blank, ramps non-empty; every family in a set shares the same shade keys; per set (`tailwind/radix/flexoki/shoelace`) `tones(hex,"ditto",set)` → one swatch per reference shade, descending lightness, wide range; `dittoMatch(hex,set)` per set. (imports `oklch` from `culori`)                                                                                                                                                                                                                                                                                                |
 | `src/hooks/use_viewport.test.ts`                | Mocks `window.matchMedia` (a `MockMql` with a listener set + a `__mqls` registry); `renderHook(useViewport)` — reports desktop when max-width doesn't match; flips `isMobile` when the listener fires; flips `isLandscape` on an orientation change.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `src/functions/iso_cube.test.ts`                | `isoBlockStack(0)`/`(-3)` → empty stack; box is `2u` wide × `u + count·c` tall; block 0's top-rhombus apex sits at the box top, block `i` one cube lower; last block's right face ends at `(u, height)`; a default-size stack has 5 blocks for 5 colours.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `src/skins/poster/share/parseShareHash.test.ts` | `isShareHash` true for `#/share` / `#/share?…` / `#/share/…`, false for `#p=…` / `""` / `#/foo` / `#sharing`; `parseShareHash("#/share?p=ff3d00-0e5c9c")` → `["#ff3d00","#0e5c9c"]`; **the colour-0 trap** — `#/share?p=aabbcc-001122-ddeeff` keeps all three; `null` for `#/share` / `#/share?x=1` / `#/share?p=` / `#/share?p=notahex` / `#p=ff0000` / `""`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/App.test.tsx`                              | `window.location.hash = "#/share?p=…"` → `render(<App/>)` shows the share page (the `open in p4lette →` link + the iso-cube `<svg role="img">` are present) — i.e. the route branch picks `PosterSharePage`, not `<Provider><PosterSkin/></Provider>`. `afterEach` clears the hash.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## JSON
 
@@ -48,6 +51,7 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
   },
   "tdd": "src/functions/* (pure) and src/context/paletteReducer.ts logic → write the colocated *.test.ts first, watch it fail, implement minimally",
   "covered": [
+    "src/App.tsx",
     "src/context/PaletteContext.tsx",
     "src/context/paletteReducer.ts",
     "src/functions/color_converters.ts",
@@ -55,12 +59,14 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
     "src/functions/generate_palette.ts",
     "src/functions/get_color_card_props.ts",
     "src/functions/harmony.ts",
+    "src/functions/iso_cube.ts",
     "src/functions/resolve_export_template.ts",
     "src/functions/saved_palettes.ts",
     "src/functions/saved_templates.ts",
     "src/functions/share_url.ts",
     "src/functions/tones.ts",
-    "src/hooks/use_viewport.ts"
+    "src/hooks/use_viewport.ts",
+    "src/skins/poster/share/parseShareHash.ts"
   ],
   "uncovered": [
     "src/skins/poster/* (all UI)",
@@ -71,7 +77,6 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
     "src/hooks/use_touch_drag_reorder.ts",
     "src/functions/color_lists.ts",
     "src/functions/tones_{tailwind,radix,flexoki,shoelace}_data.ts (vendored ramp data — exercised via tones.test.ts)",
-    "src/App.tsx",
     "src/index.tsx",
     "scripts/generate-og.mjs"
   ],
