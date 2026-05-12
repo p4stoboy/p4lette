@@ -9,7 +9,7 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
 - **Colocation rule** — tests live **next to the source file** as `src/.../X.test.ts(x)` — _not_ in a `tests/`/`__tests__/` mirror directory. This is the project convention and **deliberately overrides** the general "tests in mirror modules" rule. New tests for `src/foo/bar.ts` go in `src/foo/bar.test.ts`.
 - **Commands** — `npm test` (= `vitest run`, one-shot, CI mode), `npm run test:watch` (= `vitest`), `npm run typecheck` (= `tsc --noEmit`), `npm run lint` (= `eslint .` — **currently exits non-zero** on the single pre-existing `react-hooks/set-state-in-effect` error in `src/skins/poster/PosterEditTray.tsx` (the `setInput`-on-colour/space-change effect, ≈L145); a "tests + lint must be green" gate has to account for that one error). `npm run build` (= `tsc --noEmit && vite build`) is the full integrity check.
 - **What has tests** — all of `src/functions/*` except `color_lists.ts` and `tones_tailwind_data.ts`; both files in `src/context/*`; `src/hooks/use_viewport.ts`.
-- **What has no tests** — every UI component in `src/skins/poster/*`; the hooks `use_color_lists.ts`, `use_fit_name_size.ts`, `use_global_shortcuts.ts`, `use_touch_drag_reorder.ts`; `src/functions/color_lists.ts`, the vendored `src/functions/tones_{tailwind,radix,flexoki,shoelace}_data.ts` (exercised indirectly via `tones.test.ts`); `src/App.tsx`, `src/index.tsx`; `scripts/generate-og.mjs`. (UI changes have to be verified by hand in a browser — there's no component-test harness for the poster skin.)
+- **What has no tests** — every UI component in `src/skins/poster/*`; the hooks `use_color_lists.ts`, `use_exit_animation.ts`, `use_fit_name_size.ts`, `use_global_shortcuts.ts`, `use_touch_drag_reorder.ts`; `src/functions/color_lists.ts`, the vendored `src/functions/tones_{tailwind,radix,flexoki,shoelace}_data.ts` (exercised indirectly via `tones.test.ts`); `src/App.tsx`, `src/index.tsx`; `scripts/generate-og.mjs`. (UI changes have to be verified by hand in a browser — there's no component-test harness for the poster skin.)
 - **TDD** — pure functions in `src/functions/*` (and reducer logic in `src/context/paletteReducer.ts`) are the natural TDD target: write the colocated `*.test.ts` first, watch it fail, then implement. The existing color/harmony/tones/template tests follow this shape (red test → minimal implementation → green).
 
 ### Coverage map (high level)
@@ -65,6 +65,7 @@ The test setup, the colocation rule, the commands, and a per-file map of what's 
   "uncovered": [
     "src/skins/poster/* (all UI)",
     "src/hooks/use_color_lists.ts",
+    "src/hooks/use_exit_animation.ts",
     "src/hooks/use_fit_name_size.ts",
     "src/hooks/use_global_shortcuts.ts",
     "src/hooks/use_touch_drag_reorder.ts",

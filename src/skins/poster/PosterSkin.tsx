@@ -101,6 +101,9 @@ export const PosterSkin = () => {
   );
   const [copyLabel, setCopyLabel] = useState("COPY!");
   const [tickerVisible, setTickerVisible] = useState(readTickerVisible);
+  // True while the desktop side-panel slot is playing its slide-away exit; the
+  // show* flags drop in the slot's onAnimationEnd. (Mobile panels self-animate.)
+  const [panelClosing, setPanelClosing] = useState(false);
 
   const toggleTicker = useCallback(() => {
     setTickerVisible((v) => {
@@ -192,30 +195,43 @@ export const PosterSkin = () => {
   }, []);
 
   // Tools, export and save/load share the desktop side-panel slot, so opening
-  // one closes the others.
+  // one closes the others (and cancels any in-flight slide-away).
   const openTools = useCallback(() => {
     setShowExport(false);
     setShowSaved(false);
+    setPanelClosing(false);
     setShowTools(true);
   }, []);
   const openExport = useCallback(() => {
     setShowTools(false);
     setShowSaved(false);
+    setPanelClosing(false);
     setShowExport(true);
   }, []);
   const openSaved = useCallback(() => {
     setShowTools(false);
     setShowExport(false);
+    setPanelClosing(false);
     setShowSaved(true);
   }, []);
+  // Close whichever side panel is open. Desktop: flip panelClosing → the slot
+  // plays sidePanelOutRight, then its onAnimationEnd drops the flags. Mobile:
+  // the panel component plays its own exit, so just drop the flags here.
+  const closeSidePanel = useCallback(() => {
+    if (isMobile) {
+      setShowTools(false);
+      setShowExport(false);
+      setShowSaved(false);
+    } else {
+      setPanelClosing(true);
+    }
+  }, [isMobile]);
 
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
-    else if (showExport) setShowExport(false);
-    else if (showTools) setShowTools(false);
-    else if (showSaved) setShowSaved(false);
+    else if (showExport || showTools || showSaved) closeSidePanel();
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
   }, [
@@ -228,6 +244,7 @@ export const PosterSkin = () => {
     showAbout,
     editingId,
     dismissWelcome,
+    closeSidePanel,
   ]);
 
   const handleLockShortcut = useCallback(() => {
@@ -238,16 +255,8 @@ export const PosterSkin = () => {
   useGlobalShortcuts({
     onShuffle: randomizeUnlocked,
     onLock: handleLockShortcut,
-    onExport: () => {
-      setShowTools(false);
-      setShowSaved(false);
-      setShowExport((v) => !v);
-    },
-    onHarmony: () => {
-      setShowExport(false);
-      setShowSaved(false);
-      setShowTools((v) => !v);
-    },
+    onExport: () => (showExport ? closeSidePanel() : openExport()),
+    onHarmony: () => (showTools ? closeSidePanel() : openTools()),
     onAbout: () => setShowAbout((v) => !v),
     onEsc: closeAllOverlays,
   });
@@ -280,20 +289,20 @@ export const PosterSkin = () => {
     letterSpacing: "-0.02em",
   });
 
-  // Tools and export. On desktop these go in the content row's side-panel slot
-  // (sized + slid in by that slot — see the render); on mobile they're overlay
-  // siblings. They're mutually exclusive (openTools/openExport), so at most one
-  // is non-null.
+  // Tools / export / save-load. On desktop these go in the content row's
+  // side-panel slot (sized + slid in/out by that slot — see the render); on
+  // mobile they're overlay siblings (self-animating). Mutually exclusive
+  // (openTools/openExport/openSaved), so at most one is non-null.
   const toolsPanel = showTools ? (
     <PosterToolsTray
       ink={ink}
       bg={bg}
       isMobile={isMobile}
       palette={palette}
-      onClose={() => setShowTools(false)}
+      onClose={closeSidePanel}
       onApply={(hexes) => {
         replaceAll(hexes);
-        setShowTools(false);
+        closeSidePanel();
       }}
     />
   ) : null;
@@ -312,7 +321,7 @@ export const PosterSkin = () => {
       onSaveTemplate={handleSaveTemplate}
       onLoadTemplate={(body) => setExportTemplate(body)}
       onDeleteTemplate={removeTemplate}
-      onClose={() => setShowExport(false)}
+      onClose={closeSidePanel}
     />
   ) : null;
   const savedPanel = showSaved ? (
@@ -321,11 +330,11 @@ export const PosterSkin = () => {
       bg={bg}
       isMobile={isMobile}
       list={savedList}
-      onClose={() => setShowSaved(false)}
+      onClose={closeSidePanel}
       onSave={handleSavePalette}
       onLoad={(hexes) => {
         replaceAll(hexes);
-        setShowSaved(false);
+        closeSidePanel();
       }}
       onDelete={removeSaved}
     />
@@ -484,10 +493,20 @@ export const PosterSkin = () => {
                 display: "flex",
                 flexDirection: "column",
                 borderLeft: `${POSTER.borderW}px solid ${ink}`,
-                animation: "sidePanelInRight .24s cubic-bezier(.2,.7,.3,1)",
+                animation: panelClosing
+                  ? "sidePanelOutRight .2s cubic-bezier(.4,0,.6,1) forwards"
+                  : "sidePanelInRight .24s cubic-bezier(.2,.7,.3,1)",
+              }}
+              onAnimationEnd={() => {
+                if (panelClosing) {
+                  setShowTools(false);
+                  setShowExport(false);
+                  setShowSaved(false);
+                  setPanelClosing(false);
+                }
               }}
             >
-              <style>{`@keyframes sidePanelInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+              <style>{`@keyframes sidePanelInRight { from { transform: translateX(100%); } to { transform: translateX(0); } } @keyframes sidePanelOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }`}</style>
               {sidePanelChild}
             </div>
           )}
