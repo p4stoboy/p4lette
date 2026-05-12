@@ -1,10 +1,19 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
+import { ColorMode, EditSpace } from "../../types/Colors";
 import {
   formatColor,
+  hexToHsl,
+  hexToHsv,
+  hexToOklch,
   hexToOkhsl,
+  hexToRgb,
+  hslToHex,
+  hsvToHex,
+  oklchToHex,
   okhslToHex,
+  rgbToHex,
   parseColor,
 } from "../../functions/color_converters";
 import { POSTER } from "./tokens";
@@ -16,20 +25,125 @@ interface Props {
   onClose: () => void;
 }
 
+// The colour space the EDIT-tray sliders/text edit in. `"okhsl"` (the
+// perceptual default) keeps the old HUE/SAT/LUM behaviour + a hex text input;
+// the others map to that space's natural channels.
+const EDIT_SPACES: readonly EditSpace[] = [
+  "okhsl",
+  "rgb",
+  "hsl",
+  "hsv",
+  "oklch",
+];
+
+type SliderTriplet = {
+  labels: readonly [string, string, string];
+  maxes: readonly [number, number, number];
+  vals: readonly [number, number, number];
+  set: (i: 0 | 1 | 2, v: number) => string;
+};
+
+const tripletFor = (space: EditSpace, hex: string): SliderTriplet => {
+  switch (space) {
+    case "rgb": {
+      const { r, g, b } = hexToRgb(hex);
+      return {
+        labels: ["R", "G", "B"],
+        maxes: [255, 255, 255],
+        vals: [r, g, b],
+        set: (i, v) =>
+          rgbToHex(
+            i === 0
+              ? { r: v, g, b }
+              : i === 1
+                ? { r, g: v, b }
+                : { r, g, b: v },
+          ),
+      };
+    }
+    case "hsl": {
+      const { h, s, l } = hexToHsl(hex);
+      return {
+        labels: ["HUE", "SAT", "LUM"],
+        maxes: [360, 100, 100],
+        vals: [h, s, l],
+        set: (i, v) =>
+          hslToHex(
+            i === 0
+              ? { h: v, s, l }
+              : i === 1
+                ? { h, s: v, l }
+                : { h, s, l: v },
+          ),
+      };
+    }
+    case "hsv": {
+      const { h, s, v: val } = hexToHsv(hex);
+      return {
+        labels: ["HUE", "SAT", "VAL"],
+        maxes: [360, 100, 100],
+        vals: [h, s, val],
+        set: (i, v) =>
+          hsvToHex(
+            i === 0
+              ? { h: v, s, v: val }
+              : i === 1
+                ? { h, s: v, v: val }
+                : { h, s, v },
+          ),
+      };
+    }
+    case "oklch": {
+      const { l, c, h } = hexToOklch(hex);
+      return {
+        labels: ["LUM", "CHR", "HUE"],
+        maxes: [100, 40, 360],
+        vals: [l, c * 100, h],
+        set: (i, v) =>
+          oklchToHex(
+            i === 0
+              ? { l: v, c, h }
+              : i === 1
+                ? { l, c: v / 100, h }
+                : { l, c, h: v },
+          ),
+      };
+    }
+    default: {
+      const o = hexToOkhsl(hex);
+      return {
+        labels: ["HUE", "SAT", "LUM"],
+        maxes: [360, 100, 100],
+        vals: [o.h, o.s * 100, o.l * 100],
+        set: (i, v) =>
+          okhslToHex(
+            i === 0
+              ? { h: v, s: o.s, l: o.l }
+              : i === 1
+                ? { h: o.h, s: v / 100, l: o.l }
+                : { h: o.h, s: o.s, l: v / 100 },
+          ),
+      };
+    }
+  }
+};
+
 export const PosterEditTray = ({
   color,
   fontColor,
   onUpdate,
   onClose,
 }: Props) => {
-  const { colorMode } = usePalette();
+  const { editSpace, setEditSpace } = usePalette();
+  // Okhsl has no compact CSS string, so its text field is just a hex field.
+  const textMode: ColorMode = editSpace === "okhsl" ? "hex" : editSpace;
   const [hex, setHex] = useState(color.hex);
-  const [input, setInput] = useState(() => formatColor(color.hex, colorMode));
+  const [input, setInput] = useState(() => formatColor(color.hex, textMode));
   const trayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setInput(formatColor(hex, colorMode));
-  }, [colorMode, hex]);
+    setInput(formatColor(hex, textMode));
+  }, [textMode, hex]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -50,18 +164,18 @@ export const PosterEditTray = ({
     setHex(h);
     onUpdate(h);
   };
-  // Sliders work in Okhsl (perceptually even) regardless of the display MODE.
-  const ok = hexToOkhsl(hex);
 
   const onInput = (e: ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     setInput(v);
-    const parsed = parseColor(v, colorMode);
+    const parsed = parseColor(v, textMode);
     if (parsed) {
       setHex(parsed);
       onUpdate(parsed);
     }
   };
+
+  const t = tripletFor(editSpace, hex);
 
   return (
     <div
@@ -83,17 +197,50 @@ export const PosterEditTray = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 8,
           marginBottom: 14,
         }}
       >
         <div
           style={{
-            fontFamily: POSTER.display,
-            fontSize: 22,
-            letterSpacing: "-0.02em",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            minWidth: 0,
           }}
         >
-          EDIT
+          <span
+            style={{
+              fontFamily: POSTER.display,
+              fontSize: 22,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            EDIT
+          </span>
+          <select
+            value={editSpace}
+            onChange={(e) => setEditSpace(e.target.value as EditSpace)}
+            aria-label="edit colour space"
+            style={{
+              background: "transparent",
+              border: `1px solid ${fontColor}`,
+              color: fontColor,
+              fontFamily: POSTER.body,
+              fontWeight: 700,
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "3px 4px",
+              cursor: "pointer",
+            }}
+          >
+            {EDIT_SPACES.map((s) => (
+              <option key={s} value={s}>
+                {s.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           onClick={onClose}
@@ -106,6 +253,7 @@ export const PosterEditTray = ({
             cursor: "pointer",
             fontSize: 14,
             fontWeight: 700,
+            flexShrink: 0,
           }}
         >
           ×
@@ -121,7 +269,7 @@ export const PosterEditTray = ({
           marginBottom: 4,
         }}
       >
-        {colorMode.toUpperCase()}
+        {textMode.toUpperCase()}
       </label>
       <input
         value={input}
@@ -141,30 +289,17 @@ export const PosterEditTray = ({
         }}
       />
 
-      <ChannelSlider
-        label="HUE"
-        min={0}
-        max={360}
-        value={ok.h}
-        fontColor={fontColor}
-        onChange={(v) => apply(okhslToHex({ ...ok, h: v }))}
-      />
-      <ChannelSlider
-        label="SAT"
-        min={0}
-        max={100}
-        value={ok.s * 100}
-        fontColor={fontColor}
-        onChange={(v) => apply(okhslToHex({ ...ok, s: v / 100 }))}
-      />
-      <ChannelSlider
-        label="LUM"
-        min={0}
-        max={100}
-        value={ok.l * 100}
-        fontColor={fontColor}
-        onChange={(v) => apply(okhslToHex({ ...ok, l: v / 100 }))}
-      />
+      {([0, 1, 2] as const).map((i) => (
+        <ChannelSlider
+          key={i}
+          label={t.labels[i]}
+          min={0}
+          max={t.maxes[i]}
+          value={t.vals[i]}
+          fontColor={fontColor}
+          onChange={(v) => apply(t.set(i, v))}
+        />
+      ))}
 
       <div style={{ marginTop: 8 }}>
         <div

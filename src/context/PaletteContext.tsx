@@ -8,7 +8,7 @@ import {
   useReducer,
   useRef,
 } from "react";
-import { ColorMode } from "../types/Colors";
+import { DisplayMode, EditSpace } from "../types/Colors";
 import { PaletteContextProps } from "../types/PaletteContextProps";
 import {
   DEFAULT_TEMPLATE,
@@ -28,11 +28,13 @@ import {
 const EXPORT_KEY = "p4lette_export_template_v1";
 const NAME_LIST_KEY = "p4lette_name_list_v1";
 const COLOR_MODE_KEY = "p4lette_color_mode_v1";
+const EDIT_SPACE_KEY = "p4lette_edit_space_v1";
 const NAMES_DEBOUNCE_MS = 500;
 const HASH_DEBOUNCE_MS = 150;
 const NAME_PLACEHOLDER = "...";
 
-const VALID_MODES = ["hex", "rgb", "hsl", "hsv", "oklch"] as const;
+const VALID_MODES = ["hex", "rgb", "hsl", "hsv", "oklch", "all"] as const;
+const VALID_EDIT_SPACES = ["okhsl", "rgb", "hsl", "hsv", "oklch"] as const;
 
 export const PaletteContext = createContext<PaletteContextProps | undefined>(
   undefined,
@@ -62,13 +64,27 @@ const readInitialNameList = (): string => {
   }
 };
 
-const readInitialColorMode = (): ColorMode => {
-  if (typeof localStorage === "undefined") return "hex";
+const readInitialColorMode = (): DisplayMode => {
+  if (typeof localStorage === "undefined") return "all";
   try {
     const raw = localStorage.getItem(COLOR_MODE_KEY);
-    return VALID_MODES.includes(raw as ColorMode) ? (raw as ColorMode) : "hex";
+    return VALID_MODES.includes(raw as DisplayMode)
+      ? (raw as DisplayMode)
+      : "all";
   } catch {
-    return "hex";
+    return "all";
+  }
+};
+
+const readInitialEditSpace = (): EditSpace => {
+  if (typeof localStorage === "undefined") return "okhsl";
+  try {
+    const raw = localStorage.getItem(EDIT_SPACE_KEY);
+    return VALID_EDIT_SPACES.includes(raw as EditSpace)
+      ? (raw as EditSpace)
+      : "okhsl";
+  } catch {
+    return "okhsl";
   }
 };
 
@@ -93,6 +109,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
         hash: readInitialHash(),
         nameList: readInitialNameList(),
         colorMode: readInitialColorMode(),
+        editSpace: readInitialEditSpace(),
       }),
   );
   const {
@@ -102,6 +119,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     exportTemplate,
     nameList,
     colorMode,
+    editSpace,
     genStrategy,
     genParams,
   } = state;
@@ -182,6 +200,15 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     }
   }, [colorMode]);
 
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(EDIT_SPACE_KEY, editSpace);
+    } catch {
+      /* ignore quota */
+    }
+  }, [editSpace]);
+
   const addColor = useCallback(
     (hex?: string) => dispatch({ type: "addColor", hex }),
     [],
@@ -224,7 +251,11 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     [],
   );
   const setColorMode = useCallback(
-    (mode: ColorMode) => dispatch({ type: "setColorMode", mode }),
+    (mode: DisplayMode) => dispatch({ type: "setColorMode", mode }),
+    [],
+  );
+  const setEditSpace = useCallback(
+    (space: EditSpace) => dispatch({ type: "setEditSpace", space }),
     [],
   );
   const setGenConfig = useCallback(
@@ -242,6 +273,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       resolvedTemplate,
       nameList,
       colorMode,
+      editSpace,
       genStrategy,
       genParams,
       addColor,
@@ -255,6 +287,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportVisible,
       setNameList,
       setColorMode,
+      setEditSpace,
       setGenConfig,
     }),
     [
@@ -265,6 +298,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       resolvedTemplate,
       nameList,
       colorMode,
+      editSpace,
       genStrategy,
       genParams,
       addColor,
@@ -278,6 +312,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportVisible,
       setNameList,
       setColorMode,
+      setEditSpace,
       setGenConfig,
     ],
   );

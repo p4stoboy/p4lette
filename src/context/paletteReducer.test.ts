@@ -151,9 +151,9 @@ describe("paletteReducer", () => {
     expect(result).toBe(state);
   });
 
-  it("default colorMode is hex", () => {
+  it("defaults colorMode to ALL", () => {
     const state = createPaletteState({ exportTemplate: "t", initialCount: 0 });
-    expect(state.colorMode).toBe("hex");
+    expect(state.colorMode).toBe("all");
   });
 
   it("setColorMode updates the mode", () => {
@@ -170,6 +170,29 @@ describe("paletteReducer", () => {
     const result = paletteReducer(state, {
       type: "setColorMode",
       mode: "rgb",
+    });
+    expect(result).toBe(state);
+  });
+
+  it("defaults editSpace to okhsl", () => {
+    const state = createPaletteState({ exportTemplate: "t", initialCount: 0 });
+    expect(state.editSpace).toBe("okhsl");
+  });
+
+  it("setEditSpace updates the editing space", () => {
+    const state = baseState();
+    const result = paletteReducer(state, {
+      type: "setEditSpace",
+      space: "oklch",
+    });
+    expect(result.editSpace).toBe("oklch");
+  });
+
+  it("setEditSpace is a no-op when unchanged", () => {
+    const state = baseState({ editSpace: "rgb" });
+    const result = paletteReducer(state, {
+      type: "setEditSpace",
+      space: "rgb",
     });
     expect(result).toBe(state);
   });
