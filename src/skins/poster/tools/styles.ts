@@ -10,23 +10,6 @@ export interface BodyProps {
   onApply: (hexes: string[]) => void;
 }
 
-// On desktop the tray body lays sections out in a responsive grid; on mobile a
-// stacked scrolling column. `isFirst` only matters for the mobile stack (the
-// top section needs no divider above it).
-export const sectionStyle = (
-  ink: string,
-  isMobile: boolean,
-  isFirst: boolean,
-) => ({
-  flex: isMobile ? ("0 0 auto" as const) : undefined,
-  display: "flex" as const,
-  flexDirection: "column" as const,
-  minWidth: 0,
-  minHeight: 0,
-  borderRight: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
-  borderTop: isMobile && !isFirst ? `${POSTER.borderW}px solid ${ink}` : "none",
-});
-
 export const subHeaderStyle = (ink: string) => ({
   borderBottom: `2px solid ${ink}`,
   padding: "10px 16px",

@@ -9,7 +9,7 @@ import { EffectsBody } from "./EffectsBody";
 import { GenerateBody } from "./GenerateBody";
 
 export type { BodyProps };
-export { sectionStyle, subHeaderStyle } from "./styles";
+export { subHeaderStyle } from "./styles";
 
 export interface TraySection {
   key: string;
