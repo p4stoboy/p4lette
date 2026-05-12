@@ -11,7 +11,7 @@
 - `formatColor(hex, mode: ColorMode) → string` — exhaustive over `ColorMode`: `hex`→`#RRGGBB` uppercased; `rgb`→`rgb(r, g, b)`; `hsl`→`hsl(h, s%, l%)`; `hsv`→`hsv(h, s%, v%)`; `oklch`→`oklch(L%, c.3f, h.2f)`.
 - `parseColor(input, mode: ColorMode) → string | null` — `hex`: `/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i` → normalised `#rrggbb`. `rgb`/`hsl`/`hsv`/`oklch`: pull ≥3 numbers via `extractNumbers`, **clamp** to range, convert to hex (oklch lightness `≤1` treated as 0..1 and ×100). `null` on empty/unparseable. **Quirk: out-of-range channels are clamped, not rejected** (`parseColor("rgb(999,0,0)","rgb") → "#ff0000"`).
 - `randomHex() → string` — random HSL `h∈[0,360)`, `s∈[35,90]`, `l∈[30,80]` → `hslToHex` (avoids near-black/white/grey). The per-slot random used by `addColor` and as the `randomizeUnlocked` fallback.
-- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`clamp`, `hexToHsl`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`), `PosterEditTray` (`formatColor`, `parseColor`, `hexToOkhsl`, `okhslToHex` — the EDIT-tray sliders run in Okhsl).
+- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`hexToHsl`, `hslToHex`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`), `PosterEditTray` (`formatColor`, `parseColor`, `hexToOkhsl`, `okhslToHex` — the EDIT-tray sliders run in Okhsl).
 
 ### `generate_palette.ts` — uses **`rampensau`** (`generateColorRamp`, `generateColorRampWithCurve`, `generateColorRampParams`) + **`poline`** (`Poline`)
 
@@ -23,21 +23,17 @@
   - `"random"` — `count` independent `randomHex()` (the incoherent escape hatch).
   - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`).
 
-### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rybitten`** (`rybHsl2rgb`, `cubes`/`ColorCube` from `rybitten/cubes`) + **`rampensau`** (`colorUtils.colorHarmonies`)
+### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rampensau`** (`colorUtils.colorHarmonies`)
 
 - `HarmonyKind = "complementary"|"analogous"|"triadic"|"tetradic"|"split"|"monochrome"|"shades"`. Re-exports `PaletteStyle` (`'default'|'square'|'triangle'|'circle'|'diamond'`).
-- `COUNTS: Record<HarmonyKind, number>` = `{ complementary:2, analogous:3, triadic:3, tetradic:4, split:3, monochrome:5, shades:3 }`. `harmony`/`harmonyRyb` always return exactly `COUNTS[kind]` hexes (style/cube vary the hues, not the count). `harmonyHsv` returns one hex per hue the `colorHarmonies` fn yields.
+- `COUNTS: Record<HarmonyKind, number>` = `{ complementary:2, analogous:3, triadic:3, tetradic:4, split:3, monochrome:5, shades:3 }`. `harmony` always returns exactly `COUNTS[kind]` hexes (the style varies the hues, not the count). `harmonyHsv` returns one hex per hue the `colorHarmonies` fn yields.
 - `HARMONY_STYLES: readonly PaletteStyle[]` = `["default","square","triangle","circle","diamond"]` — for the UI's style picker; `"default"` reproduces the prior behaviour.
-- `RYB_CUBES: readonly { key: string; label: string }[]` = curated slice of rybitten's pigment wheels — `[itten, goethe, bezold, munsell, chevreul]` (rybitten ships ~30; `itten` is the default Itten chromatic circle).
 - `HARMONY_HSV_KINDS: readonly { key: string; label: string }[]` — the rampensau HSV harmonies the UI offers as a third "space": `complementary, analogous, triadic, tetradic, splitComplementary, pentadic, hexadic, compound, doubleComplementary` (the last four are geometry pro-color-harmonies doesn't have).
 - Private `LIB_KIND` maps `complementary/analogous/triadic/tetradic/split` → `pro-color-harmonies` kind names (`split → "splitComplementary"`); `monochrome`/`shades` deliberately not mapped (handled via `tintsShadesRamp`).
 - Private helpers: `toHex(OKLCH)` → `formatHex(clampChroma({mode:"oklch",l,c,h},"oklch")) ?? "#000000"`. `dedupeByHue(colors, count)` — bucket by `Math.round(h)`, take up to `count` distinct hues, pad by cycling if short. `lightnessRamp(base, count, spread)` — evenly-spaced L over `[max(0.1, l-spread), min(0.95, l+spread)]`, holding `c`/`h`. `resampleRamp(ramp, count)` — lerp an OKLCH list to exactly `count` colours. `tintsShadesRamp(base, count, spread, style)` — `ColorPaletteGenerator.generate(base,"tintsShades",{style})` (the geometric style now applies — `default`/`square` hold the hue, the others bend hue/chroma a little), sorted by L, L-range remapped to `[max(0.1, l-spread), min(0.95, l+spread)]`, `resampleRamp`d to `count`; falls back to `lightnessRamp` if the lib returns <2.
 - **`harmony(hex, kind, style: PaletteStyle = "default"): string[]`** — OKLCH path. `parsed = oklch(hex)`; null → `Array(COUNTS[kind]).fill(hex)`. `monochrome` → `tintsShadesRamp(base,5,0.32,style)`; `shades` → `tintsShadesRamp(base,3,0.22,style)` (style now affects these too). Else `ColorPaletteGenerator.generate(base, LIB_KIND[kind], { style })` → `dedupeByHue` to `COUNTS[kind]` → map `toHex`. (Hue varies per the harmony × `style`; the seed's L/C are roughly preserved.)
-- `RYB_DELTAS: Partial<Record<HarmonyKind, readonly number[]>>` = `{ complementary:[0,180], analogous:[-30,0,30], triadic:[0,120,240], tetradic:[0,90,180,270], split:[0,150,210] }`.
-- Private `rybHueRotate(hue, delta, cube?) → number | undefined` — rotate `hue` by `delta` on the given RYB pigment wheel (`cube`, defaults to rybitten's `RYB_ITTEN` when `undefined`): `rybHsl2rgb([((hue+delta)%360+360)%360, 1, 0.5], { cube })` (S=1, L=0.5 → the purest pigment for that angle), then `oklch({mode:"rgb",...clamped})?.h`. Returns **only the OKLCH hue** — the caller reapplies the seed's own L and C so results stay vivid/equiluminant rather than washing toward the cube's corners.
-- **`harmonyRyb(hex, kind, cubeKey = "itten"): string[]`** — RYB/pigment-wheel path. `monochrome`/`shades` delegate to `harmony`. Else: `deltas = RYB_DELTAS[kind]`; `parsed = oklch(hex)`; either missing → fill with `hex`. `cube = cubes.get(cubeKey)?.cube` (unknown key → `undefined` → Itten default); `seedHue = hexToHsl(hex).h`; `deltas.map(d => toHex({ l: parsed.l, c: parsed.c ?? 0, h: rybHueRotate(seedHue, d, cube) ?? parsed.h }))`.
 - **`harmonyHsv(hex, kindKey: string): string[]`** — rampensau HSV-space path. `fn = colorUtils.colorHarmonies[kindKey] ?? .complementary` (unknown → complementary); `{h,s,l} = hexToHsl(hex)`; `fn(h)` (a list of _absolute_ hues, the seed's first) → each `hslToHex({ h: hue mod 360, s, l })` (keeps the seed's HSL S/L — purely a hue-geometry variation).
-- Consumed by `PosterToolsTray` (`HarmonyBody`: `harmony`, `harmonyRyb`, `harmonyHsv`, `HarmonyKind`, `PaletteStyle`, `HARMONY_STYLES`, `RYB_CUBES`, `HARMONY_HSV_KINDS`).
+- Consumed by `PosterToolsTray` (`HarmonyBody`: `harmony`, `harmonyHsv`, `HarmonyKind`, `PaletteStyle`, `HARMONY_STYLES`, `HARMONY_HSV_KINDS`).
 
 ### `tones.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`, `parse`) + **`dittotones`** (`DittoTones`) + **`fettepalette`** (`generateRandomColorRamp`) + **`rampensau`** (`generateColorRamp`); reads `tones_tailwind_data.ts`
 
@@ -170,8 +166,6 @@
     "lib": [
       "culori",
       "pro-color-harmonies",
-      "rybitten",
-      "rybitten/cubes",
       "rampensau (colorUtils.colorHarmonies)"
     ],
     "HarmonyKind": [
@@ -193,7 +187,6 @@
       "shades": 3
     },
     "HARMONY_STYLES": ["default", "square", "triangle", "circle", "diamond"],
-    "RYB_CUBES": ["itten", "goethe", "bezold", "munsell", "chevreul"],
     "HARMONY_HSV_KINDS": [
       "complementary",
       "analogous",
@@ -207,22 +200,13 @@
     ],
     "exports": [
       "harmony(hex,kind,style='default')→string[] (OKLCH path; mono/shades=tintsShadesRamp(base,n,spread,style) — style now applies; else ColorPaletteGenerator.generate(base,libKind,{style})+dedupeByHue+toHex)",
-      "harmonyRyb(hex,kind,cubeKey='itten')→string[] (RYB path; mono/shades delegate; else rotate seedHue by RYB_DELTAS on cubes.get(cubeKey)?.cube via rybHueRotate, reapply seed L/C)",
       "harmonyHsv(hex,kindKey)→string[] (rampensau colorUtils.colorHarmonies[kind] (unknown→complementary): seed hue → list of absolute hues → hslToHex keeping the seed's S/L)",
       "HarmonyKind",
       "PaletteStyle (re-exported)",
       "HARMONY_STYLES",
-      "RYB_CUBES",
       "HARMONY_HSV_KINDS",
       "COUNTS"
     ],
-    "RYB_DELTAS": {
-      "complementary": [0, 180],
-      "analogous": [-30, 0, 30],
-      "triadic": [0, 120, 240],
-      "tetradic": [0, 90, 180, 270],
-      "split": [0, 150, 210]
-    },
     "private": [
       "resampleRamp(ramp,count) — lerp to count",
       "tintsShadesRamp(base,count,spread,style) — pro-color-harmonies tintsShades, L-range remapped, resampled; lightnessRamp fallback"
@@ -437,7 +421,7 @@ flowchart LR
   subgraph pure["pure (no I/O)"]
     cc["color_converters.ts"]
     gp["generate_palette.ts → rampensau · poline"]
-    hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes · rampensau"]
+    hm["harmony.ts → culori · pro-color-harmonies · rampensau"]
     tn["tones.ts → culori · dittotones · fettepalette · rampensau"]
     cf["color_filters.ts → culori (CVD · gamut · filters · blend)"]
     mx["color_mix.ts → culori (interpolate)"]
