@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { oklch } from "culori";
-import { TONE_METHODS, ToneMethod, tones, dittoMatch } from "./tones";
+import {
+  RAMP_SETS,
+  TONE_METHODS,
+  ToneMethod,
+  tones,
+  dittoMatch,
+} from "./tones";
 
 const BASE = "#aa6f3c";
 const METHODS: ToneMethod[] = ["ditto", "oklch", "hsv", "gen"];
@@ -58,10 +64,53 @@ describe("tones", () => {
   });
 });
 
-describe("dittoMatch", () => {
-  it("reports the matched reference ramp/shade and method", () => {
-    const m = dittoMatch(BASE);
-    expect(m.shade).toMatch(/\S/);
-    expect(["exact", "single", "blend"]).toContain(m.method);
+describe("DITTOTONES reference ramp sets", () => {
+  it("Tailwind v4 is the default (first) set", () => {
+    expect(RAMP_SETS[0].key).toBe("tailwind");
   });
+
+  it("keys are unique, labels non-blank, ramps non-empty", () => {
+    const keys = RAMP_SETS.map((s) => s.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const s of RAMP_SETS) {
+      expect(s.label).toMatch(/\S/);
+      expect(Object.keys(s.ramps).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every family in a set shares the same shade keys", () => {
+    for (const s of RAMP_SETS) {
+      const families = Object.values(s.ramps);
+      const ref = JSON.stringify(Object.keys(families[0]).sort());
+      for (const fam of families) {
+        expect(JSON.stringify(Object.keys(fam).sort())).toBe(ref);
+      }
+    }
+  });
+
+  it.each(RAMP_SETS.map((s) => s.key))(
+    "ditto via %s → one swatch per reference shade, descending lightness, wide range",
+    (set) => {
+      const family0 = Object.values(
+        RAMP_SETS.find((s) => s.key === set)!.ramps,
+      )[0];
+      const scale = tones(BASE, "ditto", set);
+      expect(scale).toHaveLength(Object.keys(family0).length);
+      for (const h of scale) expect(isHex(h)).toBe(true);
+      const ls = scale.map((h) => oklch(h)!.l);
+      expect(ls).toEqual([...ls].sort((a, b) => b - a));
+      expect(Math.max(...ls) - Math.min(...ls)).toBeGreaterThan(0.6);
+    },
+  );
+});
+
+describe("dittoMatch", () => {
+  it.each(RAMP_SETS.map((s) => s.key))(
+    "via %s, reports the matched reference ramp/shade and method",
+    (set) => {
+      const m = dittoMatch(BASE, set);
+      expect(m.shade).toMatch(/\S/);
+      expect(["exact", "single", "blend"]).toContain(m.method);
+    },
+  );
 });

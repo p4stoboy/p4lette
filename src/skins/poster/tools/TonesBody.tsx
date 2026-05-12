@@ -1,13 +1,27 @@
 import { useState } from "react";
-import { TONE_METHODS, dittoMatch, tones } from "../../../functions/tones";
+import {
+  RAMP_SETS,
+  TONE_METHODS,
+  dittoMatch,
+  tones,
+} from "../../../functions/tones";
 import { POSTER } from "../tokens";
-import { BasePicker, SwatchRow } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import { BasePicker, SwatchRow, Toggle } from "./shared";
+import {
+  BodyProps,
+  rowsStyle,
+  pillRowStyle,
+  pillRowLabelStyle,
+} from "./styles";
 
 // TONES — perceptual tone scales from a seed colour (ditto / oklch / hsv / gen).
+// The DITTOTONES row blends against a pickable reference ramp set (Tailwind v4
+// default; Radix / Flexoki / Shoelace also bundled).
 export const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#ff3d00");
-  const match = dittoMatch(base);
+  const [set, setSet] = useState(RAMP_SETS[0].key);
+  const setLabel = (RAMP_SETS.find((s) => s.key === set) ?? RAMP_SETS[0]).label;
+  const match = dittoMatch(base, set);
   return (
     <>
       <BasePicker
@@ -17,13 +31,30 @@ export const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         label="SEED COLOR"
         value={base}
         onChange={setBase}
-      />
+      >
+        <div style={{ marginTop: 12 }}>
+          <div style={pillRowLabelStyle()}>RAMP SET · DITTOTONES</div>
+          <div style={pillRowStyle()}>
+            {RAMP_SETS.map((s) => (
+              <Toggle
+                key={s.key}
+                ink={ink}
+                active={s.key === set}
+                tall={isMobile}
+                onClick={() => setSet(s.key)}
+              >
+                {s.label}
+              </Toggle>
+            ))}
+          </div>
+        </div>
+      </BasePicker>
       <div style={rowsStyle()}>
         {TONE_METHODS.map((m) => {
-          const scale = tones(base, m.id);
+          const scale = tones(base, m.id, set);
           const caption =
             m.id === "ditto"
-              ? `${m.caption} · matched ${match.shade} (${match.method})`
+              ? `${m.caption} · ${setLabel} · matched ${match.shade} (${match.method})`
               : m.caption;
           return (
             <SwatchRow

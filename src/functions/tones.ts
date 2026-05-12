@@ -10,6 +10,9 @@ import {
   hsvToHex,
 } from "./color_converters";
 import { tailwindColors } from "./tones_tailwind_data";
+import { radixColors } from "./tones_radix_data";
+import { flexokiColors } from "./tones_flexoki_data";
+import { shoelaceColors } from "./tones_shoelace_data";
 
 const STEPS = 11;
 
@@ -25,7 +28,7 @@ export const TONE_METHODS: readonly ToneMethodInfo[] = [
   {
     id: "ditto",
     label: "DITTOTONES",
-    caption: "perceptual scale blended from Tailwind v4 reference ramps",
+    caption: "perceptual scale blended from a reference ramp set",
   },
   {
     id: "oklch",
@@ -47,16 +50,17 @@ export const TONE_METHODS: readonly ToneMethodInfo[] = [
 const toHexOklch = (l: number, c: number, h: number): string =>
   formatHex(clampChroma({ mode: "oklch", l, c, h }, "oklch")) ?? "#000000";
 
-// --- dittoTones: blend against the Tailwind v4 OKLCH reference ramps ---
-const buildRamps = (): Map<
-  string,
-  Record<string, { l: number; c: number; h: number }>
-> => {
+// --- dittoTones: blend against perceptual reference ramps. A handful of
+//     reference sets are bundled (Tailwind v4 is the default); the TONES tool
+//     picks one. ---
+const buildRamps = (
+  raw: Record<string, Record<string, string>>,
+): Map<string, Record<string, { l: number; c: number; h: number }>> => {
   const ramps = new Map<
     string,
     Record<string, { l: number; c: number; h: number }>
   >();
-  for (const [name, ramp] of Object.entries(tailwindColors)) {
+  for (const [name, ramp] of Object.entries(raw)) {
     const shades: Record<string, { l: number; c: number; h: number }> = {};
     for (const [step, colorStr] of Object.entries(ramp)) {
       const parsed = oklch(parse(colorStr));
@@ -68,17 +72,37 @@ const buildRamps = (): Map<
   return ramps;
 };
 
-const dt = new DittoTones({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ramps: buildRamps() as any,
-  gamutMap: true,
-});
+export interface RampSet {
+  key: string;
+  label: string;
+  ramps: Record<string, Record<string, string>>;
+}
 
-const dittoScale = (hex: string): string[] => {
-  const entries = Object.entries(dt.generate(hex).scale);
-  // Tailwind shade keys ('50','100',...,'950') sort numerically: lightest → darkest
-  entries.sort(([a], [b]) => parseInt(a, 10) - parseInt(b, 10));
-  return entries.map(([, c]) => toHexOklch(c.l, c.c, c.h ?? 0));
+// The DITTOTONES reference sets, Tailwind v4 first (the default). Each is a
+// vendored `Record<family, Record<shade, css-color>>` — see `tones_<set>_data.ts`.
+export const RAMP_SETS: readonly RampSet[] = [
+  { key: "tailwind", label: "TAILWIND v4", ramps: tailwindColors },
+  { key: "radix", label: "RADIX", ramps: radixColors },
+  { key: "flexoki", label: "FLEXOKI", ramps: flexokiColors },
+  { key: "shoelace", label: "SHOELACE", ramps: shoelaceColors },
+];
+
+const DITTOS: Record<string, DittoTones> = Object.fromEntries(
+  RAMP_SETS.map((s) => [
+    s.key,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    new DittoTones({ ramps: buildRamps(s.ramps) as any, gamutMap: true }),
+  ]),
+);
+
+const dittoFor = (set: string): DittoTones => DITTOS[set] ?? DITTOS.tailwind;
+
+const dittoScale = (hex: string, set = "tailwind"): string[] => {
+  const scale = dittoFor(set).generate(hex).scale;
+  const out = Object.values(scale).map((c) => toHexOklch(c.l, c.c, c.h ?? 0));
+  // Re-sort by OKLCH lightness so it's always lightest → darkest, regardless of
+  // the reference ramp's shade-key convention (Tailwind 50→950, Shoelace 95→05…).
+  return out.sort((a, b) => (oklch(b)?.l ?? 0) - (oklch(a)?.l ?? 0));
 };
 
 export interface DittoMatch {
@@ -87,8 +111,8 @@ export interface DittoMatch {
   method: "exact" | "single" | "blend";
 }
 
-export const dittoMatch = (hex: string): DittoMatch => {
-  const r = dt.generate(hex);
+export const dittoMatch = (hex: string, set = "tailwind"): DittoMatch => {
+  const r = dittoFor(set).generate(hex);
   const dominant = [...r.sources].sort((a, b) => b.weight - a.weight)[0];
   const ramp = dominant?.name ?? "neutral";
   return { shade: `${ramp}-${r.matchedShade}`, method: r.method };
@@ -183,5 +207,9 @@ const SCALERS: Record<ToneMethod, (hex: string) => string[]> = {
   gen: genScale,
 };
 
-export const tones = (hex: string, method: ToneMethod): string[] =>
-  SCALERS[method](hex);
+export const tones = (
+  hex: string,
+  method: ToneMethod,
+  set: string = "tailwind",
+): string[] =>
+  method === "ditto" ? dittoScale(hex, set) : SCALERS[method](hex);
