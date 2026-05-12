@@ -223,9 +223,13 @@ export const PosterEditTray = ({
             onChange={(e) => setEditSpace(e.target.value as EditSpace)}
             aria-label="edit colour space"
             style={{
-              background: "transparent",
-              border: `1px solid ${fontColor}`,
-              color: fontColor,
+              // A small paper chip, not text-on-tile — so the closed widget
+              // *and* the native <option> popup stay readable regardless of
+              // `fontColor` (white-on-white in the popup otherwise).
+              background: POSTER.bg,
+              border: `1px solid ${POSTER.ink}`,
+              borderRadius: 0,
+              color: POSTER.ink,
               fontFamily: POSTER.body,
               fontWeight: 700,
               fontSize: 10,
@@ -236,7 +240,11 @@ export const PosterEditTray = ({
             }}
           >
             {EDIT_SPACES.map((s) => (
-              <option key={s} value={s}>
+              <option
+                key={s}
+                value={s}
+                style={{ color: POSTER.ink, background: POSTER.bg }}
+              >
                 {s.toUpperCase()}
               </option>
             ))}
