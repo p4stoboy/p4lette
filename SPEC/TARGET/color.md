@@ -53,6 +53,14 @@
 - **`snapToGamut(hexes: string[]): string[]`** — module-level `intoSrgb = toGamut("rgb","oklch")`; reduces chroma in OKLCH until the colour is displayable, hue/lightness preserved. No-op on colours already in gamut → idempotent.
 - Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`).
 
+### `pigment.ts` — uses **`rybitten`** (`rybHsl2rgb`, `RYB_ITTEN`/`cubes` from `rybitten/cubes`) + `culori` `formatHex` + `color_converters` (`clamp`, `hexToHsl`)
+
+- `interface PigmentCube { key; label; meta }` (`meta` = `"<author> · <year>"`). `PIGMENT_CUBES: readonly PigmentCube[]` — a curated slice of the ~34 rybitten cubes, chromatic wheels first (`itten` is rybitten's default and `PIGMENT_CUBES[0]`), the two reference cubes last: `itten, goethe, runge, chevreul, munsell, harris, boutet, cmy, rgb` (filtered to whatever keys `cubes` actually has). Private `cubeFor(key) = cubes.get(key)?.cube ?? RYB_ITTEN`; private `toHex([r,g,b]) = formatHex({mode:"rgb",...clamp 0–1}) ?? "#000000"`.
+- **`pigmentFilter(hexes: string[], cubeKey: string): string[]`** — re-renders each swatch through the cube: `{h,s,l} = hexToHsl(hex)` → `rybHsl2rgb([h, s/100, l/100], { cube })` → `toHex`. The hue is read on the painter's wheel, lightness is preserved, chroma falls off the way that pigment system mixes. With the `rgb` cube ≈ near-identity; with `goethe`/`munsell`/… a print-like shift. The colour-as-pigment "filter" — what rybitten's profiles are for.
+- **`pigmentWheel(cubeKey: string, n: number): string[]`** — `n` samples of `rybHsl2rgb([(i/n)*360, 1, 0.5], { cube })`: the cube's own colour wheel (full sat / mid lightness; visibly not an sRGB wheel).
+- **`cubeCorners(cubeKey: string): string[]`** — the 8 corner colours of the cube as hex (white · red · yellow · orange · blue · violet · green · black).
+- Consumed by `PosterToolsTray` (`PigmentBody`: `PIGMENT_CUBES`, `pigmentFilter`, `pigmentWheel`, `cubeCorners`).
+
 ### `contrast.ts` — pure, depends on `color_converters` only
 
 - `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` (`fontColorFor`) and `PosterFooter` (`contrast` grade).
@@ -204,6 +212,33 @@
     ],
     "consumers": ["PosterToolsTray (FixersBody)"]
   },
+  "pigment.ts": {
+    "lib": [
+      "rybitten",
+      "rybitten/cubes",
+      "culori (formatHex)",
+      "color_converters"
+    ],
+    "PIGMENT_CUBES": [
+      "itten",
+      "goethe",
+      "runge",
+      "chevreul",
+      "munsell",
+      "harris",
+      "boutet",
+      "cmy",
+      "rgb"
+    ],
+    "exports": [
+      "PigmentCube {key,label,meta='<author> · <year>'}",
+      "PIGMENT_CUBES (curated slice of the ~34 rybitten cubes; itten=default & [0]; filtered to cubes.has)",
+      "pigmentFilter(hexes,cubeKey)→string[] (per swatch: hexToHsl → rybHsl2rgb([h,s/100,l/100],{cube}) → hex; lightness kept, hue read on the painter's wheel, chroma falls off per that pigment system; rgb cube ≈ identity, goethe/munsell/… = print-like shift — the colour-as-pigment filter)",
+      "pigmentWheel(cubeKey,n)→string[] (rybHsl2rgb([(i/n)*360,1,0.5],{cube}) — the cube's own colour wheel)",
+      "cubeCorners(cubeKey)→string[] (the 8 corner colours: white·red·yellow·orange·blue·violet·green·black)"
+    ],
+    "consumers": ["PosterToolsTray (PigmentBody)"]
+  },
   "contrast.ts": {
     "lib": "color_converters",
     "exports": [
@@ -314,6 +349,7 @@ flowchart LR
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes"]
     tn["tones.ts → culori · dittotones · fettepalette"]
     cf["color_filters.ts → culori (CVD · gamut)"]
+    pg["pigment.ts → rybitten (ryb-hsl · cubes)"]
     td["tones_tailwind_data.ts"]
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
@@ -325,7 +361,7 @@ flowchart LR
     sp["saved_palettes.ts (localStorage)"]
     st["saved_templates.ts (localStorage)"]
   end
-  cc --> gp & hm & tn & ct & rt
+  cc --> gp & hm & tn & ct & rt & pg
   td --> tn
   gp --> red["paletteReducer — state.md"]
   su --> red
@@ -336,6 +372,7 @@ flowchart LR
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
   tn --> tld["PosterToolsTray TonesBody — spa.md"]
   cf --> ttf["PosterToolsTray FixersBody — spa.md"]
+  pg --> pgb["PosterToolsTray PigmentBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
   sp --> skin
