@@ -1,7 +1,10 @@
 import { clampChroma, formatHex, oklch } from "culori";
-import { ColorPaletteGenerator } from "pro-color-harmonies";
+import { ColorPaletteGenerator, PaletteStyle } from "pro-color-harmonies";
 import { rybHsl2rgb } from "rybitten";
+import { cubes, type ColorCube } from "rybitten/cubes";
 import { clamp, hexToHsl } from "./color_converters";
+
+export type { PaletteStyle } from "pro-color-harmonies";
 
 export type HarmonyKind =
   | "complementary"
@@ -36,6 +39,32 @@ const LIB_KIND: Partial<Record<HarmonyKind, LibKind>> = {
   tetradic: "tetradic",
   split: "splitComplementary",
 };
+
+// pro-color-harmonies geometric styles — `default` reproduces the prior
+// behaviour; the others re-arrange the hue relationships.
+export const HARMONY_STYLES: readonly PaletteStyle[] = [
+  "default",
+  "square",
+  "triangle",
+  "circle",
+  "diamond",
+];
+
+export interface RybCube {
+  key: string;
+  label: string;
+}
+
+// A curated slice of rybitten's pigment-wheel cubes (it ships ~30). `itten` is
+// the default (Johannes Itten's chromatic circle); the rest are other
+// historical painter's wheels.
+export const RYB_CUBES: readonly RybCube[] = [
+  { key: "itten", label: "ITTEN" },
+  { key: "goethe", label: "GOETHE" },
+  { key: "bezold", label: "BEZOLD" },
+  { key: "munsell", label: "MUNSELL" },
+  { key: "chevreul", label: "CHEVREUL" },
+];
 
 interface OKLCH {
   l: number;
@@ -79,7 +108,11 @@ const lightnessRamp = (base: OKLCH, count: number, spread: number): OKLCH[] => {
   }));
 };
 
-export const harmony = (hex: string, kind: HarmonyKind): string[] => {
+export const harmony = (
+  hex: string,
+  kind: HarmonyKind,
+  style: PaletteStyle = "default",
+): string[] => {
   const parsed = oklch(hex);
   if (!parsed) return Array(COUNTS[kind]).fill(hex);
   const base: OKLCH = { l: parsed.l, c: parsed.c, h: parsed.h ?? 0 };
@@ -93,9 +126,7 @@ export const harmony = (hex: string, kind: HarmonyKind): string[] => {
 
   const libKind = LIB_KIND[kind];
   if (!libKind) return Array(COUNTS[kind]).fill(hex);
-  const full = ColorPaletteGenerator.generate(base, libKind, {
-    style: "default",
-  });
+  const full = ColorPaletteGenerator.generate(base, libKind, { style });
   const picked = dedupeByHue(
     full.map((c) => ({ l: c.l, c: c.c, h: c.h })),
     COUNTS[kind],
@@ -111,14 +142,19 @@ const RYB_DELTAS: Partial<Record<HarmonyKind, readonly number[]>> = {
   split: [0, 150, 210],
 };
 
-// Rotate `hue` (degrees) by `delta` on the RYB / Itten painter's wheel and
-// return the OKLCH hue of the resulting pigment. Saturation and lightness are
-// pinned so the cube yields the purest pigment for that angle — the seed's own
-// L and C are reapplied by the caller, which is what keeps the harmony vivid
-// and equiluminant instead of washed toward the cube's white/black corners.
-const rybHueRotate = (hue: number, delta: number): number | undefined => {
+// Rotate `hue` (degrees) by `delta` on the given RYB pigment wheel (`cube`,
+// defaults to rybitten's RYB_ITTEN when undefined) and return the OKLCH hue of
+// the resulting pigment. Saturation/lightness are pinned so the cube yields the
+// purest pigment for that angle — the seed's own L and C are reapplied by the
+// caller, which keeps the harmony vivid and equiluminant rather than washed
+// toward the cube's white/black corners.
+const rybHueRotate = (
+  hue: number,
+  delta: number,
+  cube?: ColorCube,
+): number | undefined => {
   const angle = (((hue + delta) % 360) + 360) % 360;
-  const [r, g, b] = rybHsl2rgb([angle, 1, 0.5]);
+  const [r, g, b] = rybHsl2rgb([angle, 1, 0.5], { cube });
   return oklch({
     mode: "rgb",
     r: clamp(r, 0, 1),
@@ -127,7 +163,11 @@ const rybHueRotate = (hue: number, delta: number): number | undefined => {
   })?.h;
 };
 
-export const harmonyRyb = (hex: string, kind: HarmonyKind): string[] => {
+export const harmonyRyb = (
+  hex: string,
+  kind: HarmonyKind,
+  cubeKey = "itten",
+): string[] => {
   if (kind === "monochrome" || kind === "shades") {
     return harmony(hex, kind);
   }
@@ -135,8 +175,13 @@ export const harmonyRyb = (hex: string, kind: HarmonyKind): string[] => {
   const parsed = oklch(hex);
   if (!deltas || !parsed) return Array(COUNTS[kind]).fill(hex);
   const base: OKLCH = { l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 };
+  const cube = cubes.get(cubeKey)?.cube;
   const seedHue = hexToHsl(hex).h;
   return deltas.map((d) =>
-    toHex({ l: base.l, c: base.c, h: rybHueRotate(seedHue, d) ?? base.h }),
+    toHex({
+      l: base.l,
+      c: base.c,
+      h: rybHueRotate(seedHue, d, cube) ?? base.h,
+    }),
   );
 };
