@@ -4,16 +4,14 @@ import {
   HARMONY_STYLES,
   HarmonyKind,
   PaletteStyle,
-  RYB_CUBES,
   harmony,
   harmonyHsv,
-  harmonyRyb,
 } from "../../../functions/harmony";
 import { POSTER } from "../tokens";
 import { BasePicker, SwatchRow, Toggle } from "./shared";
 import { BodyProps, rowsStyle } from "./styles";
 
-type HarmonySpace = "oklch" | "ryb" | "hsv";
+type HarmonySpace = "oklch" | "hsv";
 
 const HARMONIES: ReadonlyArray<readonly [string, HarmonyKind]> = [
   ["ANALOGOUS", "analogous"],
@@ -27,7 +25,6 @@ const HARMONIES: ReadonlyArray<readonly [string, HarmonyKind]> = [
 
 const SPACES: ReadonlyArray<readonly [HarmonySpace, string]> = [
   ["oklch", "OKLCH"],
-  ["ryb", "RYB"],
   ["hsv", "HSV"],
 ];
 
@@ -35,8 +32,8 @@ export const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#ff3d00");
   const [space, setSpace] = useState<HarmonySpace>("oklch");
   const [style, setStyle] = useState<PaletteStyle>("default");
-  const [cube, setCube] = useState("itten");
-  // Variant picker: styles for OKLCH, pigment cubes for RYB, nothing for HSV.
+  // Variant picker: the pro-color-harmonies geometric styles for OKLCH; the
+  // HSV harmonies have no variant.
   const variants =
     space === "oklch"
       ? HARMONY_STYLES.map((s) => ({
@@ -45,14 +42,7 @@ export const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
           active: style === s,
           pick: () => setStyle(s),
         }))
-      : space === "ryb"
-        ? RYB_CUBES.map((c) => ({
-            key: c.key,
-            label: c.label,
-            active: cube === c.key,
-            pick: () => setCube(c.key),
-          }))
-        : [];
+      : [];
   const rows =
     space === "hsv"
       ? HARMONY_HSV_KINDS.map((k) => ({
@@ -63,10 +53,7 @@ export const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
       : HARMONIES.map(([label, kind]) => ({
           key: kind,
           label,
-          colors:
-            space === "ryb"
-              ? harmonyRyb(base, kind, cube)
-              : harmony(base, kind, style),
+          colors: harmony(base, kind, style),
         }));
   return (
     <>

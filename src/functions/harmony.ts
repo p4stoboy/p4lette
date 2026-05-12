@@ -1,9 +1,7 @@
 import { clampChroma, formatHex, oklch } from "culori";
 import { ColorPaletteGenerator, PaletteStyle } from "pro-color-harmonies";
 import { colorUtils } from "rampensau";
-import { rybHsl2rgb } from "rybitten";
-import { cubes, type ColorCube } from "rybitten/cubes";
-import { clamp, hexToHsl, hslToHex } from "./color_converters";
+import { hexToHsl, hslToHex } from "./color_converters";
 
 export type { PaletteStyle } from "pro-color-harmonies";
 
@@ -49,22 +47,6 @@ export const HARMONY_STYLES: readonly PaletteStyle[] = [
   "triangle",
   "circle",
   "diamond",
-];
-
-export interface RybCube {
-  key: string;
-  label: string;
-}
-
-// A curated slice of rybitten's pigment-wheel cubes (it ships ~30). `itten` is
-// the default (Johannes Itten's chromatic circle); the rest are other
-// historical painter's wheels.
-export const RYB_CUBES: readonly RybCube[] = [
-  { key: "itten", label: "ITTEN" },
-  { key: "goethe", label: "GOETHE" },
-  { key: "bezold", label: "BEZOLD" },
-  { key: "munsell", label: "MUNSELL" },
-  { key: "chevreul", label: "CHEVREUL" },
 ];
 
 export interface HsvHarmony {
@@ -199,58 +181,6 @@ export const harmony = (
     COUNTS[kind],
   );
   return picked.map(toHex);
-};
-
-const RYB_DELTAS: Partial<Record<HarmonyKind, readonly number[]>> = {
-  complementary: [0, 180],
-  analogous: [-30, 0, 30],
-  triadic: [0, 120, 240],
-  tetradic: [0, 90, 180, 270],
-  split: [0, 150, 210],
-};
-
-// Rotate `hue` (degrees) by `delta` on the given RYB pigment wheel (`cube`,
-// defaults to rybitten's RYB_ITTEN when undefined) and return the OKLCH hue of
-// the resulting pigment. Saturation/lightness are pinned so the cube yields the
-// purest pigment for that angle — the seed's own L and C are reapplied by the
-// caller, which keeps the harmony vivid and equiluminant rather than washed
-// toward the cube's white/black corners.
-const rybHueRotate = (
-  hue: number,
-  delta: number,
-  cube?: ColorCube,
-): number | undefined => {
-  const angle = (((hue + delta) % 360) + 360) % 360;
-  const [r, g, b] = rybHsl2rgb([angle, 1, 0.5], { cube });
-  return oklch({
-    mode: "rgb",
-    r: clamp(r, 0, 1),
-    g: clamp(g, 0, 1),
-    b: clamp(b, 0, 1),
-  })?.h;
-};
-
-export const harmonyRyb = (
-  hex: string,
-  kind: HarmonyKind,
-  cubeKey = "itten",
-): string[] => {
-  if (kind === "monochrome" || kind === "shades") {
-    return harmony(hex, kind);
-  }
-  const deltas = RYB_DELTAS[kind];
-  const parsed = oklch(hex);
-  if (!deltas || !parsed) return Array(COUNTS[kind]).fill(hex);
-  const base: OKLCH = { l: parsed.l, c: parsed.c ?? 0, h: parsed.h ?? 0 };
-  const cube = cubes.get(cubeKey)?.cube;
-  const seedHue = hexToHsl(hex).h;
-  return deltas.map((d) =>
-    toHex({
-      l: base.l,
-      c: base.c,
-      h: rybHueRotate(seedHue, d, cube) ?? base.h,
-    }),
-  );
 };
 
 // rampensau HSV-space harmony — `colorHarmonies[kind]` maps the seed hue to a

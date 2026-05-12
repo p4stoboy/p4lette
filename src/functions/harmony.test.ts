@@ -4,10 +4,8 @@ import {
   HARMONY_HSV_KINDS,
   HARMONY_STYLES,
   HarmonyKind,
-  RYB_CUBES,
   harmony,
   harmonyHsv,
-  harmonyRyb,
 } from "./harmony";
 import { hexToHsl } from "./color_converters";
 
@@ -90,68 +88,6 @@ describe("harmony", () => {
   });
 });
 
-describe("harmonyRyb", () => {
-  it.each(Object.entries(expectations) as Array<[HarmonyKind, number]>)(
-    "%s returns %i valid hex strings",
-    (kind, count) => {
-      const result = harmonyRyb(BASE, kind);
-      expect(result).toHaveLength(count);
-      for (const h of result) {
-        expect(h).toMatch(/^#[0-9a-f]{6}$/);
-      }
-    },
-  );
-
-  it("complementary of red lands in the green family (Itten)", () => {
-    const [, comp] = harmonyRyb("#ff0000", "complementary");
-    const { h } = hexToHsl(comp);
-    // Itten complement of red sits between green (120°) and cyan (180°);
-    // crucially not red-orange (0–60°) and not magenta (300°+).
-    expect(h).toBeGreaterThan(90);
-    expect(h).toBeLessThan(200);
-  });
-
-  it("triadic of red includes blue-ish and yellow-ish on Itten wheel", () => {
-    const [, two, three] = harmonyRyb("#ff0000", "triadic");
-    // Itten triadic of red: yellow (~60°) and blue (~240°)
-    const hues = [two, three].map((h) => hexToHsl(h).h).sort((a, b) => a - b);
-    expect(hues[0]).toBeLessThan(120);
-    expect(hues[1]).toBeGreaterThan(180);
-  });
-
-  const ROTATION_KINDS: HarmonyKind[] = [
-    "analogous",
-    "complementary",
-    "triadic",
-    "tetradic",
-    "split",
-  ];
-
-  it("hue-rotation harmonies stay at the seed's lightness (no washout)", () => {
-    // The RYB toggle only rotates hue on the painter's wheel; it must not drag
-    // swatches toward white/black the way the raw rybitten cube roundtrip did.
-    const seeds = ["#e3242b", "#2b6cb0", "#1a202c", "#cbd5e0", "#f6ad55"];
-    for (const seed of seeds) {
-      const seedL = oklch(seed)!.l;
-      for (const kind of ROTATION_KINDS) {
-        for (const h of harmonyRyb(seed, kind)) {
-          expect(Math.abs(oklch(h)!.l - seedL)).toBeLessThan(0.05);
-        }
-      }
-    }
-  });
-
-  it("hue-rotation harmonies carry the seed's chroma, not a muddy roundtrip", () => {
-    const seed = "#2b6cb0";
-    const seedC = oklch(seed)!.c!;
-    for (const kind of ROTATION_KINDS) {
-      for (const h of harmonyRyb(seed, kind)) {
-        expect(oklch(h)!.c ?? 0).toBeGreaterThan(seedC * 0.7);
-      }
-    }
-  });
-});
-
 describe("harmony — pro-color-harmonies styles", () => {
   it("HARMONY_STYLES lists the geometric styles, 'default' included", () => {
     expect(HARMONY_STYLES).toContain("default");
@@ -178,54 +114,6 @@ describe("harmony — pro-color-harmonies styles", () => {
   it("harmony(hex, kind) defaults to the 'default' style", () => {
     expect(harmony(BASE, "triadic")).toEqual(
       harmony(BASE, "triadic", "default"),
-    );
-  });
-});
-
-describe("harmonyRyb — pigment cube picker", () => {
-  const KINDS_ROT: HarmonyKind[] = [
-    "analogous",
-    "complementary",
-    "triadic",
-    "tetradic",
-    "split",
-  ];
-
-  it("RYB_CUBES is a curated list with an itten default", () => {
-    expect(RYB_CUBES.length).toBeGreaterThanOrEqual(2);
-    expect(RYB_CUBES.map((c) => c.key)).toContain("itten");
-    for (const c of RYB_CUBES) {
-      expect(c.key).toMatch(/\S/);
-      expect(c.label).toMatch(/\S/);
-    }
-  });
-
-  it.each(RYB_CUBES.map((c) => c.key))(
-    "cube %s — rotational kinds return COUNTS[kind] valid hexes at the seed's lightness",
-    (key) => {
-      const seed = "#2b6cb0";
-      const seedL = oklch(seed)!.l;
-      for (const kind of KINDS_ROT) {
-        const result = harmonyRyb(seed, kind, key);
-        expect(result).toHaveLength(expectations[kind]);
-        for (const h of result) {
-          expect(h).toMatch(HEX_RE);
-          expect(Math.abs(oklch(h)!.l - seedL)).toBeLessThan(0.05);
-        }
-      }
-    },
-  );
-
-  it("harmonyRyb(hex, kind) defaults to the itten cube", () => {
-    expect(harmonyRyb("#ff0000", "complementary")).toEqual(
-      harmonyRyb("#ff0000", "complementary", "itten"),
-    );
-  });
-
-  it("a different pigment cube changes the rotation", () => {
-    const other = RYB_CUBES.find((c) => c.key !== "itten")!.key;
-    expect(harmonyRyb("#ff0000", "triadic", other)).not.toEqual(
-      harmonyRyb("#ff0000", "triadic", "itten"),
     );
   });
 });
