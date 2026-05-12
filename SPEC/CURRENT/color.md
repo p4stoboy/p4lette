@@ -49,12 +49,16 @@
 
 - `tailwindColors: Record<string, Record<string, string>>` — 22 Tailwind v4.1 families (slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose), each an 11-step `50`–`950` ramp of `oklch(...)` CSS strings. Header comment credits Tailwind (MIT) / `@meodai/dittoTones` (MIT). Used only by `tones.ts#buildRamps`.
 
-### `color_filters.ts` — uses **`culori`** (`filterDeficiency{Prot,Deuter,Trit}`, `toGamut`, `parse`, `formatHex`)
+### `color_filters.ts` — uses **`culori`** (`filterDeficiency{Prot,Deuter,Trit}`, `filter{Grayscale,Sepia,Invert,Saturate,Contrast,HueRotate}`, `blend`, `toGamut`, `parse`, `formatHex`)
 
-- `CvdType = "prot"|"deuter"|"trit"`. Private `mapHexes(hexes, fn)` — `parse` each hex, apply `fn`, `formatHex` back; falls back to the original string when parse/format misses.
+- `CvdType = "prot"|"deuter"|"trit"`. Private `mapHexes(hexes, fn)` — `parse` each hex, apply `fn`, `formatHex` back; falls back to the original string when parse/format misses. Private `identity(c)=c`.
 - **`simulateCvd(hexes: string[], type: CvdType): string[]`** — runs each hex through culori's deficiency filter at full severity (`filterDeficiencyProt(1)` / `filterDeficiencyDeuter(1)` / `filterDeficiencyTrit(1)`). A non-destructive preview of how the palette reads to a colour-blind viewer.
 - **`snapToGamut(hexes: string[]): string[]`** — module-level `intoSrgb = toGamut("rgb","oklch")`; reduces chroma in OKLCH until the colour is displayable, hue/lightness preserved. No-op on colours already in gamut → idempotent.
-- Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`).
+- `interface Effect { key; label }`; `EFFECTS: readonly Effect[]` = `[grayscale GRAYSCALE, sepia SEPIA, invert INVERT, saturate SATURATE+, desaturate DESATURATE, contrast CONTRAST+, hue-warm "HUE +30", hue-cool "HUE -30"]`; private `EFFECT_FNS: Record<key, (c)=>Color|undefined>` = `{grayscale: filterGrayscale(1), sepia: filterSepia(1), invert: filterInvert(1), saturate: filterSaturate(1.6), desaturate: filterSaturate(0.5), contrast: filterContrast(1.4), "hue-warm": filterHueRotate(30), "hue-cool": filterHueRotate(-30)}`.
+- **`applyEffect(hexes: string[], key: string): string[]`** — `mapHexes(hexes, EFFECT_FNS[key] ?? identity)` (unknown key → input unchanged).
+- `BlendMode = "multiply"|"screen"|"overlay"|"soft-light"|"hard-light"|"darken"|"lighten"|"difference"`; `BLEND_MODES: readonly BlendMode[]` = all of them.
+- **`blendWith(hexes: string[], over: string, mode: BlendMode): string[]`** — `over` unparsable → input unchanged; else each `formatHex(blend([h, over], mode))` (composite `over` on top of the swatch).
+- Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`; `EffectsBody`: `EFFECTS`, `applyEffect`, `BLEND_MODES`, `BlendMode`, `blendWith`).
 
 ### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`)
 
@@ -242,13 +246,35 @@
     "consumers": ["tones.ts"]
   },
   "color_filters.ts": {
-    "lib": "culori",
+    "lib": "culori (filterDeficiency* · filter{Grayscale,Sepia,Invert,Saturate,Contrast,HueRotate} · blend · toGamut)",
     "CvdType": ["prot", "deuter", "trit"],
+    "EFFECTS": [
+      "grayscale",
+      "sepia",
+      "invert",
+      "saturate",
+      "desaturate",
+      "contrast",
+      "hue-warm",
+      "hue-cool"
+    ],
+    "BlendMode": [
+      "multiply",
+      "screen",
+      "overlay",
+      "soft-light",
+      "hard-light",
+      "darken",
+      "lighten",
+      "difference"
+    ],
     "exports": [
       "simulateCvd(hexes,type)→string[] (filterDeficiency* at severity 1; non-destructive preview)",
-      "snapToGamut(hexes)→string[] (toGamut('rgb','oklch'); reduce chroma into sRGB, hue/L kept; no-op when in gamut → idempotent)"
+      "snapToGamut(hexes)→string[] (toGamut('rgb','oklch'); reduce chroma into sRGB, hue/L kept; no-op when in gamut → idempotent)",
+      "EFFECTS, applyEffect(hexes,key)→string[] (mapHexes through EFFECT_FNS[key]: grayscale/sepia/invert(1), saturate(1.6)/desaturate(0.5), contrast(1.4), hueRotate(±30); unknown key → unchanged)",
+      "BLEND_MODES, BlendMode, blendWith(hexes,over,mode)→string[] (blend([h,over],mode) per swatch; bad over → unchanged)"
     ],
-    "consumers": ["PosterToolsTray (FixersBody)"]
+    "consumers": ["PosterToolsTray (FixersBody · EffectsBody)"]
   },
   "color_mix.ts": {
     "lib": "culori (interpolate · samples)",
@@ -397,7 +423,7 @@ flowchart LR
     gp["generate_palette.ts → rampensau"]
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes · rampensau"]
     tn["tones.ts → culori · dittotones · fettepalette · rampensau"]
-    cf["color_filters.ts → culori (CVD · gamut)"]
+    cf["color_filters.ts → culori (CVD · gamut · filters · blend)"]
     mx["color_mix.ts → culori (interpolate)"]
     pg["pigment.ts → rybitten (ryb-hsl · cubes)"]
     td["tones_tailwind_data.ts"]
@@ -421,7 +447,7 @@ flowchart LR
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
   tn --> tld["PosterToolsTray TonesBody — spa.md"]
-  cf --> ttf["PosterToolsTray FixersBody — spa.md"]
+  cf --> ttf["PosterToolsTray FixersBody + EffectsBody — spa.md"]
   mx --> mxb["PosterToolsTray MixBody — spa.md"]
   pg --> pgb["PosterToolsTray PigmentBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
