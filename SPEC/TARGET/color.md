@@ -53,6 +53,12 @@
 - **`snapToGamut(hexes: string[]): string[]`** — module-level `intoSrgb = toGamut("rgb","oklch")`; reduces chroma in OKLCH until the colour is displayable, hue/lightness preserved. No-op on colours already in gamut → idempotent.
 - Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`).
 
+### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`)
+
+- `MixSpace = "oklch"|"lab"|"hsl"`; `MIX_SPACES` = `[{oklch,OKLCH},{lab,LAB},{hsl,HSL}]`. `MIX_STEPS = [3,5,7,9,11]`. `MixCurve = "even"|"ease-from"|"ease-to"`; `MIX_CURVES` = `[{even,EVEN},{ease-from,EASE FROM},{ease-to,EASE TO}]`; private `GAMMA = { even:1, "ease-from":1.8, "ease-to":0.55 }` (γ on the sample parameter — `>1` bunches steps toward FROM, `<1` toward TO).
+- **`mixSteps(a, b, n, space, curve): string[]`** — if either hex doesn't parse, fill `n` with the parsable one (or `#000000`). Else `itp = interpolate([a,b], space)` (culori's default hue fixup = shortest arc; `lab` has no hue), then `samples(n).map(t => formatHex(itp(t**GAMMA[curve])))`. Two stops → no polynomial spline; the curve just biases where the `n` samples land.
+- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`).
+
 ### `contrast.ts` — pure, depends on `color_converters` only
 
 - `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` (`fontColorFor`) and `PosterFooter` (`contrast` grade).
@@ -204,6 +210,17 @@
     ],
     "consumers": ["PosterToolsTray (FixersBody)"]
   },
+  "color_mix.ts": {
+    "lib": "culori (interpolate · samples)",
+    "MixSpace": ["oklch", "lab", "hsl"],
+    "MIX_STEPS": [3, 5, 7, 9, 11],
+    "MixCurve": ["even", "ease-from", "ease-to"],
+    "exports": [
+      "MIX_SPACES, MIX_STEPS, MIX_CURVES, MixSpace, MixCurve",
+      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)"
+    ],
+    "consumers": ["PosterToolsTray (MixBody)"]
+  },
   "contrast.ts": {
     "lib": "color_converters",
     "exports": [
@@ -314,6 +331,7 @@ flowchart LR
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes"]
     tn["tones.ts → culori · dittotones · fettepalette"]
     cf["color_filters.ts → culori (CVD · gamut)"]
+    mx["color_mix.ts → culori (interpolate)"]
     td["tones_tailwind_data.ts"]
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
@@ -336,6 +354,7 @@ flowchart LR
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
   tn --> tld["PosterToolsTray TonesBody — spa.md"]
   cf --> ttf["PosterToolsTray FixersBody — spa.md"]
+  mx --> mxb["PosterToolsTray MixBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
   sp --> skin
