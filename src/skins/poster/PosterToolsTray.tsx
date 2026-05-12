@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
+import { usePalette } from "../../context/PaletteContext";
 import {
   HARMONY_HSV_KINDS,
   HARMONY_STYLES,
@@ -36,6 +37,14 @@ import {
   MixSpace,
   mixSteps,
 } from "../../functions/color_mix";
+import {
+  GEN_STRATEGIES,
+  GenStrategy,
+  RAMP_PARAM_META,
+  RampParams,
+  defaultRampParams,
+  generatePalette,
+} from "../../functions/generate_palette";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -113,8 +122,8 @@ export const PosterToolsTray = ({
               opacity: 0.6,
             }}
           >
-            HARMONY · TONES · FIXERS · PIGMENT · MIX · EFFECTS — hit USE to
-            apply a result
+            HARMONY · TONES · FIXERS · PIGMENT · MIX · EFFECTS · GENERATE — hit
+            USE to apply a result
           </span>
         )}
       </div>
@@ -189,6 +198,12 @@ export const PosterToolsTray = ({
         onApply={onApply}
       />
       <EffectsBody
+        ink={ink}
+        isMobile={isMobile}
+        palette={palette}
+        onApply={onApply}
+      />
+      <GenerateBody
         ink={ink}
         isMobile={isMobile}
         palette={palette}
@@ -847,6 +862,203 @@ const EffectsBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
             >
               palette × {over}
             </div>
+          </div>
+        </SwatchRow>
+      </div>
+    </div>
+  );
+};
+
+const RangeRow = ({
+  ink,
+  label,
+  meta,
+  value,
+  onChange,
+}: {
+  ink: string;
+  label: string;
+  meta: { min: number; max: number; step: number };
+  value: number;
+  onChange: (v: number) => void;
+}) => (
+  <div style={{ marginBottom: 8 }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        fontFamily: POSTER.body,
+        fontWeight: 700,
+        fontSize: 9,
+        letterSpacing: "0.1em",
+        marginBottom: 2,
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ fontFamily: POSTER.mono, fontWeight: 400 }}>
+        {value.toFixed(meta.step < 0.01 ? 3 : 2)}
+      </span>
+    </div>
+    <input
+      type="range"
+      min={meta.min}
+      max={meta.max}
+      step={meta.step}
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      style={{ width: "100%", accentColor: ink }}
+    />
+  </div>
+);
+
+// GENERATE — pick a palette-generation strategy (and, for rampensau, tune its
+// ramp), preview it, REGENERATE within the bounds, and USE — which both applies
+// the preview *and* commits the strategy/params so the nav SHUFFLE button (and
+// the `Space` shortcut) use them too.
+const GenerateBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
+  const { genStrategy, genParams, setGenConfig } = usePalette();
+  const n = Math.max(palette.length, 1);
+  const roll = (s: GenStrategy, p: RampParams): string[] =>
+    generatePalette(n, s, Math.random, s === "rampensau" ? p : undefined);
+  const [strategy, setStrategy] = useState<GenStrategy>(genStrategy);
+  const [params, setParams] = useState<RampParams>(
+    genParams ?? defaultRampParams(),
+  );
+  // The preview re-rolls on the events that should change it (strategy switch,
+  // a slider move, REGEN) — never in an effect.
+  const [preview, setPreview] = useState<string[]>(() =>
+    roll(genStrategy, genParams ?? defaultRampParams()),
+  );
+  const pickStrategy = (s: GenStrategy) => {
+    setStrategy(s);
+    setPreview(roll(s, params));
+  };
+  const setParam = (k: keyof RampParams) => (v: number) => {
+    const next = { ...params, [k]: v };
+    setParams(next);
+    if (strategy === "rampensau") setPreview(roll(strategy, next));
+  };
+  const commit = () => {
+    onApply(preview);
+    setGenConfig({
+      strategy,
+      params: strategy === "rampensau" ? params : null,
+    });
+  };
+  return (
+    <div style={sectionStyle(ink, isMobile, false)}>
+      <div style={subHeaderStyle(ink)}>GENERATE</div>
+      <div
+        style={{
+          padding: "14px 16px",
+          borderBottom: `2px solid ${ink}`,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: POSTER.body,
+            fontWeight: 700,
+            fontSize: 10,
+            letterSpacing: "0.12em",
+            marginBottom: 8,
+          }}
+        >
+          STRATEGY
+        </div>
+        <div style={{ display: "flex", border: `2px solid ${ink}` }}>
+          {GEN_STRATEGIES.map((s, i) => (
+            <Toggle
+              key={s.key}
+              ink={ink}
+              active={strategy === s.key}
+              tall={isMobile}
+              divide={i < GEN_STRATEGIES.length - 1}
+              onClick={() => pickStrategy(s.key)}
+            >
+              {s.label}
+            </Toggle>
+          ))}
+        </div>
+        {strategy === "rampensau" && (
+          <div style={{ marginTop: 12 }}>
+            <RangeRow
+              ink={ink}
+              label="SAT LO"
+              meta={RAMP_PARAM_META.sLo}
+              value={params.sLo}
+              onChange={setParam("sLo")}
+            />
+            <RangeRow
+              ink={ink}
+              label="SAT HI"
+              meta={RAMP_PARAM_META.sHi}
+              value={params.sHi}
+              onChange={setParam("sHi")}
+            />
+            <RangeRow
+              ink={ink}
+              label="LIGHT LO"
+              meta={RAMP_PARAM_META.lLo}
+              value={params.lLo}
+              onChange={setParam("lLo")}
+            />
+            <RangeRow
+              ink={ink}
+              label="LIGHT HI"
+              meta={RAMP_PARAM_META.lHi}
+              value={params.lHi}
+              onChange={setParam("lHi")}
+            />
+            <RangeRow
+              ink={ink}
+              label="HUE SPAN"
+              meta={RAMP_PARAM_META.hueSpan}
+              value={params.hueSpan}
+              onChange={setParam("hueSpan")}
+            />
+            <RangeRow
+              ink={ink}
+              label="CURVE ACCENT"
+              meta={RAMP_PARAM_META.curveAccent}
+              value={params.curveAccent}
+              onChange={setParam("curveAccent")}
+            />
+          </div>
+        )}
+      </div>
+      <div style={rowsStyle()}>
+        <SwatchRow
+          ink={ink}
+          isMobile={isMobile}
+          colors={preview}
+          swatchHeight={isMobile ? 76 : 56}
+          onUse={commit}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
+            >
+              PREVIEW
+            </div>
+            <SmallBtn
+              ink={ink}
+              tall={isMobile}
+              onClick={() => setPreview(roll(strategy, params))}
+            >
+              REGEN
+            </SmallBtn>
           </div>
         </SwatchRow>
       </div>

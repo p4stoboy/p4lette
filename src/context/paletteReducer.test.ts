@@ -173,4 +173,46 @@ describe("paletteReducer", () => {
     });
     expect(result).toBe(state);
   });
+
+  it("defaults the generation config to the rampensau strategy with no params", () => {
+    const state = createPaletteState({ exportTemplate: "t", initialCount: 0 });
+    expect(state.genStrategy).toBe("rampensau");
+    expect(state.genParams).toBeNull();
+  });
+
+  it("setGenConfig updates strategy and/or params; params:undefined leaves them alone", () => {
+    const start = baseState();
+    const a = paletteReducer(start, {
+      type: "setGenConfig",
+      strategy: "poline",
+    });
+    expect(a.genStrategy).toBe("poline");
+    expect(a.genParams).toBeNull(); // untouched
+
+    const params = {
+      sLo: 0.3,
+      sHi: 0.9,
+      lLo: 0.1,
+      lHi: 0.95,
+      hueSpan: 1,
+      curveAccent: 0.5,
+    };
+    const b = paletteReducer(a, { type: "setGenConfig", params });
+    expect(b.genStrategy).toBe("poline"); // untouched
+    expect(b.genParams).toEqual(params);
+
+    const c = paletteReducer(b, { type: "setGenConfig", params: null });
+    expect(c.genParams).toBeNull();
+  });
+
+  it("randomizeUnlocked still produces a valid coherent palette after setGenConfig", () => {
+    const start = paletteReducer(
+      baseState({ palette: [make("#aabbcc", 0), make("#112233", 1)] }),
+      { type: "setGenConfig", strategy: "poline" },
+    );
+    const result = paletteReducer(start, { type: "randomizeUnlocked" });
+    for (const c of result.palette) {
+      expect(c.hex).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
 });

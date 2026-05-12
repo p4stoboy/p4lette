@@ -95,8 +95,16 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
         colorMode: readInitialColorMode(),
       }),
   );
-  const { palette, names, exportVisible, exportTemplate, nameList, colorMode } =
-    state;
+  const {
+    palette,
+    names,
+    exportVisible,
+    exportTemplate,
+    nameList,
+    colorMode,
+    genStrategy,
+    genParams,
+  } = state;
   const namesRef = useRef<string[]>(names);
 
   useEffect(() => {
@@ -219,6 +227,11 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     (mode: ColorMode) => dispatch({ type: "setColorMode", mode }),
     [],
   );
+  const setGenConfig = useCallback(
+    (cfg: Parameters<PaletteContextProps["setGenConfig"]>[0]) =>
+      dispatch({ type: "setGenConfig", ...cfg }),
+    [],
+  );
 
   const itf = useMemo<PaletteContextProps>(
     () => ({
@@ -229,6 +242,8 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       resolvedTemplate,
       nameList,
       colorMode,
+      genStrategy,
+      genParams,
       addColor,
       deleteColor,
       updateColor,
@@ -240,6 +255,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportVisible,
       setNameList,
       setColorMode,
+      setGenConfig,
     }),
     [
       palette,
@@ -249,6 +265,8 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       resolvedTemplate,
       nameList,
       colorMode,
+      genStrategy,
+      genParams,
       addColor,
       deleteColor,
       updateColor,
@@ -260,6 +278,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       setExportVisible,
       setNameList,
       setColorMode,
+      setGenConfig,
     ],
   );
 

@@ -16,7 +16,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
 - **External HTTP dependency** — `color.pizza`, no auth, no key, fail-soft:
   - `GET https://api.color.pizza/v1/?values=<csv-hex>&noduplicates=true&list=<list>` → color names — `src/functions/get_color_card_props.ts`. On any failure: per-slot fallback to the previous name, else the hex.
   - `GET https://api.color.pizza/v1/lists/` → available name-list keys — `src/functions/color_lists.ts` (module-memoised). On failure: a "load failed" UI state.
-- **Color libraries** (all under `src/functions/`): `culori` (OKLCH/space math — harmony, tones), `pro-color-harmonies` (`ColorPaletteGenerator` — OKLCH harmony sets), `rybitten` (`rybHsl2rgb` — Itten/painter's-wheel hue rotation), `dittotones` (`DittoTones` — perceptual tone scales from reference ramps), `rampensau` (`generateColorRamp` — coherent palette generation for the initial seed + SHUFFLE).
+- **Color libraries** (all under `src/functions/`): `culori` (OKLCH/space math, filters, blend, interpolate — harmony, tones, color_filters, color_mix), `pro-color-harmonies` (`ColorPaletteGenerator` — OKLCH harmony sets incl. `tintsShades`), `rybitten` (`rybHsl2rgb`/`ryb2rgb` + `cubes` — painter's-wheel hue rotation + the PIGMENT cube filter), `dittotones` (`DittoTones` — perceptual tone scales from reference ramps), `rampensau` (`generateColorRamp` + `colorUtils.colorHarmonies` — coherent palette generation for the seed + SHUFFLE, the GENERATIVE tone method, HSV harmonies), `fettepalette` (`generateRandomColorRamp` — the HSV-curve tone scale), `poline` (`Poline` — the POLINE ANCHORS palette-generation strategy).
 - **Commands** — `npm run dev` (=`vite`), `npm run build` (=`tsc --noEmit && vite build` → `dist/`), `npm run preview`, `npm test` (=`vitest run`), `npm run test:watch`, `npm run typecheck` (=`tsc --noEmit`), `npm run lint` (=`eslint .`), `npm run og` (=`node scripts/generate-og.mjs` → regenerates `public/og.png`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`).
 - **Cross-cutting guardrails / known state**:
   - **Lint debt**: `src/skins/poster/PosterEditTray.tsx:31` raises `react-hooks/set-state-in-effect` (`setInput(formatColor(hex, colorMode))` inside a `useEffect`). `npm run lint` therefore exits non-zero with exactly this one error — any "lint must be clean" check has to allow it (or the file gets fixed).
@@ -84,11 +84,13 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
     ]
   },
   "colorLibs": {
-    "culori": "OKLCH + space math (harmony.ts, tones.ts)",
-    "pro-color-harmonies": "ColorPaletteGenerator — OKLCH harmony sets (harmony.ts)",
-    "rybitten": "rybHsl2rgb — Itten/painter's-wheel hue rotation (harmony.ts)",
+    "culori": "OKLCH/space math, filters, blend, interpolate (harmony.ts, tones.ts, color_filters.ts, color_mix.ts)",
+    "pro-color-harmonies": "ColorPaletteGenerator — OKLCH harmony sets incl. tintsShades (harmony.ts)",
+    "rybitten": "rybHsl2rgb / ryb2rgb + cubes — painter's-wheel hue rotation + PIGMENT filter (harmony.ts, pigment.ts)",
     "dittotones": "DittoTones — perceptual tone scales (tones.ts)",
-    "rampensau": "generateColorRamp — coherent palette generation (generate_palette.ts)"
+    "rampensau": "generateColorRamp + colorUtils.colorHarmonies — palette generation, GENERATIVE tones, HSV harmonies (generate_palette.ts, tones.ts, harmony.ts)",
+    "fettepalette": "generateRandomColorRamp — HSV-curve tone scale (tones.ts)",
+    "poline": "Poline — POLINE ANCHORS generation strategy (generate_palette.ts)"
   },
   "persistence": {
     "localStorage": {
