@@ -45,6 +45,13 @@
 
 - `tailwindColors: Record<string, Record<string, string>>` — 22 Tailwind v4.1 families (slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose), each an 11-step `50`–`950` ramp of `oklch(...)` CSS strings. Header comment credits Tailwind (MIT) / `@meodai/dittoTones` (MIT). Used only by `tones.ts#buildRamps`.
 
+### `color_filters.ts` — uses **`culori`** (`filterDeficiency{Prot,Deuter,Trit}`, `toGamut`, `parse`, `formatHex`)
+
+- `CvdType = "prot"|"deuter"|"trit"`. Private `mapHexes(hexes, fn)` — `parse` each hex, apply `fn`, `formatHex` back; falls back to the original string when parse/format misses.
+- **`simulateCvd(hexes: string[], type: CvdType): string[]`** — runs each hex through culori's deficiency filter at full severity (`filterDeficiencyProt(1)` / `filterDeficiencyDeuter(1)` / `filterDeficiencyTrit(1)`). A non-destructive preview of how the palette reads to a colour-blind viewer.
+- **`snapToGamut(hexes: string[]): string[]`** — module-level `intoSrgb = toGamut("rgb","oklch")`; reduces chroma in OKLCH until the colour is displayable, hue/lightness preserved. No-op on colours already in gamut → idempotent.
+- Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`).
+
 ### `contrast.ts` — pure, depends on `color_converters` only
 
 - `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` (`fontColorFor`) and `PosterFooter` (`contrast` grade).
@@ -185,6 +192,15 @@
     ],
     "consumers": ["tones.ts"]
   },
+  "color_filters.ts": {
+    "lib": "culori",
+    "CvdType": ["prot", "deuter", "trit"],
+    "exports": [
+      "simulateCvd(hexes,type)→string[] (filterDeficiency* at severity 1; non-destructive preview)",
+      "snapToGamut(hexes)→string[] (toGamut('rgb','oklch'); reduce chroma into sRGB, hue/L kept; no-op when in gamut → idempotent)"
+    ],
+    "consumers": ["PosterToolsTray (FixersBody)"]
+  },
   "contrast.ts": {
     "lib": "color_converters",
     "exports": [
@@ -294,6 +310,7 @@ flowchart LR
     gp["generate_palette.ts → rampensau"]
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes"]
     tn["tones.ts → culori · dittotones · fettepalette"]
+    cf["color_filters.ts → culori (CVD · gamut)"]
     td["tones_tailwind_data.ts"]
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
@@ -315,6 +332,7 @@ flowchart LR
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
   tn --> tld["PosterToolsTray TonesBody — spa.md"]
+  cf --> ttf["PosterToolsTray FixersBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
   sp --> skin

@@ -10,6 +10,11 @@ import {
   harmonyRyb,
 } from "../../functions/harmony";
 import { TONE_METHODS, dittoMatch, tones } from "../../functions/tones";
+import {
+  CvdType,
+  simulateCvd,
+  snapToGamut,
+} from "../../functions/color_filters";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -87,7 +92,7 @@ export const PosterToolsTray = ({
               opacity: 0.6,
             }}
           >
-            HARMONY · TONES — pick a seed, hit USE to apply
+            HARMONY · TONES · FIXERS — hit USE to apply a result
           </span>
         )}
       </div>
@@ -112,13 +117,24 @@ export const PosterToolsTray = ({
     </div>
 
     <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        overflowY: isMobile ? "auto" : "hidden",
-      }}
+      style={
+        isMobile
+          ? {
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              overflowY: "auto",
+            }
+          : {
+              flex: 1,
+              minHeight: 0,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              alignContent: "start",
+              overflowY: "auto",
+            }
+      }
     >
       <HarmonyBody
         ink={ink}
@@ -127,6 +143,12 @@ export const PosterToolsTray = ({
         onApply={onApply}
       />
       <TonesBody
+        ink={ink}
+        isMobile={isMobile}
+        palette={palette}
+        onApply={onApply}
+      />
+      <FixersBody
         ink={ink}
         isMobile={isMobile}
         palette={palette}
@@ -143,14 +165,17 @@ interface BodyProps {
   onApply: (hexes: string[]) => void;
 }
 
-const sectionStyle = (ink: string, isMobile: boolean, first: boolean) => ({
-  flex: isMobile ? ("0 0 auto" as const) : 1,
+// On desktop the body is a responsive grid (sections wrap when narrow); on
+// mobile a stacked scrolling column. `isFirst` only matters for the mobile
+// stack (the top section needs no divider above it).
+const sectionStyle = (ink: string, isMobile: boolean, isFirst: boolean) => ({
+  flex: isMobile ? ("0 0 auto" as const) : undefined,
   display: "flex" as const,
   flexDirection: "column" as const,
   minWidth: 0,
   minHeight: 0,
-  borderRight: !isMobile && first ? `${POSTER.borderW}px solid ${ink}` : "none",
-  borderTop: isMobile && !first ? `${POSTER.borderW}px solid ${ink}` : "none",
+  borderRight: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
+  borderTop: isMobile && !isFirst ? `${POSTER.borderW}px solid ${ink}` : "none",
 });
 
 const subHeaderStyle = (ink: string) => ({
@@ -162,9 +187,11 @@ const subHeaderStyle = (ink: string) => ({
   flexShrink: 0,
 });
 
-const rowsStyle = (isMobile: boolean) => ({
+// The body scrolls as a whole (grid on desktop, column on mobile), so a section's
+// rows just flow — no nested scroll area.
+const rowsStyle = () => ({
   flex: 1,
-  overflowY: isMobile ? ("visible" as const) : ("auto" as const),
+  overflowY: "visible" as const,
   padding: 16,
 });
 
@@ -234,7 +261,7 @@ const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
           </div>
         </div>
       </BasePicker>
-      <div style={rowsStyle(isMobile)}>
+      <div style={rowsStyle()}>
         {HARMONIES.map(([label, kind]) => {
           const colors =
             space === "ryb"
@@ -280,7 +307,7 @@ const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         value={base}
         onChange={setBase}
       />
-      <div style={rowsStyle(isMobile)}>
+      <div style={rowsStyle()}>
         {TONE_METHODS.map((m) => {
           const scale = tones(base, m.id);
           const caption =
@@ -321,6 +348,96 @@ const TonesBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
             </SwatchRow>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+const CVD_LABELS: Record<CvdType, string> = {
+  prot: "PROTANOPIA",
+  deuter: "DEUTERANOPIA",
+  trit: "TRITANOPIA",
+};
+const CVD_TYPES: CvdType[] = ["prot", "deuter", "trit"];
+
+// FIXERS — operates on the *live* palette (no seed). The CVD rows are a
+// non-destructive preview; USE applies the transformed palette.
+const FixersBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
+  const hexes = palette.map((c) => c.hex);
+  const snapped = snapToGamut(hexes);
+  const alreadyOk = snapped.join() === hexes.join();
+  const rowH = isMobile ? 76 : 56;
+  const caption = (text: string) => (
+    <div
+      style={{
+        fontFamily: POSTER.body,
+        fontSize: 10,
+        letterSpacing: "0.04em",
+        opacity: 0.6,
+        marginTop: 2,
+      }}
+    >
+      {text}
+    </div>
+  );
+  return (
+    <div style={sectionStyle(ink, isMobile, false)}>
+      <div style={subHeaderStyle(ink)}>FIXERS</div>
+      <div style={rowsStyle()}>
+        {CVD_TYPES.map((type) => {
+          const sim = simulateCvd(hexes, type);
+          return (
+            <SwatchRow
+              key={type}
+              ink={ink}
+              isMobile={isMobile}
+              colors={sim}
+              swatchHeight={rowH}
+              onUse={() => onApply(sim)}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontFamily: POSTER.display,
+                    fontSize: 16,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {CVD_LABELS[type]}
+                </div>
+                {caption(
+                  `simulated — how this palette reads with ${CVD_LABELS[
+                    type
+                  ].toLowerCase()}`,
+                )}
+              </div>
+            </SwatchRow>
+          );
+        })}
+        <SwatchRow
+          ink={ink}
+          isMobile={isMobile}
+          colors={snapped}
+          swatchHeight={rowH}
+          onUse={() => onApply(snapped)}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
+            >
+              IN-GAMUT sRGB
+            </div>
+            {caption(
+              alreadyOk
+                ? "every swatch is already displayable"
+                : "every swatch snapped into displayable sRGB",
+            )}
+          </div>
+        </SwatchRow>
       </div>
     </div>
   );
