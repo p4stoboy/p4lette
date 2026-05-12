@@ -55,12 +55,14 @@ const markWelcomeSeen = () => {
   }
 };
 
+// The ticker is opt-in: visible only when the user has explicitly turned it on
+// (a stored `"1"`). No key, or a stored `"0"`, → off.
 const readTickerVisible = (): boolean => {
-  if (typeof localStorage === "undefined") return true;
+  if (typeof localStorage === "undefined") return false;
   try {
-    return localStorage.getItem(TICKER_KEY) !== "0";
+    return localStorage.getItem(TICKER_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 };
 
@@ -99,6 +101,9 @@ export const PosterSkin = () => {
   );
   const [copyLabel, setCopyLabel] = useState("COPY!");
   const [tickerVisible, setTickerVisible] = useState(readTickerVisible);
+  // True while the desktop side-panel slot is playing its slide-away exit; the
+  // show* flags drop in the slot's onAnimationEnd. (Mobile panels self-animate.)
+  const [panelClosing, setPanelClosing] = useState(false);
 
   const toggleTicker = useCallback(() => {
     setTickerVisible((v) => {
@@ -189,13 +194,44 @@ export const PosterSkin = () => {
     markWelcomeSeen();
   }, []);
 
+  // Tools, export and save/load share the desktop side-panel slot, so opening
+  // one closes the others (and cancels any in-flight slide-away).
+  const openTools = useCallback(() => {
+    setShowExport(false);
+    setShowSaved(false);
+    setPanelClosing(false);
+    setShowTools(true);
+  }, []);
+  const openExport = useCallback(() => {
+    setShowTools(false);
+    setShowSaved(false);
+    setPanelClosing(false);
+    setShowExport(true);
+  }, []);
+  const openSaved = useCallback(() => {
+    setShowTools(false);
+    setShowExport(false);
+    setPanelClosing(false);
+    setShowSaved(true);
+  }, []);
+  // Close whichever side panel is open. Desktop: flip panelClosing → the slot
+  // plays sidePanelOutRight, then its onAnimationEnd drops the flags. Mobile:
+  // the panel component plays its own exit, so just drop the flags here.
+  const closeSidePanel = useCallback(() => {
+    if (isMobile) {
+      setShowTools(false);
+      setShowExport(false);
+      setShowSaved(false);
+    } else {
+      setPanelClosing(true);
+    }
+  }, [isMobile]);
+
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
-    else if (showExport) setShowExport(false);
-    else if (showTools) setShowTools(false);
-    else if (showSaved) setShowSaved(false);
+    else if (showExport || showTools || showSaved) closeSidePanel();
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
   }, [
@@ -208,6 +244,7 @@ export const PosterSkin = () => {
     showAbout,
     editingId,
     dismissWelcome,
+    closeSidePanel,
   ]);
 
   const handleLockShortcut = useCallback(() => {
@@ -218,8 +255,8 @@ export const PosterSkin = () => {
   useGlobalShortcuts({
     onShuffle: randomizeUnlocked,
     onLock: handleLockShortcut,
-    onExport: () => setShowExport((v) => !v),
-    onHarmony: () => setShowTools((v) => !v),
+    onExport: () => (showExport ? closeSidePanel() : openExport()),
+    onHarmony: () => (showTools ? closeSidePanel() : openTools()),
     onAbout: () => setShowAbout((v) => !v),
     onEsc: closeAllOverlays,
   });
@@ -252,6 +289,58 @@ export const PosterSkin = () => {
     letterSpacing: "-0.02em",
   });
 
+  // Tools / export / save-load. On desktop these go in the content row's
+  // side-panel slot (sized + slid in/out by that slot — see the render); on
+  // mobile they're overlay siblings (self-animating). Mutually exclusive
+  // (openTools/openExport/openSaved), so at most one is non-null.
+  const toolsPanel = showTools ? (
+    <PosterToolsTray
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      palette={palette}
+      onClose={closeSidePanel}
+      onApply={(hexes) => {
+        replaceAll(hexes);
+        closeSidePanel();
+      }}
+    />
+  ) : null;
+  const exportPanel = showExport ? (
+    <PosterExportSheet
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      tpl={exportTemplate}
+      setTpl={setExportTemplate}
+      resolved={resolvedTemplate}
+      copyLabel={copyLabel}
+      templates={templateList}
+      onCopy={onCopy}
+      onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
+      onSaveTemplate={handleSaveTemplate}
+      onLoadTemplate={(body) => setExportTemplate(body)}
+      onDeleteTemplate={removeTemplate}
+      onClose={closeSidePanel}
+    />
+  ) : null;
+  const savedPanel = showSaved ? (
+    <PosterSavedDrawer
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      list={savedList}
+      onClose={closeSidePanel}
+      onSave={handleSavePalette}
+      onLoad={(hexes) => {
+        replaceAll(hexes);
+        closeSidePanel();
+      }}
+      onDelete={removeSaved}
+    />
+  ) : null;
+  const sidePanelChild = toolsPanel ?? exportPanel ?? savedPanel;
+
   return (
     <div
       style={{
@@ -274,9 +363,9 @@ export const PosterSkin = () => {
         tickerVisible={tickerVisible}
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
-        onSaved={() => setShowSaved(true)}
-        onTools={() => setShowTools(true)}
-        onExport={() => setShowExport(true)}
+        onSaved={openSaved}
+        onTools={openTools}
+        onExport={openExport}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
@@ -342,47 +431,85 @@ export const PosterSkin = () => {
         </div>
       ) : (
         <div
-          ref={paletteRef}
           style={{
             flex: 1,
+            minHeight: 0,
             display: "flex",
             position: "relative",
-            minHeight: 0,
+            overflow: "hidden",
           }}
         >
-          {palette.map((c, i) => (
-            <PosterColumn
-              key={c.dataId}
-              color={c}
-              name={names[i] || "..."}
-              index={i}
-              editing={editingId === c.id}
-              nameFontSize={nameFontSize}
-              onEdit={() => {
-                setEditingId(c.id);
-                setLastEditedId(c.id);
+          <div
+            ref={paletteRef}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              position: "relative",
+            }}
+          >
+            {palette.map((c, i) => (
+              <PosterColumn
+                key={c.dataId}
+                color={c}
+                name={names[i] || "..."}
+                index={i}
+                editing={editingId === c.id}
+                nameFontSize={nameFontSize}
+                onEdit={() => {
+                  setEditingId(c.id);
+                  setLastEditedId(c.id);
+                }}
+                onCloseEdit={() => setEditingId(null)}
+                onUpdate={(hex) => {
+                  updateColor(c.id, hex);
+                  setLastEditedId(c.id);
+                }}
+                onDelete={() => {
+                  deleteColor(c.id);
+                  setEditingId(null);
+                }}
+                onLock={() => {
+                  toggleLock(c.id);
+                  setLastEditedId(c.id);
+                }}
+                onDragStart={onDragStart(i)}
+                onDragOver={onDragOver(i)}
+                onPointerDown={touchHandlers.onPointerDown(i)}
+                onPointerMove={touchHandlers.onPointerMove}
+                onPointerUp={touchHandlers.onPointerUp}
+                onPointerCancel={touchHandlers.onPointerCancel}
+              />
+            ))}
+          </div>
+          {sidePanelChild && (
+            <div
+              style={{
+                flex: "0 0 50%",
+                height: "100%",
+                minHeight: 0,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                borderLeft: `${POSTER.borderW}px solid ${ink}`,
+                animation: panelClosing
+                  ? "sidePanelOutRight .2s cubic-bezier(.4,0,.6,1) forwards"
+                  : "sidePanelInRight .24s cubic-bezier(.2,.7,.3,1)",
               }}
-              onCloseEdit={() => setEditingId(null)}
-              onUpdate={(hex) => {
-                updateColor(c.id, hex);
-                setLastEditedId(c.id);
+              onAnimationEnd={() => {
+                if (panelClosing) {
+                  setShowTools(false);
+                  setShowExport(false);
+                  setShowSaved(false);
+                  setPanelClosing(false);
+                }
               }}
-              onDelete={() => {
-                deleteColor(c.id);
-                setEditingId(null);
-              }}
-              onLock={() => {
-                toggleLock(c.id);
-                setLastEditedId(c.id);
-              }}
-              onDragStart={onDragStart(i)}
-              onDragOver={onDragOver(i)}
-              onPointerDown={touchHandlers.onPointerDown(i)}
-              onPointerMove={touchHandlers.onPointerMove}
-              onPointerUp={touchHandlers.onPointerUp}
-              onPointerCancel={touchHandlers.onPointerCancel}
-            />
-          ))}
+            >
+              <style>{`@keyframes sidePanelInRight { from { transform: translateX(100%); } to { transform: translateX(0); } } @keyframes sidePanelOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }`}</style>
+              {sidePanelChild}
+            </div>
+          )}
         </div>
       )}
 
@@ -404,52 +531,9 @@ export const PosterSkin = () => {
           onClose={() => setShowAbout(false)}
         />
       )}
-      {showSaved && (
-        <PosterSavedDrawer
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          list={savedList}
-          onClose={() => setShowSaved(false)}
-          onSave={handleSavePalette}
-          onLoad={(hexes) => {
-            replaceAll(hexes);
-            setShowSaved(false);
-          }}
-          onDelete={removeSaved}
-        />
-      )}
-      {showTools && (
-        <PosterToolsTray
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          palette={palette}
-          onClose={() => setShowTools(false)}
-          onApply={(hexes) => {
-            replaceAll(hexes);
-            setShowTools(false);
-          }}
-        />
-      )}
-      {showExport && (
-        <PosterExportSheet
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          tpl={exportTemplate}
-          setTpl={setExportTemplate}
-          resolved={resolvedTemplate}
-          copyLabel={copyLabel}
-          templates={templateList}
-          onCopy={onCopy}
-          onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
-          onSaveTemplate={handleSaveTemplate}
-          onLoadTemplate={(body) => setExportTemplate(body)}
-          onDeleteTemplate={removeTemplate}
-          onClose={() => setShowExport(false)}
-        />
-      )}
+      {isMobile && toolsPanel}
+      {isMobile && exportPanel}
+      {isMobile && savedPanel}
       {showMenu && (
         <PosterMobileMenu
           ink={ink}
@@ -462,9 +546,9 @@ export const PosterSkin = () => {
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
-          onSaved={() => setShowSaved(true)}
-          onTools={() => setShowTools(true)}
-          onExport={() => setShowExport(true)}
+          onSaved={openSaved}
+          onTools={openTools}
+          onExport={openExport}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
           onToggleTicker={toggleTicker}

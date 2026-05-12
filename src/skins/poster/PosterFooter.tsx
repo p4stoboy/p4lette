@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
+import { encodePalette } from "../../functions/share_url";
 import { POSTER } from "./tokens";
 import { PosterNamingPicker } from "./PosterNamingPicker";
 import { PosterModePicker } from "./PosterModePicker";
@@ -70,16 +71,18 @@ export const PosterFooter = ({ palette, ink, bg }: Props) => {
       </Stat>
       <div style={{ flex: 1 }} />
       <Stat ink={ink} label="SHARE" right>
-        <ShareButton ink={ink} />
+        <ShareButton ink={ink} palette={palette} />
       </Stat>
     </div>
   );
 };
 
-const ShareButton = ({ ink }: { ink: string }) => {
+const ShareButton = ({ ink, palette }: { ink: string; palette: Palette }) => {
   const [label, setLabel] = useState("URL ↗");
   const handleClick = async () => {
-    const url = window.location.href;
+    const enc = encodePalette(palette);
+    const base = window.location.origin + window.location.pathname;
+    const url = enc ? `${base}#/share?p=${enc}` : base;
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ url, title: "P4LETTE" });

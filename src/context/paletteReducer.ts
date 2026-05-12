@@ -1,8 +1,12 @@
 import { ColorCardProps } from "../types/ColorCardProps";
-import { ColorMode } from "../types/Colors";
+import { DisplayMode, EditSpace } from "../types/Colors";
 import { Palette } from "../types/Palette";
 import { randomHex } from "../functions/color_converters";
-import { generatePalette } from "../functions/generate_palette";
+import {
+  GenStrategy,
+  RampParams,
+  generatePalette,
+} from "../functions/generate_palette";
 import { DEFAULT_NAME_LIST } from "../functions/get_color_card_props";
 import { decodePalette } from "../functions/share_url";
 
@@ -12,7 +16,14 @@ export type PaletteState = {
   exportVisible: boolean;
   exportTemplate: string;
   nameList: string;
-  colorMode: ColorMode;
+  // Under-swatch display format (`"all"` = every format stacked, the default).
+  colorMode: DisplayMode;
+  // The colour space the inline EDIT tray edits in (text input + sliders).
+  editSpace: EditSpace;
+  // How SHUFFLE / the initial seed generate a palette. `genParams` (rampensau
+  // knobs) is `null` until the GENERATE panel commits one. Session-only.
+  genStrategy: GenStrategy;
+  genParams: RampParams | null;
 };
 
 export type PaletteAction =
@@ -27,7 +38,13 @@ export type PaletteAction =
   | { type: "setExportTemplate"; template: string }
   | { type: "setExportVisible"; visible: boolean }
   | { type: "setNameList"; list: string }
-  | { type: "setColorMode"; mode: ColorMode };
+  | { type: "setColorMode"; mode: DisplayMode }
+  | { type: "setEditSpace"; space: EditSpace }
+  | {
+      type: "setGenConfig";
+      strategy?: GenStrategy;
+      params?: RampParams | null;
+    };
 
 const NAME_PLACEHOLDER = "...";
 
@@ -67,7 +84,8 @@ export interface CreatePaletteOptions {
   exportTemplate: string;
   hash?: string | null;
   nameList?: string;
-  colorMode?: ColorMode;
+  colorMode?: DisplayMode;
+  editSpace?: EditSpace;
 }
 
 export const createPaletteState = ({
@@ -75,7 +93,8 @@ export const createPaletteState = ({
   exportTemplate,
   hash,
   nameList = DEFAULT_NAME_LIST,
-  colorMode = "hex",
+  colorMode = "all",
+  editSpace = "okhsl",
 }: CreatePaletteOptions): PaletteState => {
   const decoded = decodePalette(hash ?? null);
   const seed = decoded ?? generatePalette(initialCount);
@@ -86,6 +105,9 @@ export const createPaletteState = ({
     exportTemplate,
     nameList,
     colorMode,
+    editSpace,
+    genStrategy: "default",
+    genParams: null,
   };
 };
 
@@ -143,9 +165,15 @@ export const paletteReducer = (
       };
     }
     case "randomizeUnlocked": {
-      // One coherent palette; unlocked slot i takes its colour at the same
-      // index, so locked slots stay put and the rest still read as a set.
-      const fresh = generatePalette(state.palette.length);
+      // One coherent palette via the chosen strategy/params; unlocked slot i
+      // takes its colour at the same index, so locked slots stay put and the
+      // rest still read as a set.
+      const fresh = generatePalette(
+        state.palette.length,
+        state.genStrategy,
+        Math.random,
+        state.genParams ?? undefined,
+      );
       return {
         ...state,
         palette: state.palette.map((c, i) =>
@@ -185,5 +213,16 @@ export const paletteReducer = (
     case "setColorMode":
       if (action.mode === state.colorMode) return state;
       return { ...state, colorMode: action.mode };
+    case "setEditSpace":
+      if (action.space === state.editSpace) return state;
+      return { ...state, editSpace: action.space };
+    case "setGenConfig":
+      return {
+        ...state,
+        genStrategy: action.strategy ?? state.genStrategy,
+        // `params: undefined` → leave as-is; `params: null` → clear; else set.
+        genParams:
+          action.params === undefined ? state.genParams : action.params,
+      };
   }
 };

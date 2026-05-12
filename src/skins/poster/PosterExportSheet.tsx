@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { SavedTemplate } from "../../functions/saved_templates";
+import { EXPORT_PRESETS } from "../../functions/resolve_export_template";
+import { useExitAnimation } from "../../hooks/use_exit_animation";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -49,26 +51,44 @@ export const PosterExportSheet = ({
   onClose,
 }: Props) => {
   const [loadOpen, setLoadOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
 
   return (
     <div
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: bg,
-        color: ink,
-        borderTop: `${POSTER.borderW}px solid ${ink}`,
-        height: isMobile ? "92%" : "62%",
-        animation: "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: `0 -10px 0 ${POSTER.accent}`,
-        zIndex: 50,
-      }}
+      onAnimationEnd={isMobile ? onAnimationEnd : undefined}
+      style={
+        isMobile
+          ? {
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: bg,
+              color: ink,
+              borderTop: `${POSTER.borderW}px solid ${ink}`,
+              height: "92%",
+              animation: closing
+                ? "maxSheetDown .2s cubic-bezier(.4,0,.6,1) forwards"
+                : "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: `0 -10px 0 ${POSTER.accent}`,
+              zIndex: 50,
+            }
+          : {
+              width: "100%",
+              height: "100%",
+              background: bg,
+              color: ink,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: `-10px 0 0 ${POSTER.accent}`,
+            }
+      }
     >
-      <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}}`}</style>
+      <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}} @keyframes maxSheetDown { from {transform: translateY(0);} to{transform:translateY(100%);}}`}</style>
 
       <div
         style={{
@@ -119,9 +139,22 @@ export const PosterExportSheet = ({
           <SmallBtn
             ink={ink}
             tall={isMobile}
-            onClick={() => setLoadOpen((v) => !v)}
+            onClick={() => {
+              setPresetsOpen(false);
+              setLoadOpen((v) => !v);
+            }}
           >
             LOAD ▾
+          </SmallBtn>
+          <SmallBtn
+            ink={ink}
+            tall={isMobile}
+            onClick={() => {
+              setLoadOpen(false);
+              setPresetsOpen((v) => !v);
+            }}
+          >
+            PRESETS ▾
           </SmallBtn>
           <SmallBtn ink={ink} tall={isMobile} onClick={onReset}>
             RESET
@@ -144,7 +177,7 @@ export const PosterExportSheet = ({
             {copyLabel}
           </button>
           <button
-            onClick={onClose}
+            onClick={isMobile ? requestClose : onClose}
             aria-label="close"
             style={{
               background: "none",
@@ -273,6 +306,58 @@ export const PosterExportSheet = ({
               )}
             </div>
           )}
+          {presetsOpen && (
+            <div
+              role="menu"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                zIndex: 5,
+                width: isMobile ? "min(280px, 86vw)" : 300,
+                maxHeight: "min(52vh, 320px)",
+                overflowY: "auto",
+                background: bg,
+                color: ink,
+                border: `${POSTER.borderW}px solid ${ink}`,
+                boxShadow: `0 8px 0 ${POSTER.accent}`,
+              }}
+            >
+              <div style={{ ...labelRow(ink), textTransform: "uppercase" }}>
+                PRESETS [{EXPORT_PRESETS.length}]
+              </div>
+              {EXPORT_PRESETS.map((p, i) => (
+                <button
+                  key={p.key}
+                  onClick={() => {
+                    onLoadTemplate(p.body);
+                    setPresetsOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    minWidth: 0,
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    border: "none",
+                    borderBottom:
+                      i === EXPORT_PRESETS.length - 1
+                        ? "none"
+                        : `1px solid ${ink}`,
+                    background: "transparent",
+                    color: ink,
+                    fontFamily: POSTER.display,
+                    fontSize: 15,
+                    letterSpacing: "0.02em",
+                    cursor: "pointer",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -280,17 +365,14 @@ export const PosterExportSheet = ({
         style={{
           flex: 1,
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gridTemplateRows: isMobile ? "1fr 1fr" : "1fr",
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr 1fr",
           minHeight: 0,
         }}
       >
         <div
           style={{
-            borderRight: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
-            borderBottom: isMobile
-              ? `${POSTER.borderW}px solid ${ink}`
-              : "none",
+            borderBottom: `${POSTER.borderW}px solid ${ink}`,
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
