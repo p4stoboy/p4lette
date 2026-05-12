@@ -241,6 +241,16 @@ export const formatColor = (hex: string, mode: ColorMode): string => {
   }
 };
 
+// All five display formats for a colour (HEX first), for the `"all"` MODE.
+export const formatAll = (
+  hex: string,
+): { mode: ColorMode; label: string; value: string }[] =>
+  (["hex", "rgb", "hsl", "hsv", "oklch"] as ColorMode[]).map((mode) => ({
+    mode,
+    label: mode.toUpperCase(),
+    value: formatColor(hex, mode),
+  }));
+
 const extractNumbers = (input: string): number[] => {
   const matches = input.match(/-?\d+(?:\.\d+)?/g);
   return matches ? matches.map(Number) : [];

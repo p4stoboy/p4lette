@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAll,
   formatColor,
   hexToHsl,
   hexToHsv,
@@ -160,6 +161,21 @@ describe("color_converters", () => {
     expect(formatColor("#ff0000", "oklch")).toMatch(
       /^oklch\(\d+(\.\d+)?%, 0\.\d+, \d+(\.\d+)?\)$/,
     );
+  });
+
+  it("formatAll returns all five formats, HEX first, each matching formatColor", () => {
+    const all = formatAll("#ff3d00");
+    expect(all.map((f) => f.mode)).toEqual([
+      "hex",
+      "rgb",
+      "hsl",
+      "hsv",
+      "oklch",
+    ]);
+    expect(all[0].label).toBe("HEX");
+    for (const { mode, value } of all) {
+      expect(value).toBe(formatColor("#ff3d00", mode));
+    }
   });
 
   it("parseColor accepts the mode-specific string and returns hex", () => {

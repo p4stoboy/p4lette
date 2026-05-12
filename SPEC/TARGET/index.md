@@ -12,14 +12,14 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
   - `src/skins/poster/*` + `src/hooks/*` + `src/App.tsx` + `src/index.tsx` → **`spa.md`** — every component, the overlay/edit state in `PosterSkin`, the hooks.
   - `*.test.ts(x)` (colocated next to source) + `src/setupTests.ts` + Vitest config → **`testing.md`**.
   - this file → **`index.md`** — plus `index.html` (Vite shell), `scripts/generate-og.mjs` (build-time favicon/OG generator), `public/*` (generated assets), root config (`vite.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `package.json`).
-- **Persistence surfaces** — see table below. Two kinds: **localStorage** (7 keys, `v1`-suffixed) and the **URL hash** (`#p=<hex>-<hex>-…`, 6-digit hexes, no `#` per color; written debounced 150 ms via `history.replaceState`; cleared to bare path when the palette is empty; read once at startup to seed state). Every localStorage/`window`/`crypto`/`navigator` access is `typeof`-guarded + wrapped in try/catch (SSR- and private-mode-safe; quota errors swallowed).
+- **Persistence surfaces** — see table below. Two kinds: **localStorage** (8 keys, `v1`-suffixed) and the **URL hash** (`#p=<hex>-<hex>-…`, 6-digit hexes, no `#` per color; written debounced 150 ms via `history.replaceState`; cleared to bare path when the palette is empty; read once at startup to seed state). Every localStorage/`window`/`crypto`/`navigator` access is `typeof`-guarded + wrapped in try/catch (SSR- and private-mode-safe; quota errors swallowed).
 - **External HTTP dependency** — `color.pizza`, no auth, no key, fail-soft:
   - `GET https://api.color.pizza/v1/?values=<csv-hex>&noduplicates=true&list=<list>` → color names — `src/functions/get_color_card_props.ts`. On any failure: per-slot fallback to the previous name, else the hex.
   - `GET https://api.color.pizza/v1/lists/` → available name-list keys — `src/functions/color_lists.ts` (module-memoised). On failure: a "load failed" UI state.
 - **Color libraries** (all under `src/functions/`): `culori` (OKLCH/space math, filters, blend, interpolate — harmony, tones, color_filters, color_mix), `pro-color-harmonies` (`ColorPaletteGenerator` — OKLCH harmony sets incl. `tintsShades`), `rybitten` (`rybHsl2rgb`/`ryb2rgb` + `cubes` — the PIGMENT cube filter: each swatch re-mixed through a painter's pigment wheel, plus the wheel's own colours and its corners), `dittotones` (`DittoTones` — perceptual tone scales from vendored reference ramp sets: Tailwind v4 (default), Radix, Flexoki, Shoelace), `rampensau` (`generateColorRamp` + `colorUtils.colorHarmonies` — coherent palette generation for the seed + SHUFFLE, the GENERATIVE tone method, HSV harmonies), `fettepalette` (`generateRandomColorRamp` — the HSV-curve tone scale), `poline` (`Poline` — the POLINE ANCHORS palette-generation strategy).
 - **Commands** — `npm run dev` (=`vite`), `npm run build` (=`tsc --noEmit && vite build` → `dist/`), `npm run preview`, `npm test` (=`vitest run`), `npm run test:watch`, `npm run typecheck` (=`tsc --noEmit`), `npm run lint` (=`eslint .`), `npm run og` (=`node scripts/generate-og.mjs` → regenerates `public/og.png`, `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`).
 - **Cross-cutting guardrails / known state**:
-  - **Lint debt**: `src/skins/poster/PosterEditTray.tsx:31` raises `react-hooks/set-state-in-effect` (`setInput(formatColor(hex, colorMode))` inside a `useEffect`). `npm run lint` therefore exits non-zero with exactly this one error — any "lint must be clean" check has to allow it (or the file gets fixed).
+  - **Lint debt**: `src/skins/poster/PosterEditTray.tsx` raises `react-hooks/set-state-in-effect` — the `setInput(formatColor(hex, textMode))` effect that re-syncs the text field on a colour/space change (currently ≈L145). `npm run lint` therefore exits non-zero with exactly this one error — any "lint must be clean" check has to allow it (or the file gets fixed).
   - `react-refresh/only-export-components` is intentionally **off** for `src/context/**` (that module exports `Provider`, `PaletteContext`, `usePalette` + re-exports together).
   - **Tests are colocated** (`src/**/X.test.ts(x)`), not in a `tests/`/`__tests__/` mirror tree. This is the project rule and deliberately overrides the general "tests in mirror modules" convention.
   - `tsconfig.json`: `strict`, `noEmit`, `noFallthroughCasesInSwitch` (reducer/`formatColor`/`parseColor` switches are exhaustive, no `default`), `isolatedModules`, `moduleResolution: "bundler"`, `jsx: "react-jsx"`, `types: ["vite/client"]`. `package.json` `overrides` pins `@types/react`/`@types/react-dom` to `^18.3.x` so React-18 typings survive newer tooling.
@@ -30,16 +30,17 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
 
 ### Persistence surfaces
 
-| Surface      | Key / format                         | Owner (sole writer)                                                             | Holds                                                                       |
-| ------------ | ------------------------------------ | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| localStorage | `p4lette_export_template_v1`         | `src/context/PaletteContext.tsx`                                                | export-template string (effect on change)                                   |
-| localStorage | `p4lette_name_list_v1`               | `src/context/PaletteContext.tsx`                                                | active color.pizza list key                                                 |
-| localStorage | `p4lette_color_mode_v1`              | `src/context/PaletteContext.tsx`                                                | `ColorMode` (validated against `VALID_MODES` on read)                       |
-| localStorage | `p4lette_saved_v1`                   | `src/functions/saved_palettes.ts`                                               | JSON `SavedPalette[]`, capped `SAVED_LIMIT=20`                              |
-| localStorage | `p4lette_saved_templates_v1`         | `src/functions/saved_templates.ts`                                              | JSON `SavedTemplate[]`, capped `SAVED_TEMPLATES_LIMIT=20`                   |
-| localStorage | `p4lette_seen_welcome_v1`            | `src/skins/poster/PosterSkin.tsx`                                               | `"1"` once the welcome modal is dismissed                                   |
-| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                               | `"0"`/`"1"` ticker visibility — off by default, visible only if `"1"`       |
-| URL hash     | `#p=<hex>-<hex>-…` (6-digit, no `#`) | `src/context/PaletteContext.tsx` (write) / `src/functions/share_url.ts` (codec) | the live palette; debounced 150 ms; seeds startup state via `decodePalette` |
+| Surface      | Key / format                         | Owner (sole writer)                                                             | Holds                                                                          |
+| ------------ | ------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| localStorage | `p4lette_export_template_v1`         | `src/context/PaletteContext.tsx`                                                | export-template string (effect on change)                                      |
+| localStorage | `p4lette_name_list_v1`               | `src/context/PaletteContext.tsx`                                                | active color.pizza list key                                                    |
+| localStorage | `p4lette_color_mode_v1`              | `src/context/PaletteContext.tsx`                                                | `DisplayMode` incl. `all` — **default `all`**; validated against `VALID_MODES` |
+| localStorage | `p4lette_edit_space_v1`              | `src/context/PaletteContext.tsx`                                                | `EditSpace` — the EDIT tray's editing space; **default `okhsl`**; validated    |
+| localStorage | `p4lette_saved_v1`                   | `src/functions/saved_palettes.ts`                                               | JSON `SavedPalette[]`, capped `SAVED_LIMIT=20`                                 |
+| localStorage | `p4lette_saved_templates_v1`         | `src/functions/saved_templates.ts`                                              | JSON `SavedTemplate[]`, capped `SAVED_TEMPLATES_LIMIT=20`                      |
+| localStorage | `p4lette_seen_welcome_v1`            | `src/skins/poster/PosterSkin.tsx`                                               | `"1"` once the welcome modal is dismissed                                      |
+| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                               | `"0"`/`"1"` ticker visibility — off by default, visible only if `"1"`          |
+| URL hash     | `#p=<hex>-<hex>-…` (6-digit, no `#`) | `src/context/PaletteContext.tsx` (write) / `src/functions/share_url.ts` (codec) | the live palette; debounced 150 ms; seeds startup state via `decodePalette`    |
 
 ## JSON
 
@@ -96,7 +97,8 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
     "localStorage": {
       "p4lette_export_template_v1": "src/context/PaletteContext.tsx",
       "p4lette_name_list_v1": "src/context/PaletteContext.tsx",
-      "p4lette_color_mode_v1": "src/context/PaletteContext.tsx",
+      "p4lette_color_mode_v1": "src/context/PaletteContext.tsx (DisplayMode incl. 'all' — default 'all')",
+      "p4lette_edit_space_v1": "src/context/PaletteContext.tsx (EditSpace — EDIT tray; default 'okhsl')",
       "p4lette_saved_v1": "src/functions/saved_palettes.ts (cap 20)",
       "p4lette_saved_templates_v1": "src/functions/saved_templates.ts (cap 20)",
       "p4lette_seen_welcome_v1": "src/skins/poster/PosterSkin.tsx",
@@ -128,7 +130,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
     "og": "node scripts/generate-og.mjs"
   },
   "guardrails": {
-    "lintDebt": "src/skins/poster/PosterEditTray.tsx:31 react-hooks/set-state-in-effect — `eslint .` exits non-zero with this one error",
+    "lintDebt": "src/skins/poster/PosterEditTray.tsx react-hooks/set-state-in-effect (the setInput-on-space/colour-change effect, ~L145) — `eslint .` exits non-zero with this one error",
     "reactRefreshOffFor": "src/context/**",
     "testsColocated": "src/**/X.test.ts(x) — overrides the 'mirror modules' convention",
     "branching": "feature branches off dev; PRs target dev; conventional commits",

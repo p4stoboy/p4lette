@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
-import { ColorMode } from "../../types/Colors";
+import { DisplayMode } from "../../types/Colors";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -8,7 +8,8 @@ interface Props {
   bg: string;
 }
 
-const MODES: { key: ColorMode; title: string; sample: string }[] = [
+const MODES: { key: DisplayMode; title: string; sample: string }[] = [
+  { key: "all", title: "ALL", sample: "all formats" },
   { key: "hex", title: "HEX", sample: "6 digit hex" },
   { key: "rgb", title: "RGB", sample: "r g b" },
   { key: "hsl", title: "HSL", sample: "h s l" },

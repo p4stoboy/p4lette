@@ -8,7 +8,7 @@ import {
 import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
 import { fontColorFor } from "../../functions/contrast";
-import { formatColor } from "../../functions/color_converters";
+import { formatAll, formatColor } from "../../functions/color_converters";
 import { PosterEditTray } from "./PosterEditTray";
 import { POSTER } from "./tokens";
 
@@ -135,17 +135,42 @@ export const PosterColumn = ({
         >
           {name}
         </div>
-        <div
-          style={{
-            fontFamily: POSTER.mono,
-            fontSize: 14,
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            opacity: 0.85,
-          }}
-        >
-          {formatColor(color.hex, colorMode)}
-        </div>
+        {colorMode === "all" ? (
+          <div
+            style={{
+              fontFamily: POSTER.mono,
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+            }}
+          >
+            {formatAll(color.hex).map(({ mode, value }, i) => (
+              <div
+                key={mode}
+                style={{
+                  fontSize: i === 0 ? 14 : 10,
+                  opacity: i === 0 ? 0.85 : 0.55,
+                }}
+              >
+                {value}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              fontFamily: POSTER.mono,
+              fontSize: 14,
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              opacity: 0.85,
+            }}
+          >
+            {formatColor(color.hex, colorMode)}
+          </div>
+        )}
       </div>
 
       {hov && !editing && (

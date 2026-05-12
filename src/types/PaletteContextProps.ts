@@ -1,4 +1,4 @@
-import { ColorMode } from "./Colors";
+import { DisplayMode, EditSpace } from "./Colors";
 import { Palette } from "./Palette";
 import { GenStrategy, RampParams } from "../functions/generate_palette";
 
@@ -9,7 +9,8 @@ export interface PaletteContextProps {
   exportTemplate: string;
   resolvedTemplate: string;
   nameList: string;
-  colorMode: ColorMode;
+  colorMode: DisplayMode;
+  editSpace: EditSpace;
   genStrategy: GenStrategy;
   genParams: RampParams | null;
   addColor: (hex?: string) => void;
@@ -22,7 +23,8 @@ export interface PaletteContextProps {
   setExportTemplate: (template: string) => void;
   setExportVisible: (visible: boolean) => void;
   setNameList: (list: string) => void;
-  setColorMode: (mode: ColorMode) => void;
+  setColorMode: (mode: DisplayMode) => void;
+  setEditSpace: (space: EditSpace) => void;
   setGenConfig: (cfg: {
     strategy?: GenStrategy;
     params?: RampParams | null;

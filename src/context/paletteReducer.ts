@@ -1,5 +1,5 @@
 import { ColorCardProps } from "../types/ColorCardProps";
-import { ColorMode } from "../types/Colors";
+import { DisplayMode, EditSpace } from "../types/Colors";
 import { Palette } from "../types/Palette";
 import { randomHex } from "../functions/color_converters";
 import {
@@ -16,7 +16,10 @@ export type PaletteState = {
   exportVisible: boolean;
   exportTemplate: string;
   nameList: string;
-  colorMode: ColorMode;
+  // Under-swatch display format (`"all"` = every format stacked, the default).
+  colorMode: DisplayMode;
+  // The colour space the inline EDIT tray edits in (text input + sliders).
+  editSpace: EditSpace;
   // How SHUFFLE / the initial seed generate a palette. `genParams` (rampensau
   // knobs) is `null` until the GENERATE panel commits one. Session-only.
   genStrategy: GenStrategy;
@@ -35,7 +38,8 @@ export type PaletteAction =
   | { type: "setExportTemplate"; template: string }
   | { type: "setExportVisible"; visible: boolean }
   | { type: "setNameList"; list: string }
-  | { type: "setColorMode"; mode: ColorMode }
+  | { type: "setColorMode"; mode: DisplayMode }
+  | { type: "setEditSpace"; space: EditSpace }
   | {
       type: "setGenConfig";
       strategy?: GenStrategy;
@@ -80,7 +84,8 @@ export interface CreatePaletteOptions {
   exportTemplate: string;
   hash?: string | null;
   nameList?: string;
-  colorMode?: ColorMode;
+  colorMode?: DisplayMode;
+  editSpace?: EditSpace;
 }
 
 export const createPaletteState = ({
@@ -88,7 +93,8 @@ export const createPaletteState = ({
   exportTemplate,
   hash,
   nameList = DEFAULT_NAME_LIST,
-  colorMode = "hex",
+  colorMode = "all",
+  editSpace = "okhsl",
 }: CreatePaletteOptions): PaletteState => {
   const decoded = decodePalette(hash ?? null);
   const seed = decoded ?? generatePalette(initialCount);
@@ -99,6 +105,7 @@ export const createPaletteState = ({
     exportTemplate,
     nameList,
     colorMode,
+    editSpace,
     genStrategy: "default",
     genParams: null,
   };
@@ -206,6 +213,9 @@ export const paletteReducer = (
     case "setColorMode":
       if (action.mode === state.colorMode) return state;
       return { ...state, colorMode: action.mode };
+    case "setEditSpace":
+      if (action.space === state.editSpace) return state;
+      return { ...state, editSpace: action.space };
     case "setGenConfig":
       return {
         ...state,
