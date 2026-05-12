@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { oklch } from "culori";
 import {
+  HARMONY_HSV_KINDS,
   HARMONY_STYLES,
   HarmonyKind,
   RYB_CUBES,
   harmony,
+  harmonyHsv,
   harmonyRyb,
 } from "./harmony";
 import { hexToHsl } from "./color_converters";
@@ -224,6 +226,78 @@ describe("harmonyRyb — pigment cube picker", () => {
     const other = RYB_CUBES.find((c) => c.key !== "itten")!.key;
     expect(harmonyRyb("#ff0000", "triadic", other)).not.toEqual(
       harmonyRyb("#ff0000", "triadic", "itten"),
+    );
+  });
+});
+
+describe("harmony — pro-color-harmonies tintsShades for MONOCHROME/SHADES", () => {
+  it("the style toggle now changes MONOCHROME / SHADES", () => {
+    expect(harmony(BASE, "monochrome", "circle")).not.toEqual(
+      harmony(BASE, "monochrome", "default"),
+    );
+    expect(harmony(BASE, "shades", "triangle")).not.toEqual(
+      harmony(BASE, "shades", "default"),
+    );
+  });
+
+  it("MONOCHROME / SHADES still vary lightness monotonically at every style", () => {
+    for (const style of HARMONY_STYLES) {
+      for (const kind of ["monochrome", "shades"] as const) {
+        const ls = harmony(BASE, kind, style).map((c) => oklch(c)!.l);
+        expect(ls).toEqual([...ls].sort((a, b) => a - b));
+      }
+    }
+  });
+});
+
+describe("harmonyHsv — rampensau HSV-space harmonies", () => {
+  const COUNTS: Record<string, number> = {
+    complementary: 2,
+    analogous: 6,
+    triadic: 3,
+    tetradic: 4,
+    splitComplementary: 3,
+    pentadic: 5,
+    hexadic: 6,
+    compound: 4,
+    doubleComplementary: 4,
+  };
+
+  it("HARMONY_HSV_KINDS includes the geometry pro-color-harmonies lacks", () => {
+    const keys = HARMONY_HSV_KINDS.map((k) => k.key);
+    expect(keys).toContain("pentadic");
+    expect(keys).toContain("hexadic");
+    expect(keys).toContain("compound");
+    expect(keys).toContain("doubleComplementary");
+    for (const k of HARMONY_HSV_KINDS) {
+      expect(k.key).toMatch(/\S/);
+      expect(k.label).toMatch(/\S/);
+    }
+  });
+
+  it.each(HARMONY_HSV_KINDS.map((k) => k.key))(
+    "%s returns the right number of valid hexes",
+    (kind) => {
+      const result = harmonyHsv(BASE, kind);
+      expect(result).toHaveLength(COUNTS[kind]);
+      for (const h of result) expect(h).toMatch(HEX_RE);
+    },
+  );
+
+  it("the first colour is at the seed's hue", () => {
+    const [first] = harmonyHsv(BASE, "triadic");
+    expect(hueDelta(hexToHsl(first).h, hexToHsl(BASE).h)).toBeLessThan(4);
+  });
+
+  it("an unknown kind falls back to complementary (doesn't throw)", () => {
+    expect(harmonyHsv(BASE, "no-such-harmony")).toEqual(
+      harmonyHsv(BASE, "complementary"),
+    );
+  });
+
+  it("distinct kinds give distinct results", () => {
+    expect(harmonyHsv(BASE, "pentadic")).not.toEqual(
+      harmonyHsv(BASE, "hexadic"),
     );
   });
 });

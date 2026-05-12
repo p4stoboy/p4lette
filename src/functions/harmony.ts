@@ -1,8 +1,9 @@
 import { clampChroma, formatHex, oklch } from "culori";
 import { ColorPaletteGenerator, PaletteStyle } from "pro-color-harmonies";
+import { colorUtils } from "rampensau";
 import { rybHsl2rgb } from "rybitten";
 import { cubes, type ColorCube } from "rybitten/cubes";
-import { clamp, hexToHsl } from "./color_converters";
+import { clamp, hexToHsl, hslToHex } from "./color_converters";
 
 export type { PaletteStyle } from "pro-color-harmonies";
 
@@ -66,6 +67,27 @@ export const RYB_CUBES: readonly RybCube[] = [
   { key: "chevreul", label: "CHEVREUL" },
 ];
 
+export interface HsvHarmony {
+  key: string;
+  label: string;
+}
+
+// rampensau's HSV-space harmonies — geometry pro-color-harmonies doesn't cover
+// (pentadic / hexadic / compound / double-complementary), plus the staples.
+// Each `colorHarmonies` fn maps a seed hue to a list of *absolute* hues (the
+// seed's own hue is the first element).
+export const HARMONY_HSV_KINDS: readonly HsvHarmony[] = [
+  { key: "complementary", label: "COMPLEMENTARY" },
+  { key: "analogous", label: "ANALOGOUS" },
+  { key: "triadic", label: "TRIADIC" },
+  { key: "tetradic", label: "TETRADIC" },
+  { key: "splitComplementary", label: "SPLIT-COMP" },
+  { key: "pentadic", label: "PENTADIC" },
+  { key: "hexadic", label: "HEXADIC" },
+  { key: "compound", label: "COMPOUND" },
+  { key: "doubleComplementary", label: "DBL-COMP" },
+];
+
 interface OKLCH {
   l: number;
   c: number;
@@ -108,6 +130,51 @@ const lightnessRamp = (base: OKLCH, count: number, spread: number): OKLCH[] => {
   }));
 };
 
+// Evenly resample an OKLCH ramp to exactly `count` colours by lerping through it.
+const resampleRamp = (ramp: OKLCH[], count: number): OKLCH[] => {
+  if (ramp.length === 0) return [];
+  if (count <= 1) return [ramp[Math.floor(ramp.length / 2)]];
+  return Array.from({ length: count }, (_, i) => {
+    const p = (i / (count - 1)) * (ramp.length - 1);
+    const lo = Math.floor(p);
+    const hi = Math.min(lo + 1, ramp.length - 1);
+    const t = p - lo;
+    const a = ramp[lo];
+    const b = ramp[hi];
+    return {
+      l: a.l + (b.l - a.l) * t,
+      c: a.c + (b.c - a.c) * t,
+      h: a.h + (b.h - a.h) * t,
+    };
+  });
+};
+
+// Tints & shades via pro-color-harmonies (so the geometric `style` now applies
+// to MONOCHROME/SHADES too — `default`/`square` hold the hue, the others bend
+// hue/chroma slightly), re-spanned to the same lightness window the plain ramp
+// used and resampled to `count`. Falls back to the local ramp if the lib is no help.
+const tintsShadesRamp = (
+  base: OKLCH,
+  count: number,
+  spread: number,
+  style: PaletteStyle,
+): OKLCH[] => {
+  const raw = ColorPaletteGenerator.generate(base, "tintsShades", { style })
+    .map((c) => ({ l: c.l, c: c.c, h: c.h }))
+    .sort((a, b) => a.l - b.l);
+  if (raw.length < 2) return lightnessRamp(base, count, spread);
+  const loL = Math.max(0.1, base.l - spread);
+  const hiL = Math.min(0.95, base.l + spread);
+  const minL = raw[0].l;
+  const span = raw[raw.length - 1].l - minL || 1;
+  const remapped = raw.map((c) => ({
+    l: loL + ((c.l - minL) / span) * (hiL - loL),
+    c: c.c,
+    h: c.h,
+  }));
+  return resampleRamp(remapped, count);
+};
+
 export const harmony = (
   hex: string,
   kind: HarmonyKind,
@@ -118,10 +185,10 @@ export const harmony = (
   const base: OKLCH = { l: parsed.l, c: parsed.c, h: parsed.h ?? 0 };
 
   if (kind === "monochrome") {
-    return lightnessRamp(base, COUNTS.monochrome, 0.32).map(toHex);
+    return tintsShadesRamp(base, COUNTS.monochrome, 0.32, style).map(toHex);
   }
   if (kind === "shades") {
-    return lightnessRamp(base, COUNTS.shades, 0.22).map(toHex);
+    return tintsShadesRamp(base, COUNTS.shades, 0.22, style).map(toHex);
   }
 
   const libKind = LIB_KIND[kind];
@@ -184,4 +251,16 @@ export const harmonyRyb = (
       h: rybHueRotate(seedHue, d, cube) ?? base.h,
     }),
   );
+};
+
+// rampensau HSV-space harmony — `colorHarmonies[kind]` maps the seed hue to a
+// list of absolute hues; we keep the seed's HSL saturation/lightness so the
+// result is purely a hue-geometry variation. Unknown kind → complementary.
+export const harmonyHsv = (hex: string, kindKey: string): string[] => {
+  const fn =
+    colorUtils.colorHarmonies[
+      kindKey as keyof typeof colorUtils.colorHarmonies
+    ] ?? colorUtils.colorHarmonies.complementary;
+  const { h, s, l } = hexToHsl(hex);
+  return fn(h).map((hue) => hslToHex({ h: ((hue % 360) + 360) % 360, s, l }));
 };
