@@ -21,7 +21,7 @@
   - `"default"` / `"rampensau"` — `"default"` ≡ `"rampensau"` with no `params` (the out-of-the-box sweep; the panel hides the tuning sliders for it). No `params` → the random bounds (`sRange ≈ [0.4–0.6, 0.72–0.9]`, `lRange ≈ [0.18–0.3, 0.8–0.9]`, `hCycles = (0.2 + rnd()*0.8)·(±1)`) via `generateColorRamp`; with `params` (only ever via `"rampensau"`) → those bounds via `generateColorRampWithCurve({…, curveMethod:"lamé", curveAccent})`. Either way `hStart = rnd()*360`, `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`. **A _coherent_ ramp (single hue arc, perceptual light→dark), not N randoms.**
   - `"poline"` — `new Poline({ numPoints: max(count,2), anchorColors: [a,b] })` with two `rnd`-derived anchors → `.colors` (`[h,s,l]`) → `hslToHex` → resampled to exactly `count` (private `resampleHexList` — evenly-spaced indices).
   - `"random"` — `count` independent `randomHex()` (the incoherent escape hatch).
-  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`).
+  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`) — and by `PosterToolsTray` (`GenerateBody`: `generatePalette`, `GEN_STRATEGIES`, `GenStrategy`, `RAMP_PARAM_META`, `RampParams`, `defaultRampParams`).
 
 ### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rampensau`** (`colorUtils.colorHarmonies`)
 
@@ -443,17 +443,17 @@ flowchart LR
   cc --> gp & hm & tn & ct & rt & pg
   td --> tn
   gp --> red["paletteReducer — state.md"]
-  gp --> ggb["PosterToolsTray GenerateBody — spa.md"]
+  gp --> ttray["PosterToolsTray — spa.md"]
   su --> red
   su --> pctx["PaletteContext — state.md"]
   rt --> pctx
   gcn --> pctx
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
-  hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
-  tn --> tld["PosterToolsTray TonesBody — spa.md"]
-  cf --> ttf["PosterToolsTray FixersBody + EffectsBody — spa.md"]
-  mx --> mxb["PosterToolsTray MixBody — spa.md"]
-  pg --> pgb["PosterToolsTray PigmentBody — spa.md"]
+  hm --> ttray
+  tn --> ttray
+  cf --> ttray
+  mx --> ttray
+  pg --> ttray
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
   sp --> skin
