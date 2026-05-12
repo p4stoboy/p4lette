@@ -9,7 +9,12 @@ import {
 } from "../../../functions/harmony";
 import { POSTER } from "../tokens";
 import { BasePicker, SwatchRow, Toggle } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import {
+  BodyProps,
+  rowsStyle,
+  pillRowStyle,
+  pillRowLabelStyle,
+} from "./styles";
 
 type HarmonySpace = "oklch" | "hsv";
 
@@ -65,15 +70,15 @@ export const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         value={base}
         onChange={setBase}
       >
-        <div style={{ marginTop: 12, border: `2px solid ${ink}` }}>
-          <div style={{ display: "flex" }}>
-            {SPACES.map(([key, label], i) => (
+        <div style={{ marginTop: 12 }}>
+          <div style={pillRowLabelStyle()}>SPACE</div>
+          <div style={pillRowStyle()}>
+            {SPACES.map(([key, label]) => (
               <Toggle
                 key={key}
                 ink={ink}
                 active={space === key}
                 tall={isMobile}
-                divide={i < SPACES.length - 1}
                 onClick={() => setSpace(key)}
               >
                 {label}
@@ -81,20 +86,22 @@ export const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
             ))}
           </div>
           {variants.length > 0 && (
-            <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
-              {variants.map((v, i) => (
-                <Toggle
-                  key={v.key}
-                  ink={ink}
-                  active={v.active}
-                  tall={isMobile}
-                  divide={i < variants.length - 1}
-                  onClick={v.pick}
-                >
-                  {v.label}
-                </Toggle>
-              ))}
-            </div>
+            <>
+              <div style={{ ...pillRowLabelStyle(), marginTop: 10 }}>STYLE</div>
+              <div style={pillRowStyle()}>
+                {variants.map((v) => (
+                  <Toggle
+                    key={v.key}
+                    ink={ink}
+                    active={v.active}
+                    tall={isMobile}
+                    onClick={v.pick}
+                  >
+                    {v.label}
+                  </Toggle>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </BasePicker>

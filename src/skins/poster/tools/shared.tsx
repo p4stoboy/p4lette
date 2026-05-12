@@ -139,18 +139,18 @@ interface ToggleProps {
   ink: string;
   active: boolean;
   tall: boolean;
-  divide?: boolean;
   onClick: () => void;
   children: ReactNode;
 }
 
-// A mutually-exclusive tab button (`nowrap`/`ellipsis` so longer labels don't
-// break a row on narrow viewports).
+// A pick-one-of-a-small-set pill. Auto-width — meant to flow inside a
+// `pillRowStyle()` row that wraps, so a set of options reads as a pill strip
+// rather than a stack of full-width header bars. Active = filled with `ink`
+// (inverted text); inactive = `1px` outlined. `nowrap` keeps a label on one line.
 export const Toggle = ({
   ink,
   active,
   tall,
-  divide,
   onClick,
   children,
 }: ToggleProps) => {
@@ -159,8 +159,8 @@ export const Toggle = ({
     <button
       onClick={onClick}
       style={{
-        flex: 1,
-        padding: tall ? "12px 14px" : "8px 12px",
+        flex: "0 0 auto",
+        padding: tall ? "11px 14px" : "6px 11px",
         minHeight: tall ? 44 : undefined,
         fontFamily: POSTER.body,
         fontWeight: 700,
@@ -168,10 +168,8 @@ export const Toggle = ({
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        border: "none",
-        borderRight: divide ? `2px solid ${ink}` : "none",
+        border: `1px solid ${ink}`,
+        borderRadius: 0,
         background: active ? ink : "transparent",
         color: active ? invert : ink,
         cursor: "pointer",

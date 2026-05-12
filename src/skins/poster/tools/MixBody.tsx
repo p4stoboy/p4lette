@@ -9,7 +9,12 @@ import {
 } from "../../../functions/color_mix";
 import { POSTER } from "../tokens";
 import { BasePicker, SwatchRow, Toggle } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import {
+  BodyProps,
+  rowsStyle,
+  pillRowStyle,
+  pillRowLabelStyle,
+} from "./styles";
 
 // MIX — interpolate between two picked colours. Two stacked BasePickers
 // (FROM / TO) over the live palette, then steps / space / curve toggles.
@@ -38,43 +43,43 @@ export const MixBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         value={to}
         onChange={setTo}
       >
-        <div style={{ marginTop: 12, border: `2px solid ${ink}` }}>
-          <div style={{ display: "flex" }}>
-            {MIX_STEPS.map((s, i) => (
+        <div style={{ marginTop: 12 }}>
+          <div style={pillRowLabelStyle()}>STEPS</div>
+          <div style={pillRowStyle()}>
+            {MIX_STEPS.map((s) => (
               <Toggle
                 key={s}
                 ink={ink}
                 active={n === s}
                 tall={isMobile}
-                divide={i < MIX_STEPS.length - 1}
                 onClick={() => setN(s)}
               >
                 {String(s)}
               </Toggle>
             ))}
           </div>
-          <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
-            {MIX_SPACES.map((s, i) => (
+          <div style={{ ...pillRowLabelStyle(), marginTop: 10 }}>SPACE</div>
+          <div style={pillRowStyle()}>
+            {MIX_SPACES.map((s) => (
               <Toggle
                 key={s.key}
                 ink={ink}
                 active={space === s.key}
                 tall={isMobile}
-                divide={i < MIX_SPACES.length - 1}
                 onClick={() => setSpace(s.key)}
               >
                 {s.label}
               </Toggle>
             ))}
           </div>
-          <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
-            {MIX_CURVES.map((c, i) => (
+          <div style={{ ...pillRowLabelStyle(), marginTop: 10 }}>CURVE</div>
+          <div style={pillRowStyle()}>
+            {MIX_CURVES.map((c) => (
               <Toggle
                 key={c.key}
                 ink={ink}
                 active={curve === c.key}
                 tall={isMobile}
-                divide={i < MIX_CURVES.length - 1}
                 onClick={() => setCurve(c.key)}
               >
                 {c.label}
