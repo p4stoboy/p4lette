@@ -13,10 +13,12 @@ interface Props {
   onApply: (hexes: string[]) => void;
 }
 
-// The TOOLS overlay: pick one tool at a time. A two-row pill-tab strip selects
-// the active section from the `TRAY_SECTIONS` registry (`./tools`); the active
-// body is shown, the others stay mounted (`display:none`) so their local state
-// survives a tab switch.
+// The TOOLS panel: pick one tool at a time. On desktop it's a flex child of
+// PosterSkin's content row (~50vw, sized by the parent — that's where the
+// slide-in lives); on mobile it's a full-screen overlay. A two-row pill-tab
+// strip selects the active section from the `TRAY_SECTIONS` registry
+// (`./tools`); the active body is shown, the others stay mounted (`display:none`)
+// so their local state survives a tab switch.
 export const PosterToolsTray = ({
   ink,
   bg,
@@ -35,16 +37,28 @@ export const PosterToolsTray = ({
     <div
       role="dialog"
       aria-label="tools"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 55,
-        background: bg,
-        color: ink,
-        display: "flex",
-        flexDirection: "column",
-        animation: "toolsIn .22s cubic-bezier(.2,.7,.3,1)",
-      }}
+      style={
+        isMobile
+          ? {
+              position: "fixed",
+              inset: 0,
+              zIndex: 55,
+              background: bg,
+              color: ink,
+              display: "flex",
+              flexDirection: "column",
+              animation: "toolsIn .22s cubic-bezier(.2,.7,.3,1)",
+            }
+          : {
+              width: "100%",
+              height: "100%",
+              background: bg,
+              color: ink,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }
+      }
     >
       <style>{`@keyframes toolsIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 

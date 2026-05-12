@@ -54,21 +54,34 @@ export const PosterExportSheet = ({
 
   return (
     <div
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: bg,
-        color: ink,
-        borderTop: `${POSTER.borderW}px solid ${ink}`,
-        height: isMobile ? "92%" : "62%",
-        animation: "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: `0 -10px 0 ${POSTER.accent}`,
-        zIndex: 50,
-      }}
+      style={
+        isMobile
+          ? {
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: bg,
+              color: ink,
+              borderTop: `${POSTER.borderW}px solid ${ink}`,
+              height: "92%",
+              animation: "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: `0 -10px 0 ${POSTER.accent}`,
+              zIndex: 50,
+            }
+          : {
+              width: "100%",
+              height: "100%",
+              background: bg,
+              color: ink,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: `-10px 0 0 ${POSTER.accent}`,
+            }
+      }
     >
       <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}}`}</style>
 
@@ -347,17 +360,14 @@ export const PosterExportSheet = ({
         style={{
           flex: 1,
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gridTemplateRows: isMobile ? "1fr 1fr" : "1fr",
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr 1fr",
           minHeight: 0,
         }}
       >
         <div
           style={{
-            borderRight: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
-            borderBottom: isMobile
-              ? `${POSTER.borderW}px solid ${ink}`
-              : "none",
+            borderBottom: `${POSTER.borderW}px solid ${ink}`,
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
