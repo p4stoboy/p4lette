@@ -40,7 +40,6 @@ async function ensureFonts() {
 }
 
 const POSTER = { bg: "#FFF8E7", ink: "#0E0B08", accent: "#FF3D00" };
-const TERMINAL = { bg: "#0A0A0A", ink: "#E8E5DD", accent: "#00FF6A" };
 
 const PALETTE = [
   { hex: "#FF3D00", name: "CINNABAR" },
@@ -56,7 +55,8 @@ const luminance = (hex) => {
   const b = parseInt(hex.slice(5, 7), 16) / 255;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
-const fontColorFor = (hex, dark, light) => (luminance(hex) > 0.55 ? dark : light);
+const fontColorFor = (hex, dark, light) =>
+  luminance(hex) > 0.55 ? dark : light;
 
 const escape = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -66,32 +66,33 @@ const starPolygon = (cx, cy, r, fill) => {
   for (let i = 0; i < 10; i++) {
     const ang = -Math.PI / 2 + (Math.PI / 5) * i;
     const rr = i % 2 === 0 ? r : r * 0.42;
-    pts.push(`${(cx + Math.cos(ang) * rr).toFixed(2)},${(cy + Math.sin(ang) * rr).toFixed(2)}`);
+    pts.push(
+      `${(cx + Math.cos(ang) * rr).toFixed(2)},${(cy + Math.sin(ang) * rr).toFixed(2)}`,
+    );
   }
   return `<polygon points="${pts.join(" ")}" fill="${fill}" />`;
 };
 
+// The OG card is the (only) skin — a poster-style swatch grid under a wordmark +
+// nav bar. The dead "terminal" skin used to fill the bottom half; it's gone.
 function buildOgSvg() {
   const W = 1200;
   const H = 630;
-  const HALF = H / 2; // 315
   const cols = PALETTE.length;
   const colW = W / cols;
 
-  // Top half — POSTER
-  const NAV_H = 96;
+  const NAV_H = 100;
   const wordmarkX = 36;
   const wordmarkY = NAV_H * 0.62;
-  // Drop symbol glyphs from nav buttons in the OG: their fallback fonts drag
-  // the rest of the text run out of Space Grotesk. The labels alone read fine.
+
+  // Labels only — symbol glyphs (＋ ♥ …) drag the text run out of Space Grotesk.
   const buttons = [
     { label: "ADD", bold: true },
     { label: "SHUFFLE" },
+    { label: "TOOLS" },
     { label: "SAVE" },
-    { label: "VAULT" },
     { label: "EXPORT" },
   ];
-
   const navStartX = 470;
   const btnPad = 18;
   const btnFontSize = 20;
@@ -101,13 +102,12 @@ function buildOgSvg() {
     const approxW = b.label.length * 12 + btnPad * 2;
     const x = navX;
     navX += approxW;
-    return { text: b.label, x, approxW, bold: b.bold };
+    return { text: b.label, x, bold: b.bold };
   });
-
   const navRules = navParts
     .map(
       (p) =>
-        `<line x1="${p.x}" y1="0" x2="${p.x}" y2="${NAV_H}" stroke="${POSTER.ink}" stroke-width="3" />`
+        `<line x1="${p.x}" y1="0" x2="${p.x}" y2="${NAV_H}" stroke="${POSTER.ink}" stroke-width="3" />`,
     )
     .join("");
   const navTexts = navParts
@@ -115,73 +115,32 @@ function buildOgSvg() {
       (p) => `
       <text x="${p.x + btnPad}" y="${btnY}" fill="${POSTER.ink}"
         font-family="Space Grotesk" font-weight="${p.bold ? 700 : 600}"
-        font-size="${btnFontSize}" letter-spacing="1.4">${escape(p.text)}</text>`
+        font-size="${btnFontSize}" letter-spacing="1.4">${escape(p.text)}</text>`,
     )
     .join("");
 
   const tagLineY = NAV_H + 56;
   const swatchTop = tagLineY + 30;
-  const swatchH = HALF - swatchTop - 8;
+  const swatchH = H - swatchTop;
 
   const posterCols = PALETTE.map((c, i) => {
     const x = i * colW;
     const fg = fontColorFor(c.hex, POSTER.ink, POSTER.bg);
     return `
       <rect x="${x}" y="${swatchTop}" width="${colW}" height="${swatchH}" fill="${c.hex}" />
-      <text x="${x + colW / 2}" y="${swatchTop + swatchH / 2 - 4}" fill="${fg}"
-        font-family="Anton" font-size="56" text-anchor="middle"
+      <text x="${x + colW / 2}" y="${swatchTop + swatchH / 2 - 6}" fill="${fg}"
+        font-family="Anton" font-size="64" text-anchor="middle"
         letter-spacing="1">${escape(c.name)}</text>
-      <text x="${x + colW / 2}" y="${swatchTop + swatchH / 2 + 36}" fill="${fg}"
-        font-family="JetBrains Mono" font-size="20" text-anchor="middle"
-        opacity="0.8">${escape(c.hex)}</text>`;
+      <text x="${x + colW / 2}" y="${swatchTop + swatchH / 2 + 34}" fill="${fg}"
+        font-family="JetBrains Mono" font-size="22" text-anchor="middle"
+        opacity="0.85">${escape(c.hex)}</text>`;
   }).join("");
 
-  // Bottom half — TERMINAL
-  const TERM_Y = HALF;
-  const TAPE_H = 36;
-  const INDEX_H = 32;
-  const termTapeY = TERM_Y;
-  const termIndexY = TERM_Y + TAPE_H;
-  const termBodyY = TERM_Y + TAPE_H + INDEX_H;
-  const termBodyH = H - termBodyY;
-
-  const tapeText =
-    "p4lette $ shuffle | save | export | harmony | vault [12]                         --more--";
-
-  const indexCells = PALETTE.map((c, i) => {
-    const x = i * colW;
-    const num = String(i + 1).padStart(2, "0");
-    const lockTag = i === 0 ? "[LOCK]" : `[${(luminance(c.hex) * 100).toFixed(2)}L]`;
-    return `
-      <line x1="${x}" y1="${termIndexY}" x2="${x}" y2="${termIndexY + INDEX_H}" stroke="${TERMINAL.ink}" stroke-width="1" opacity="0.5" />
-      <text x="${x + 10}" y="${termIndexY + 21}" fill="${TERMINAL.accent}"
-        font-family="JetBrains Mono" font-size="16">[${num}]</text>
-      <text x="${x + colW - 10}" y="${termIndexY + 21}" fill="${TERMINAL.ink}"
-        font-family="JetBrains Mono" font-size="14" text-anchor="end" opacity="0.6">${escape(lockTag)}</text>`;
-  }).join("");
-
-  const termCols = PALETTE.map((c, i) => {
-    const x = i * colW;
-    const inner = 18;
-    const padTop = 24;
-    const swatchY = termBodyY + padTop;
-    const swatchHeight = termBodyH - padTop - 90;
-    const fg = fontColorFor(c.hex, TERMINAL.bgDark || "#0A0A0A", TERMINAL.ink);
-    return `
-      <rect x="${x + inner}" y="${swatchY}" width="${colW - inner * 2}" height="${swatchHeight}" fill="${c.hex}" stroke="${TERMINAL.ink}" stroke-width="1" />
-      <text x="${x + colW / 2}" y="${swatchY + swatchHeight / 2 + 8}" fill="${fg}"
-        font-family="JetBrains Mono" font-size="28" text-anchor="middle"
-        letter-spacing="1.5">${escape(c.hex.toUpperCase())}</text>
-      <text x="${x + inner + 4}" y="${swatchY + swatchHeight + 28}" fill="${TERMINAL.ink}"
-        font-family="JetBrains Mono" font-size="14" opacity="0.85">${escape(c.name.toLowerCase())}</text>
-      <text x="${x + colW - inner - 4}" y="${swatchY + swatchHeight + 28}" fill="${TERMINAL.accent}"
-        font-family="JetBrains Mono" font-size="14" text-anchor="end">◼</text>`;
-  }).join("");
+  const lastFg = fontColorFor(PALETTE[cols - 1].hex, POSTER.ink, POSTER.bg);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <!-- POSTER half -->
-  <rect width="${W}" height="${HALF}" fill="${POSTER.bg}" />
+  <rect width="${W}" height="${H}" fill="${POSTER.bg}" />
   <line x1="0" y1="${NAV_H}" x2="${W}" y2="${NAV_H}" stroke="${POSTER.ink}" stroke-width="3" />
   <text x="${wordmarkX}" y="${wordmarkY}" fill="${POSTER.ink}"
     font-family="Anton" font-size="72" letter-spacing="-1.4">P4</text>
@@ -194,23 +153,11 @@ function buildOgSvg() {
     font-family="Space Grotesk" font-weight="600" font-size="22" letter-spacing="1.6"
     text-anchor="end">DARK MODE</text>
   <text x="${wordmarkX}" y="${tagLineY}" fill="${POSTER.ink}"
-    font-family="Space Grotesk" font-weight="700" font-size="20" letter-spacing="3">
+    font-family="Space Grotesk" font-weight="700" font-size="22" letter-spacing="3">
     DRAG · LOCK · SHUFFLE · SHARE</text>
   ${posterCols}
-
-  <!-- 3px ink rule between halves -->
-  <line x1="0" y1="${HALF}" x2="${W}" y2="${HALF}" stroke="${POSTER.ink}" stroke-width="6" />
-
-  <!-- TERMINAL half -->
-  <rect x="0" y="${TERM_Y}" width="${W}" height="${HALF}" fill="${TERMINAL.bg}" />
-  <text x="20" y="${termTapeY + 24}" fill="${TERMINAL.accent}"
-    font-family="JetBrains Mono" font-size="16">${escape(tapeText)}</text>
-  <line x1="0" y1="${termIndexY}" x2="${W}" y2="${termIndexY}" stroke="${TERMINAL.ink}" stroke-width="1" opacity="0.4" stroke-dasharray="4 4" />
-  ${indexCells}
-  <line x1="0" y1="${termBodyY}" x2="${W}" y2="${termBodyY}" stroke="${TERMINAL.ink}" stroke-width="1" opacity="0.4" stroke-dasharray="4 4" />
-  ${termCols}
-  <text x="${W - 24}" y="${H - 16}" fill="${TERMINAL.ink}"
-    font-family="JetBrains Mono" font-size="13" text-anchor="end" opacity="0.5">p4lette.app</text>
+  <text x="${W - 24}" y="${H - 18}" fill="${lastFg}"
+    font-family="JetBrains Mono" font-size="14" text-anchor="end" opacity="0.7">p4lette.app</text>
 </svg>`;
 }
 
@@ -236,8 +183,8 @@ function rasterise(svg, width) {
   return new Resvg(svg, {
     font: {
       fontDirs: [FONTS_DIR],
-      // Allow system fonts as fallback so glyphs missing from Anton/Space
-      // Grotesk/JetBrains Mono (★ ＋ ♥ ⚄ ☾ ◼) resolve via Noto Sans Symbols /
+      // Allow system fonts as fallback so glyphs missing from Anton / Space
+      // Grotesk / JetBrains Mono (★ · etc.) resolve via Noto Sans Symbols /
       // DejaVu / similar. Brand fonts still win where they cover the glyph.
       loadSystemFonts: true,
       defaultFontFamily: "Space Grotesk",
@@ -262,7 +209,10 @@ async function main() {
   process.stdout.write("wrote public/favicon.svg + favicon-32.png\n");
 
   const appleSvg = buildAppleTouchIconSvg();
-  await writeFile(join(PUBLIC, "apple-touch-icon.png"), rasterise(appleSvg, 180));
+  await writeFile(
+    join(PUBLIC, "apple-touch-icon.png"),
+    rasterise(appleSvg, 180),
+  );
   process.stdout.write("wrote public/apple-touch-icon.png\n");
 }
 
