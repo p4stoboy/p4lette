@@ -174,9 +174,9 @@ describe("paletteReducer", () => {
     expect(result).toBe(state);
   });
 
-  it("defaults the generation config to the rampensau strategy with no params", () => {
+  it("defaults the generation config to the DEFAULT strategy with no params", () => {
     const state = createPaletteState({ exportTemplate: "t", initialCount: 0 });
-    expect(state.genStrategy).toBe("rampensau");
+    expect(state.genStrategy).toBe("default");
     expect(state.genParams).toBeNull();
   });
 

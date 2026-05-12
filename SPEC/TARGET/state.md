@@ -15,7 +15,7 @@
 
 - **`PaletteState`** = `{ palette: Palette; names: string[]; exportVisible: boolean; exportTemplate: string; nameList: string; colorMode: ColorMode; genStrategy: GenStrategy; genParams: RampParams | null }`. `palette[i]` and `names[i]` are positionally paired; `names[i]` is `"..."` (`NAME_PLACEHOLDER`) until resolved by the names effect. `genStrategy`/`genParams` drive SHUFFLE + the seed — session-only (not persisted to the hash or localStorage).
 - Helpers: `NAME_PLACEHOLDER = "..."`. `newDataId(id)` → `crypto.randomUUID()` else `${Date.now()}-${id}-${rand}`. `makeColor(hex, id)` → `{ id, hex, locked: false, dataId: newDataId(id) }`. `renumber(palette)` → `palette.map((c,i) => ({...c, id:i}))` — resyncs `id` to index after any structural change. `reorderItems<T>(items, from, to)` → array move; no-op if `from===to` or either index is out of range.
-- **`createPaletteState({ initialCount=5, exportTemplate, hash=null, nameList=DEFAULT_NAME_LIST, colorMode="hex" })`** → `decoded = decodePalette(hash)`; `seed = decoded ?? generatePalette(initialCount)` (default strategy = `rampensau`, default rolls); returns `{ palette: seed.map(makeColor), names: seed.map(()=> "..."), exportVisible:false, exportTemplate, nameList, colorMode, genStrategy:"rampensau", genParams:null }`. **The URL hash wins; otherwise a fresh _coherent_ random ramp of `initialCount` colors** (`generatePalette`, not per-slot random — see `color.md`). `initialCount:0` is the test seam (empty palette).
+- **`createPaletteState({ initialCount=5, exportTemplate, hash=null, nameList=DEFAULT_NAME_LIST, colorMode="hex" })`** → `decoded = decodePalette(hash)`; `seed = decoded ?? generatePalette(initialCount)` (strategy `"default"` = the random-bounds rampensau sweep); returns `{ palette: seed.map(makeColor), names: seed.map(()=> "..."), exportVisible:false, exportTemplate, nameList, colorMode, genStrategy:"default", genParams:null }`. **The URL hash wins; otherwise a fresh _coherent_ random ramp of `initialCount` colors** (`generatePalette`, not per-slot random — see `color.md`). `initialCount:0` is the test seam (empty palette).
 - **`paletteReducer(state, action)`** — exhaustive switch (`noFallthroughCasesInSwitch`, no `default`):
   - `addColor{hex?}` — `hex ?? randomHex()`; append `makeColor(hex, palette.length)`, then `renumber`; append `"..."` to `names`. _(The one place a brand-new color is per-slot-random rather than from a coherent ramp.)_
   - `deleteColor{id}` — find by `id`; not found → return `state`. Else `renumber(palette.filter(out i))` + `names.filter(out i)`.
@@ -95,7 +95,7 @@
   "createPaletteState": {
     "args": "{initialCount=5, exportTemplate, hash=null, nameList=DEFAULT_NAME_LIST, colorMode='hex'}",
     "seed": "decodePalette(hash) ?? generatePalette(initialCount)",
-    "note": "URL hash wins; else a coherent random ramp; genStrategy:'rampensau', genParams:null; initialCount:0 = test seam"
+    "note": "URL hash wins; else a coherent random ramp; genStrategy:'default', genParams:null; initialCount:0 = test seam"
   },
   "actions": {
     "addColor": "append makeColor(hex??randomHex()), renumber; names += '...' — ONLY per-slot-random new color",
