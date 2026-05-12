@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Palette } from "../../types/Palette";
 import { POSTER } from "./tokens";
-import { TRAY_SECTIONS, subHeaderStyle } from "./tools";
+import { TRAY_SECTIONS, subHeaderStyle, pillRowStyle } from "./tools";
 import { Toggle } from "./tools/shared";
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 
 // The TOOLS panel: pick one tool at a time. On desktop it's a flex child of
 // PosterSkin's content row (~50vw, sized by the parent — that's where the
-// slide-in lives); on mobile it's a full-screen overlay. A two-row pill-tab
+// slide-in lives); on mobile it's a full-screen overlay. A wrapping pill-tab
 // strip selects the active section from the `TRAY_SECTIONS` registry
 // (`./tools`); the active body is shown, the others stay mounted (`display:none`)
 // so their local state survives a tab switch.
@@ -30,8 +30,6 @@ export const PosterToolsTray = ({
   const [activeKey, setActiveKey] = useState(TRAY_SECTIONS[0].key);
   const active =
     TRAY_SECTIONS.find((s) => s.key === activeKey) ?? TRAY_SECTIONS[0];
-  const half = Math.ceil(TRAY_SECTIONS.length / 2);
-  const tabRows = [TRAY_SECTIONS.slice(0, half), TRAY_SECTIONS.slice(half)];
 
   return (
     <div
@@ -126,31 +124,22 @@ export const PosterToolsTray = ({
       >
         <div
           style={{
+            ...pillRowStyle(),
+            padding: isMobile ? "10px 16px" : "10px 24px",
             borderBottom: `${POSTER.borderW}px solid ${ink}`,
             flexShrink: 0,
           }}
         >
-          {tabRows.map((row, ri) => (
-            <div
-              key={ri}
-              style={{
-                display: "flex",
-                borderTop: ri > 0 ? `2px solid ${ink}` : undefined,
-              }}
+          {TRAY_SECTIONS.map((s) => (
+            <Toggle
+              key={s.key}
+              ink={ink}
+              active={s.key === activeKey}
+              tall={isMobile}
+              onClick={() => setActiveKey(s.key)}
             >
-              {row.map((s, i) => (
-                <Toggle
-                  key={s.key}
-                  ink={ink}
-                  active={s.key === activeKey}
-                  tall={isMobile}
-                  divide={i < row.length - 1}
-                  onClick={() => setActiveKey(s.key)}
-                >
-                  {s.label}
-                </Toggle>
-              ))}
-            </div>
+              {s.label}
+            </Toggle>
           ))}
         </div>
 

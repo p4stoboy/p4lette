@@ -11,7 +11,7 @@ import {
 } from "../../../functions/generate_palette";
 import { POSTER } from "../tokens";
 import { RangeRow, SwatchRow, Toggle } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import { BodyProps, rowsStyle, pillRowStyle } from "./styles";
 
 // SHUFFLE SETTINGS — pick the palette-generation strategy the SHUFFLE button
 // uses (and, for rampensau, tune its ramp), preview it, REGENERATE within the
@@ -83,14 +83,13 @@ export const GenerateBody = ({
         >
           sets how the SHUFFLE button builds a fresh palette
         </div>
-        <div style={{ display: "flex", border: `2px solid ${ink}` }}>
-          {GEN_STRATEGIES.map((s, i) => (
+        <div style={pillRowStyle()}>
+          {GEN_STRATEGIES.map((s) => (
             <Toggle
               key={s.key}
               ink={ink}
               active={strategy === s.key}
               tall={isMobile}
-              divide={i < GEN_STRATEGIES.length - 1}
               onClick={() => pickStrategy(s.key)}
             >
               {s.label}

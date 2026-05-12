@@ -7,7 +7,7 @@ import {
 } from "../../../functions/pigment";
 import { POSTER } from "../tokens";
 import { SwatchRow, Toggle } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import { BodyProps, rowsStyle, pillRowStyle } from "./styles";
 
 // PIGMENT — rybitten cube profiles as a print-like filter over the live palette.
 // No seed colour; a profile picker drives all three rows.
@@ -19,8 +19,6 @@ export const PigmentBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const wheel = pigmentWheel(cube, isMobile ? 7 : 11);
   const corners = cubeCorners(cube);
   const rowH = isMobile ? 76 : 56;
-  const half = Math.ceil(PIGMENT_CUBES.length / 2);
-  const cubeRows = [PIGMENT_CUBES.slice(0, half), PIGMENT_CUBES.slice(half)];
   const caption = (text: string) => (
     <div
       style={{
@@ -54,28 +52,17 @@ export const PigmentBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         >
           PROFILE
         </div>
-        <div style={{ border: `2px solid ${ink}` }}>
-          {cubeRows.map((row, ri) => (
-            <div
-              key={ri}
-              style={{
-                display: "flex",
-                borderTop: ri > 0 ? `2px solid ${ink}` : undefined,
-              }}
+        <div style={pillRowStyle()}>
+          {PIGMENT_CUBES.map((c) => (
+            <Toggle
+              key={c.key}
+              ink={ink}
+              active={c.key === cube}
+              tall={isMobile}
+              onClick={() => setCube(c.key)}
             >
-              {row.map((c, i) => (
-                <Toggle
-                  key={c.key}
-                  ink={ink}
-                  active={c.key === cube}
-                  tall={isMobile}
-                  divide={i < row.length - 1}
-                  onClick={() => setCube(c.key)}
-                >
-                  {c.label}
-                </Toggle>
-              ))}
-            </div>
+              {c.label}
+            </Toggle>
           ))}
         </div>
         {active && caption(active.meta)}

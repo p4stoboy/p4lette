@@ -8,7 +8,12 @@ import {
 } from "../../../functions/color_filters";
 import { POSTER } from "../tokens";
 import { BasePicker, SwatchRow, Toggle } from "./shared";
-import { BodyProps, rowsStyle } from "./styles";
+import {
+  BodyProps,
+  rowsStyle,
+  pillRowStyle,
+  pillRowLabelStyle,
+} from "./styles";
 
 // EFFECTS — one-shot culori filters over the live palette + a "blend the whole
 // palette under a colour" control. No seed; reads the live palette.
@@ -18,8 +23,6 @@ export const EffectsBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const hexes = palette.map((c) => c.hex);
   const blended = blendWith(hexes, over, mode);
   const rowH = isMobile ? 76 : 56;
-  const half = Math.ceil(BLEND_MODES.length / 2);
-  const modeRows = [BLEND_MODES.slice(0, half), BLEND_MODES.slice(half)];
   return (
     <>
       <BasePicker
@@ -30,29 +33,21 @@ export const EffectsBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         value={over}
         onChange={setOver}
       >
-        <div style={{ marginTop: 12, border: `2px solid ${ink}` }}>
-          {modeRows.map((row, ri) => (
-            <div
-              key={ri}
-              style={{
-                display: "flex",
-                borderTop: ri > 0 ? `2px solid ${ink}` : undefined,
-              }}
-            >
-              {row.map((m, i) => (
-                <Toggle
-                  key={m}
-                  ink={ink}
-                  active={m === mode}
-                  tall={isMobile}
-                  divide={i < row.length - 1}
-                  onClick={() => setMode(m)}
-                >
-                  {m}
-                </Toggle>
-              ))}
-            </div>
-          ))}
+        <div style={{ marginTop: 12 }}>
+          <div style={pillRowLabelStyle()}>BLEND MODE</div>
+          <div style={pillRowStyle()}>
+            {BLEND_MODES.map((m) => (
+              <Toggle
+                key={m}
+                ink={ink}
+                active={m === mode}
+                tall={isMobile}
+                onClick={() => setMode(m)}
+              >
+                {m}
+              </Toggle>
+            ))}
+          </div>
         </div>
       </BasePicker>
       <div style={rowsStyle()}>
