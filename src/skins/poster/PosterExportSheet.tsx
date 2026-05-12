@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { SavedTemplate } from "../../functions/saved_templates";
+import { EXPORT_PRESETS } from "../../functions/resolve_export_template";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -49,6 +50,7 @@ export const PosterExportSheet = ({
   onClose,
 }: Props) => {
   const [loadOpen, setLoadOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   return (
     <div
@@ -119,9 +121,22 @@ export const PosterExportSheet = ({
           <SmallBtn
             ink={ink}
             tall={isMobile}
-            onClick={() => setLoadOpen((v) => !v)}
+            onClick={() => {
+              setPresetsOpen(false);
+              setLoadOpen((v) => !v);
+            }}
           >
             LOAD ▾
+          </SmallBtn>
+          <SmallBtn
+            ink={ink}
+            tall={isMobile}
+            onClick={() => {
+              setLoadOpen(false);
+              setPresetsOpen((v) => !v);
+            }}
+          >
+            PRESETS ▾
           </SmallBtn>
           <SmallBtn ink={ink} tall={isMobile} onClick={onReset}>
             RESET
@@ -271,6 +286,58 @@ export const PosterExportSheet = ({
                   </div>
                 ))
               )}
+            </div>
+          )}
+          {presetsOpen && (
+            <div
+              role="menu"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                zIndex: 5,
+                width: isMobile ? "min(280px, 86vw)" : 300,
+                maxHeight: "min(52vh, 320px)",
+                overflowY: "auto",
+                background: bg,
+                color: ink,
+                border: `${POSTER.borderW}px solid ${ink}`,
+                boxShadow: `0 8px 0 ${POSTER.accent}`,
+              }}
+            >
+              <div style={{ ...labelRow(ink), textTransform: "uppercase" }}>
+                PRESETS [{EXPORT_PRESETS.length}]
+              </div>
+              {EXPORT_PRESETS.map((p, i) => (
+                <button
+                  key={p.key}
+                  onClick={() => {
+                    onLoadTemplate(p.body);
+                    setPresetsOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    minWidth: 0,
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    border: "none",
+                    borderBottom:
+                      i === EXPORT_PRESETS.length - 1
+                        ? "none"
+                        : `1px solid ${ink}`,
+                    background: "transparent",
+                    color: ink,
+                    fontFamily: POSTER.display,
+                    fontSize: 15,
+                    letterSpacing: "0.02em",
+                    cursor: "pointer",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
