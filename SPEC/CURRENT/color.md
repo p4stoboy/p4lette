@@ -56,6 +56,12 @@
 - **`snapToGamut(hexes: string[]): string[]`** — module-level `intoSrgb = toGamut("rgb","oklch")`; reduces chroma in OKLCH until the colour is displayable, hue/lightness preserved. No-op on colours already in gamut → idempotent.
 - Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`).
 
+### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`)
+
+- `MixSpace = "oklch"|"lab"|"hsl"`; `MIX_SPACES` = `[{oklch,OKLCH},{lab,LAB},{hsl,HSL}]`. `MIX_STEPS = [3,5,7,9,11]`. `MixCurve = "even"|"ease-from"|"ease-to"`; `MIX_CURVES` = `[{even,EVEN},{ease-from,EASE FROM},{ease-to,EASE TO}]`; private `GAMMA = { even:1, "ease-from":1.8, "ease-to":0.55 }` (γ on the sample parameter — `>1` bunches steps toward FROM, `<1` toward TO).
+- **`mixSteps(a, b, n, space, curve): string[]`** — if either hex doesn't parse, fill `n` with the parsable one (or `#000000`). Else `itp = interpolate([a,b], space)` (culori's default hue fixup = shortest arc; `lab` has no hue), then `samples(n).map(t => formatHex(itp(t**GAMMA[curve])))`. Two stops → no polynomial spline; the curve just biases where the `n` samples land.
+- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`).
+
 ### `pigment.ts` — uses **`rybitten`** (`rybHsl2rgb`, `RYB_ITTEN`/`cubes` from `rybitten/cubes`) + `culori` `formatHex` + `color_converters` (`clamp`, `hexToHsl`)
 
 - `interface PigmentCube { key; label; meta }` (`meta` = `"<author> · <year>"`). `PIGMENT_CUBES: readonly PigmentCube[]` — a curated slice of the ~34 rybitten cubes, chromatic wheels first (`itten` is rybitten's default and `PIGMENT_CUBES[0]`), the two reference cubes last: `itten, goethe, runge, chevreul, munsell, harris, boutet, cmy, rgb` (filtered to whatever keys `cubes` actually has). Private `cubeFor(key) = cubes.get(key)?.cube ?? RYB_ITTEN`; private `toHex([r,g,b]) = formatHex({mode:"rgb",...clamp 0–1}) ?? "#000000"`.
@@ -244,6 +250,17 @@
     ],
     "consumers": ["PosterToolsTray (FixersBody)"]
   },
+  "color_mix.ts": {
+    "lib": "culori (interpolate · samples)",
+    "MixSpace": ["oklch", "lab", "hsl"],
+    "MIX_STEPS": [3, 5, 7, 9, 11],
+    "MixCurve": ["even", "ease-from", "ease-to"],
+    "exports": [
+      "MIX_SPACES, MIX_STEPS, MIX_CURVES, MixSpace, MixCurve",
+      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)"
+    ],
+    "consumers": ["PosterToolsTray (MixBody)"]
+  },
   "pigment.ts": {
     "lib": [
       "rybitten",
@@ -381,6 +398,7 @@ flowchart LR
     hm["harmony.ts → culori · pro-color-harmonies · rybitten/cubes · rampensau"]
     tn["tones.ts → culori · dittotones · fettepalette · rampensau"]
     cf["color_filters.ts → culori (CVD · gamut)"]
+    mx["color_mix.ts → culori (interpolate)"]
     pg["pigment.ts → rybitten (ryb-hsl · cubes)"]
     td["tones_tailwind_data.ts"]
     ct["contrast.ts"]
@@ -404,6 +422,7 @@ flowchart LR
   hm --> hd["PosterToolsTray HarmonyBody — spa.md"]
   tn --> tld["PosterToolsTray TonesBody — spa.md"]
   cf --> ttf["PosterToolsTray FixersBody — spa.md"]
+  mx --> mxb["PosterToolsTray MixBody — spa.md"]
   pg --> pgb["PosterToolsTray PigmentBody — spa.md"]
   ct --> swatch["PosterColumn/Tile/EditTray + PosterFooter — spa.md"]
   cl --> ucl["useColorLists — spa.md"]
