@@ -191,15 +191,22 @@ export const PosterSkin = () => {
     markWelcomeSeen();
   }, []);
 
-  // Tools and export share the desktop side-panel slot, so opening one closes
-  // the other.
+  // Tools, export and save/load share the desktop side-panel slot, so opening
+  // one closes the others.
   const openTools = useCallback(() => {
     setShowExport(false);
+    setShowSaved(false);
     setShowTools(true);
   }, []);
   const openExport = useCallback(() => {
     setShowTools(false);
+    setShowSaved(false);
     setShowExport(true);
+  }, []);
+  const openSaved = useCallback(() => {
+    setShowTools(false);
+    setShowExport(false);
+    setShowSaved(true);
   }, []);
 
   const closeAllOverlays = useCallback(() => {
@@ -233,10 +240,12 @@ export const PosterSkin = () => {
     onLock: handleLockShortcut,
     onExport: () => {
       setShowTools(false);
+      setShowSaved(false);
       setShowExport((v) => !v);
     },
     onHarmony: () => {
       setShowExport(false);
+      setShowSaved(false);
       setShowTools((v) => !v);
     },
     onAbout: () => setShowAbout((v) => !v),
@@ -306,7 +315,22 @@ export const PosterSkin = () => {
       onClose={() => setShowExport(false)}
     />
   ) : null;
-  const sidePanelChild = toolsPanel ?? exportPanel;
+  const savedPanel = showSaved ? (
+    <PosterSavedDrawer
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      list={savedList}
+      onClose={() => setShowSaved(false)}
+      onSave={handleSavePalette}
+      onLoad={(hexes) => {
+        replaceAll(hexes);
+        setShowSaved(false);
+      }}
+      onDelete={removeSaved}
+    />
+  ) : null;
+  const sidePanelChild = toolsPanel ?? exportPanel ?? savedPanel;
 
   return (
     <div
@@ -330,7 +354,7 @@ export const PosterSkin = () => {
         tickerVisible={tickerVisible}
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
-        onSaved={() => setShowSaved(true)}
+        onSaved={openSaved}
         onTools={openTools}
         onExport={openExport}
         onRandomize={randomizeUnlocked}
@@ -488,23 +512,9 @@ export const PosterSkin = () => {
           onClose={() => setShowAbout(false)}
         />
       )}
-      {showSaved && (
-        <PosterSavedDrawer
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          list={savedList}
-          onClose={() => setShowSaved(false)}
-          onSave={handleSavePalette}
-          onLoad={(hexes) => {
-            replaceAll(hexes);
-            setShowSaved(false);
-          }}
-          onDelete={removeSaved}
-        />
-      )}
       {isMobile && toolsPanel}
       {isMobile && exportPanel}
+      {isMobile && savedPanel}
       {showMenu && (
         <PosterMobileMenu
           ink={ink}
@@ -517,7 +527,7 @@ export const PosterSkin = () => {
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
-          onSaved={() => setShowSaved(true)}
+          onSaved={openSaved}
           onTools={openTools}
           onExport={openExport}
           onAbout={() => setShowAbout(true)}
