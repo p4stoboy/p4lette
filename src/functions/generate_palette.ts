@@ -6,14 +6,17 @@ import {
 } from "rampensau";
 import { hslToHex, randomHex } from "./color_converters";
 
-// Three ways to make a *coherent* palette of `count` colours. `rampensau`
-// sweeps a single hue arc with a perceptual light→dark progression; `poline`
-// interpolates between two anchor colours on a colour sphere; `random` is the
-// incoherent escape hatch. Used by SHUFFLE and the initial seed.
+// Ways to make a palette of `count` colours. `default` is the out-of-the-box
+// `rampensau` sweep with random bounds (the panel hides the tuning sliders for
+// it); `rampensau` is the same single-hue-arc sweep with the sliders exposed
+// (and any tuned `params` honoured); `poline` interpolates between two anchor
+// colours on a colour sphere; `random` is the incoherent escape hatch. Used by
+// SHUFFLE and the initial seed.
 
-export type GenStrategy = "rampensau" | "poline" | "random";
+export type GenStrategy = "default" | "rampensau" | "poline" | "random";
 
 export const GEN_STRATEGIES: readonly { key: GenStrategy; label: string }[] = [
+  { key: "default", label: "DEFAULT" },
   { key: "rampensau", label: "RAMPENSAU SWEEP" },
   { key: "poline", label: "POLINE ANCHORS" },
   { key: "random", label: "PLAIN RANDOM" },
@@ -134,7 +137,7 @@ const polinePalette = (count: number, rnd: () => number): string[] => {
 
 export const generatePalette = (
   count: number,
-  strategy: GenStrategy = "rampensau",
+  strategy: GenStrategy = "default",
   rnd: () => number = Math.random,
   params?: RampParams,
 ): string[] => {
@@ -142,5 +145,11 @@ export const generatePalette = (
   if (strategy === "poline") return polinePalette(count, rnd);
   if (strategy === "random")
     return Array.from({ length: count }, () => randomHex());
-  return rampensauPalette(count, rnd, params);
+  // "default" = the unparameterised rampensau sweep (random bounds, no tuning
+  // sliders); "rampensau" honours any tuned `params`.
+  return rampensauPalette(
+    count,
+    rnd,
+    strategy === "default" ? undefined : params,
+  );
 };

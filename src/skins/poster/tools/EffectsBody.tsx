@@ -56,29 +56,6 @@ export const EffectsBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
         </div>
       </BasePicker>
       <div style={rowsStyle()}>
-        {EFFECTS.map((e) => {
-          const out = applyEffect(hexes, e.key);
-          return (
-            <SwatchRow
-              key={e.key}
-              ink={ink}
-              isMobile={isMobile}
-              colors={out}
-              swatchHeight={rowH}
-              onUse={() => onApply(out)}
-            >
-              <div
-                style={{
-                  fontFamily: POSTER.display,
-                  fontSize: 16,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {e.label}
-              </div>
-            </SwatchRow>
-          );
-        })}
         <SwatchRow
           ink={ink}
           isMobile={isMobile}
@@ -109,6 +86,29 @@ export const EffectsBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
             </div>
           </div>
         </SwatchRow>
+        {EFFECTS.map((e) => {
+          const out = applyEffect(hexes, e.key);
+          return (
+            <SwatchRow
+              key={e.key}
+              ink={ink}
+              isMobile={isMobile}
+              colors={out}
+              swatchHeight={rowH}
+              onUse={() => onApply(out)}
+            >
+              <div
+                style={{
+                  fontFamily: POSTER.display,
+                  fontSize: 16,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {e.label}
+              </div>
+            </SwatchRow>
+          );
+        })}
       </div>
     </>
   );

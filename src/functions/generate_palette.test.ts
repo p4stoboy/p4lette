@@ -8,7 +8,7 @@ import {
   generatePalette,
 } from "./generate_palette";
 
-const STRATEGIES: GenStrategy[] = ["rampensau", "poline", "random"];
+const STRATEGIES: GenStrategy[] = ["default", "rampensau", "poline", "random"];
 const isHex = (h: string): boolean => /^#[0-9a-f]{6}$/.test(h);
 
 describe("generatePalette", () => {
@@ -97,8 +97,16 @@ describe("generatePalette", () => {
     );
   });
 
-  it("GEN_STRATEGIES lists the three strategies", () => {
+  it("'default' strategy is the unparameterised rampensau sweep", () => {
+    const fixed = () => 0.31;
+    expect(generatePalette(7, "default", fixed)).toEqual(
+      generatePalette(7, "rampensau", fixed),
+    );
+  });
+
+  it("GEN_STRATEGIES lists the four strategies, 'default' first", () => {
     expect(GEN_STRATEGIES.map((s) => s.key)).toEqual(STRATEGIES);
+    expect(GEN_STRATEGIES[0].key).toBe("default");
     for (const s of GEN_STRATEGIES) expect(s.label).toMatch(/\S/);
   });
 });

@@ -15,13 +15,13 @@
 
 ### `generate_palette.ts` — uses **`rampensau`** (`generateColorRamp`, `generateColorRampWithCurve`, `generateColorRampParams`) + **`poline`** (`Poline`)
 
-- `GenStrategy = "rampensau"|"poline"|"random"`; `GEN_STRATEGIES` = `[{rampensau,"RAMPENSAU SWEEP"},{poline,"POLINE ANCHORS"},{random,"PLAIN RANDOM"}]`.
+- `GenStrategy = "default"|"rampensau"|"poline"|"random"`; `GEN_STRATEGIES` = `[{default,"DEFAULT"},{rampensau,"RAMPENSAU SWEEP"},{poline,"POLINE ANCHORS"},{random,"PLAIN RANDOM"}]` — `default` = the out-of-the-box `rampensau` sweep (random bounds; the GENERATE panel hides the tuning sliders for it); `rampensau` = the same sweep with the sliders exposed.
 - `interface RampParams { sLo; sHi; lLo; lHi; hueSpan; curveAccent }` — the rampensau knobs the "tune the ramp" panel exposes (sat/light 0–1, `hueSpan` = |hCycles|, `curveAccent` shapes the lamé curve). `RAMP_PARAM_META: Record<keyof RampParams, {default,min,max,step}>` — lifted from rampensau's own `generateColorRampParams` (`minSaturation/maxSaturation/minLight/maxLight` → sLo/sHi/lLo/lHi; `hCycles` → hueSpan with `min:0`; `curveAccent`). `defaultRampParams()` → those defaults.
-- **`generatePalette(count, strategy: GenStrategy = "rampensau", rnd: () => number = Math.random, params?: RampParams): string[]`** — `count <= 0` → `[]`.
-  - `"rampensau"` — no `params` → the old random bounds (`sRange ≈ [0.4–0.6, 0.72–0.9]`, `lRange ≈ [0.18–0.3, 0.8–0.9]`, `hCycles = (0.2 + rnd()*0.8)·(±1)`) via `generateColorRamp`; with `params` → those bounds via `generateColorRampWithCurve({…, curveMethod:"lamé", curveAccent})`. Either way `hStart = rnd()*360`, `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`. **A _coherent_ ramp (single hue arc, perceptual light→dark), not N randoms.**
+- **`generatePalette(count, strategy: GenStrategy = "default", rnd: () => number = Math.random, params?: RampParams): string[]`** — `count <= 0` → `[]`.
+  - `"default"` / `"rampensau"` — `"default"` ≡ `"rampensau"` with no `params` (the out-of-the-box sweep; the panel hides the tuning sliders for it). No `params` → the random bounds (`sRange ≈ [0.4–0.6, 0.72–0.9]`, `lRange ≈ [0.18–0.3, 0.8–0.9]`, `hCycles = (0.2 + rnd()*0.8)·(±1)`) via `generateColorRamp`; with `params` (only ever via `"rampensau"`) → those bounds via `generateColorRampWithCurve({…, curveMethod:"lamé", curveAccent})`. Either way `hStart = rnd()*360`, `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`. **A _coherent_ ramp (single hue arc, perceptual light→dark), not N randoms.**
   - `"poline"` — `new Poline({ numPoints: max(count,2), anchorColors: [a,b] })` with two `rnd`-derived anchors → `.colors` (`[h,s,l]`) → `hslToHex` → resampled to exactly `count` (private `resampleHexList` — evenly-spaced indices).
   - `"random"` — `count` independent `randomHex()` (the incoherent escape hatch).
-  - Pass a deterministic `rnd` for reproducible `rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState`, default strategy) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`).
+  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`).
 
 ### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rybitten`** (`rybHsl2rgb`, `cubes`/`ColorCube` from `rybitten/cubes`) + **`rampensau`** (`colorUtils.colorHarmonies`)
 
@@ -155,10 +155,10 @@
       "rampensau (generateColorRamp · generateColorRampWithCurve · generateColorRampParams)",
       "poline (Poline)"
     ],
-    "GenStrategy": ["rampensau", "poline", "random"],
+    "GenStrategy": ["default", "rampensau", "poline", "random"],
     "RampParams": ["sLo", "sHi", "lLo", "lHi", "hueSpan", "curveAccent"],
     "exports": [
-      "generatePalette(count, strategy='rampensau', rnd=Math.random, params?)→string[] (count<=0→[]; rampensau: no params → old random bounds via generateColorRamp / with params → generateColorRampWithCurve(lamé,curveAccent); poline: 2 rnd-anchors → Poline → hslToHex → resample to count; random: N randomHex; COHERENT ramp not N randoms for rampensau/poline; deterministic with fixed rnd)",
+      "generatePalette(count, strategy='default', rnd=Math.random, params?)→string[] (count<=0→[]; default ≡ rampensau with no params = random bounds via generateColorRamp, the panel hides the sliders for it; rampensau with params → generateColorRampWithCurve(lamé,curveAccent); poline: 2 rnd-anchors → Poline → hslToHex → resample to count; random: N randomHex; COHERENT ramp not N randoms for default/rampensau/poline; deterministic with fixed rnd)",
       "GEN_STRATEGIES, GenStrategy, RampParams, RAMP_PARAM_META (= rampensau generateColorRampParams metadata), defaultRampParams()"
     ],
     "consumers": [

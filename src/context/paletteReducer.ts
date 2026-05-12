@@ -99,7 +99,7 @@ export const createPaletteState = ({
     exportTemplate,
     nameList,
     colorMode,
-    genStrategy: "rampensau",
+    genStrategy: "default",
     genParams: null,
   };
 };
