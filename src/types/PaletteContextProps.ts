@@ -14,6 +14,7 @@ export interface PaletteContextProps {
   genStrategy: GenStrategy;
   genParams: RampParams | null;
   addColor: (hex?: string) => void;
+  insertColor: (index: number, hex: string) => void;
   deleteColor: (id: number) => void;
   updateColor: (id: number, hex: string) => void;
   reorderColor: (fromIndex: number, toIndex: number) => void;

@@ -1,4 +1,4 @@
-import { formatHex, interpolate, parse, samples } from "culori";
+import { formatHex, interpolate, parse, samples, toGamut } from "culori";
 
 // MIX — interpolate between two swatches in a chosen colour space, with an
 // optional sample-distribution easing (the "curve"). Two stops, so a polynomial
@@ -48,4 +48,32 @@ export const mixSteps = (
   const itp = interpolate([a, b], space);
   const g = GAMMA[curve];
   return samples(n).map((t) => formatHex(itp(Math.pow(t, g))) ?? a);
+};
+
+// --- single-step OKLab interpolation — the "insert between" affordance ---
+
+const intoSrgb = toGamut("rgb", "oklch");
+
+// The OKLab `t`-point between two hexes (`t=0.5` = the Coolors-style midpoint);
+// gamut-clamped into sRGB. Bad input falls back to the parsable one (or black).
+export const mixHex = (a: string, b: string, t = 0.5): string => {
+  if (!parse(a)) return parse(b) ? b : "#000000";
+  if (!parse(b)) return a;
+  return formatHex(intoSrgb(interpolate([a, b], "oklab")(t))) ?? a;
+};
+
+// Step `t` of a unit *past* `anchor`, away from `neighbor`, in OKLab — so it
+// continues a ramp past its endpoint — gamut-clamped into sRGB. (`interpolate`
+// at parameter `1 + t` overshoots the `neighbor → anchor` segment by `t`.)
+export const extrapolateHex = (
+  anchor: string,
+  neighbor: string,
+  t = 0.6,
+): string => {
+  if (!parse(anchor)) return parse(neighbor) ? neighbor : "#000000";
+  if (!parse(neighbor)) return anchor;
+  return (
+    formatHex(intoSrgb(interpolate([neighbor, anchor], "oklab")(1 + t))) ??
+    anchor
+  );
 };
