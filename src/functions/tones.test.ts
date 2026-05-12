@@ -3,7 +3,7 @@ import { oklch } from "culori";
 import { TONE_METHODS, ToneMethod, tones, dittoMatch } from "./tones";
 
 const BASE = "#aa6f3c";
-const METHODS: ToneMethod[] = ["ditto", "oklch", "hsv"];
+const METHODS: ToneMethod[] = ["ditto", "oklch", "hsv", "gen"];
 
 const isHex = (h: string): boolean => /^#[0-9a-f]{6}$/.test(h);
 
@@ -51,6 +51,10 @@ describe("tones", () => {
 
   it("hsv: distinct seeds give distinct scales (the curve tracks the seed)", () => {
     expect(tones("#3b82f6", "hsv")).not.toEqual(tones("#e11d48", "hsv"));
+  });
+
+  it("gen: distinct seeds give distinct scales", () => {
+    expect(tones("#3b82f6", "gen")).not.toEqual(tones("#e11d48", "gen"));
   });
 });
 
