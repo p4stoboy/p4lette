@@ -68,6 +68,7 @@ export const PosterColumn = ({
       onMouseLeave={() => setHov(false)}
       style={{
         flex: 1,
+        minWidth: 0,
         background: color.hex,
         color: fontColor,
         position: "relative",

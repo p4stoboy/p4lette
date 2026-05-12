@@ -191,6 +191,17 @@ export const PosterSkin = () => {
     markWelcomeSeen();
   }, []);
 
+  // Tools and export share the desktop side-panel slot, so opening one closes
+  // the other.
+  const openTools = useCallback(() => {
+    setShowExport(false);
+    setShowTools(true);
+  }, []);
+  const openExport = useCallback(() => {
+    setShowTools(false);
+    setShowExport(true);
+  }, []);
+
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
@@ -220,8 +231,14 @@ export const PosterSkin = () => {
   useGlobalShortcuts({
     onShuffle: randomizeUnlocked,
     onLock: handleLockShortcut,
-    onExport: () => setShowExport((v) => !v),
-    onHarmony: () => setShowTools((v) => !v),
+    onExport: () => {
+      setShowTools(false);
+      setShowExport((v) => !v);
+    },
+    onHarmony: () => {
+      setShowExport(false);
+      setShowTools((v) => !v);
+    },
     onAbout: () => setShowAbout((v) => !v),
     onEsc: closeAllOverlays,
   });
@@ -254,6 +271,43 @@ export const PosterSkin = () => {
     letterSpacing: "-0.02em",
   });
 
+  // Tools and export. On desktop these go in the content row's side-panel slot
+  // (sized + slid in by that slot — see the render); on mobile they're overlay
+  // siblings. They're mutually exclusive (openTools/openExport), so at most one
+  // is non-null.
+  const toolsPanel = showTools ? (
+    <PosterToolsTray
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      palette={palette}
+      onClose={() => setShowTools(false)}
+      onApply={(hexes) => {
+        replaceAll(hexes);
+        setShowTools(false);
+      }}
+    />
+  ) : null;
+  const exportPanel = showExport ? (
+    <PosterExportSheet
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      tpl={exportTemplate}
+      setTpl={setExportTemplate}
+      resolved={resolvedTemplate}
+      copyLabel={copyLabel}
+      templates={templateList}
+      onCopy={onCopy}
+      onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
+      onSaveTemplate={handleSaveTemplate}
+      onLoadTemplate={(body) => setExportTemplate(body)}
+      onDeleteTemplate={removeTemplate}
+      onClose={() => setShowExport(false)}
+    />
+  ) : null;
+  const sidePanelChild = toolsPanel ?? exportPanel;
+
   return (
     <div
       style={{
@@ -277,8 +331,8 @@ export const PosterSkin = () => {
         onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         onAbout={() => setShowAbout(true)}
         onSaved={() => setShowSaved(true)}
-        onTools={() => setShowTools(true)}
-        onExport={() => setShowExport(true)}
+        onTools={openTools}
+        onExport={openExport}
         onRandomize={randomizeUnlocked}
         onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
@@ -344,47 +398,75 @@ export const PosterSkin = () => {
         </div>
       ) : (
         <div
-          ref={paletteRef}
           style={{
             flex: 1,
+            minHeight: 0,
             display: "flex",
             position: "relative",
-            minHeight: 0,
+            overflow: "hidden",
           }}
         >
-          {palette.map((c, i) => (
-            <PosterColumn
-              key={c.dataId}
-              color={c}
-              name={names[i] || "..."}
-              index={i}
-              editing={editingId === c.id}
-              nameFontSize={nameFontSize}
-              onEdit={() => {
-                setEditingId(c.id);
-                setLastEditedId(c.id);
+          <div
+            ref={paletteRef}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              position: "relative",
+            }}
+          >
+            {palette.map((c, i) => (
+              <PosterColumn
+                key={c.dataId}
+                color={c}
+                name={names[i] || "..."}
+                index={i}
+                editing={editingId === c.id}
+                nameFontSize={nameFontSize}
+                onEdit={() => {
+                  setEditingId(c.id);
+                  setLastEditedId(c.id);
+                }}
+                onCloseEdit={() => setEditingId(null)}
+                onUpdate={(hex) => {
+                  updateColor(c.id, hex);
+                  setLastEditedId(c.id);
+                }}
+                onDelete={() => {
+                  deleteColor(c.id);
+                  setEditingId(null);
+                }}
+                onLock={() => {
+                  toggleLock(c.id);
+                  setLastEditedId(c.id);
+                }}
+                onDragStart={onDragStart(i)}
+                onDragOver={onDragOver(i)}
+                onPointerDown={touchHandlers.onPointerDown(i)}
+                onPointerMove={touchHandlers.onPointerMove}
+                onPointerUp={touchHandlers.onPointerUp}
+                onPointerCancel={touchHandlers.onPointerCancel}
+              />
+            ))}
+          </div>
+          {sidePanelChild && (
+            <div
+              style={{
+                flex: "0 0 50%",
+                height: "100%",
+                minHeight: 0,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                borderLeft: `${POSTER.borderW}px solid ${ink}`,
+                animation: "sidePanelInRight .24s cubic-bezier(.2,.7,.3,1)",
               }}
-              onCloseEdit={() => setEditingId(null)}
-              onUpdate={(hex) => {
-                updateColor(c.id, hex);
-                setLastEditedId(c.id);
-              }}
-              onDelete={() => {
-                deleteColor(c.id);
-                setEditingId(null);
-              }}
-              onLock={() => {
-                toggleLock(c.id);
-                setLastEditedId(c.id);
-              }}
-              onDragStart={onDragStart(i)}
-              onDragOver={onDragOver(i)}
-              onPointerDown={touchHandlers.onPointerDown(i)}
-              onPointerMove={touchHandlers.onPointerMove}
-              onPointerUp={touchHandlers.onPointerUp}
-              onPointerCancel={touchHandlers.onPointerCancel}
-            />
-          ))}
+            >
+              <style>{`@keyframes sidePanelInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+              {sidePanelChild}
+            </div>
+          )}
         </div>
       )}
 
@@ -421,37 +503,8 @@ export const PosterSkin = () => {
           onDelete={removeSaved}
         />
       )}
-      {showTools && (
-        <PosterToolsTray
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          palette={palette}
-          onClose={() => setShowTools(false)}
-          onApply={(hexes) => {
-            replaceAll(hexes);
-            setShowTools(false);
-          }}
-        />
-      )}
-      {showExport && (
-        <PosterExportSheet
-          ink={ink}
-          bg={bg}
-          isMobile={isMobile}
-          tpl={exportTemplate}
-          setTpl={setExportTemplate}
-          resolved={resolvedTemplate}
-          copyLabel={copyLabel}
-          templates={templateList}
-          onCopy={onCopy}
-          onReset={() => setExportTemplate(DEFAULT_TEMPLATE)}
-          onSaveTemplate={handleSaveTemplate}
-          onLoadTemplate={(body) => setExportTemplate(body)}
-          onDeleteTemplate={removeTemplate}
-          onClose={() => setShowExport(false)}
-        />
-      )}
+      {isMobile && toolsPanel}
+      {isMobile && exportPanel}
       {showMenu && (
         <PosterMobileMenu
           ink={ink}
@@ -465,8 +518,8 @@ export const PosterSkin = () => {
           onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
           onSaved={() => setShowSaved(true)}
-          onTools={() => setShowTools(true)}
-          onExport={() => setShowExport(true)}
+          onTools={openTools}
+          onExport={openExport}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
           onToggleTicker={toggleTicker}
