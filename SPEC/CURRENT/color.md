@@ -83,12 +83,13 @@
 ### `resolve_export_template.ts` — pure, depends on `color_converters` only
 
 - `DEFAULT_TEMPLATE` — a multi-line demo string using `$1$`, `$1.hex$`, `$[1,3].name$`, `$[all].hex$`. Seeds the export sheet and is the `RESET` target; persisted to `p4lette_export_template_v1`.
-- Private `ResolvedColor` = `{ name, hex, rgb:{r,g,b}, hsl:{h,s,l}, hsv:{h,s,v}, oklch:{l,c,h} }` — rgb/hsl/hsv rounded to ints; oklch `l`/`h` to 1 dp, `c` to 3 dp; `name` falls back to the hex when the names slot is empty. `fmt(v)` → `JSON.stringify(v)` if object, else `String(v)`.
+- `EXPORT_PRESETS: readonly ExportPreset[]` (`ExportPreset = { key; label; body }`) — built-in starting templates the export sheet's `PRESETS ▾` offers: `CSS CUSTOM PROPERTIES`, `CSS OKLCH VARS`, `TAILWIND colors{}`, `JSON ARRAY`, `PLAIN HEX LIST`, `NAME — HEX`, `SWIFTUI COLORS`. The per-`--color-N` ones target the default 5-colour palette (the grammar has no loop, and a literal `$` collides with the `$…$` token syntax — so no Sass-map preset); the `$[all]…` ones adapt to any length.
+- Private `ResolvedColor` = `{ name, hex, rgb:{r,g,b}, hsl:{h,s,l}, hsv:{h,s,v}, oklch:{l,c,h}, rgbCss, hslCss, oklchCss }` — rgb/hsl/hsv rounded to ints; oklch `l`/`h` to 1 dp, `c` to 3 dp; `rgbCss`/`hslCss`/`oklchCss` are CSS-ready value strings (`"r, g, b"` / `"h, s%, l%"` / `"l c h"` — for `rgb(…)`/`hsl(…)`/`oklch(…)`); `name` falls back to the hex when the names slot is empty. `fmt(v)` → `JSON.stringify(v)` if object, else `String(v)`.
 - **`resolveTemplate(template, palette, names): string`** — replaces every `$...$` token (regex `/\$([^$]+)\$/g` — the inner expr cannot contain `$`):
   - **Array selector** `^\[([^\]]+)\](?:\.(\w+))?$`: `sel === "all"` → ids `1..n`; else `,`-split → `parseInt(trim,10)` → keep `Number.isFinite` → `colorAt`, drop nulls. None survive → `[ERROR: no ids in $...$]`. With `.prop` → `fmt(items.map(it => it[prop]))` (an unknown prop just yields `undefined`s — no error); without → `fmt(items)` (array of full objects).
   - **Single id** `^(\d+)(?:\.(\w+))?$`: `colorAt(id)`; null → `[ERROR: no color {id}]`. No prop → `fmt(it)`. Prop present but `it[prop] === undefined` → `[ERROR: no prop {prop}]`; else `fmt(it[prop])`.
   - Neither shape → `[ERROR: bad expr $...$]`. Any thrown error inside a token → `[ERROR: $...$]`.
-- `colorAt(i)` is **1-based** (`palette[i-1]`). Single-id props: `name, hex, rgb, hsl, hsv, oklch`. Consumed by `PaletteContext` (`resolveTemplate`, `DEFAULT_TEMPLATE`); `DEFAULT_TEMPLATE` also imported by `PosterSkin` (RESET).
+- `colorAt(i)` is **1-based** (`palette[i-1]`). Single-id props: `name, hex, rgb, hsl, hsv, oklch, rgbCss, hslCss, oklchCss`. Consumed by `PaletteContext` (`resolveTemplate`, `DEFAULT_TEMPLATE`); `DEFAULT_TEMPLATE` also imported by `PosterSkin` (RESET), and `EXPORT_PRESETS` by `PosterExportSheet` (the `PRESETS ▾` dropdown).
 
 ### `share_url.ts` — pure
 
@@ -332,18 +333,20 @@
     "lib": "color_converters",
     "exports": [
       "DEFAULT_TEMPLATE",
+      "EXPORT_PRESETS, ExportPreset ({key,label,body}) — built-in starting templates for the PRESETS▾ dropdown (per---color-N ones are 5-slot; $[all]… ones adapt; no Sass-map preset — literal $ collides with $…$)",
       "resolveTemplate(template,palette,names)→string"
     ],
     "grammar": {
       "token": "$expr$ (expr has no $)",
       "array": "$[all].prop$ | $[1,3].prop$ (1-based, finite ints, nulls dropped; empty→[ERROR: no ids in $…$]; unknown prop→undefineds, no error)",
-      "single": "$3$ (full obj) | $3.hex$ (name|hex|rgb|hsl|hsv|oklch); bad id→[ERROR: no color 3]; unknown prop→[ERROR: no prop X]",
+      "single": "$3$ (full obj) | $3.hex$ (name|hex|rgb|hsl|hsv|oklch|rgbCss|hslCss|oklchCss — *Css are CSS value strings); bad id→[ERROR: no color 3]; unknown prop→[ERROR: no prop X]",
       "else": "[ERROR: bad expr $…$]",
       "throw": "[ERROR: $…$]"
     },
     "consumers": [
       "PaletteContext (resolvedTemplate)",
-      "PosterSkin (DEFAULT_TEMPLATE for RESET)"
+      "PosterSkin (DEFAULT_TEMPLATE for RESET)",
+      "PosterExportSheet (EXPORT_PRESETS for PRESETS▾)"
     ]
   },
   "share_url.ts": {
