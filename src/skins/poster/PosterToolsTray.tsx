@@ -2,11 +2,13 @@ import { ReactNode, useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { Palette } from "../../types/Palette";
 import {
+  HARMONY_HSV_KINDS,
   HARMONY_STYLES,
   HarmonyKind,
   PaletteStyle,
   RYB_CUBES,
   harmony,
+  harmonyHsv,
   harmonyRyb,
 } from "../../functions/harmony";
 import { TONE_METHODS, dittoMatch, tones } from "../../functions/tones";
@@ -15,6 +17,12 @@ import {
   simulateCvd,
   snapToGamut,
 } from "../../functions/color_filters";
+import {
+  PIGMENT_CUBES,
+  cubeCorners,
+  pigmentFilter,
+  pigmentWheel,
+} from "../../functions/pigment";
 import {
   MIX_CURVES,
   MIX_SPACES,
@@ -34,7 +42,7 @@ interface Props {
   onApply: (hexes: string[]) => void;
 }
 
-type HarmonySpace = "oklch" | "ryb";
+type HarmonySpace = "oklch" | "ryb" | "hsv";
 
 const HARMONIES: ReadonlyArray<readonly [string, HarmonyKind]> = [
   ["ANALOGOUS", "analogous"],
@@ -100,7 +108,7 @@ export const PosterToolsTray = ({
               opacity: 0.6,
             }}
           >
-            HARMONY · TONES · FIXERS · MIX — hit USE to apply a result
+            HARMONY · TONES · FIXERS · PIGMENT · MIX — hit USE to apply a result
           </span>
         )}
       </div>
@@ -162,6 +170,12 @@ export const PosterToolsTray = ({
         palette={palette}
         onApply={onApply}
       />
+      <PigmentBody
+        ink={ink}
+        isMobile={isMobile}
+        palette={palette}
+        onApply={onApply}
+      />
       <MixBody
         ink={ink}
         isMobile={isMobile}
@@ -209,11 +223,18 @@ const rowsStyle = () => ({
   padding: 16,
 });
 
+const SPACES: ReadonlyArray<readonly [HarmonySpace, string]> = [
+  ["oklch", "OKLCH"],
+  ["ryb", "RYB"],
+  ["hsv", "HSV"],
+];
+
 const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
   const [base, setBase] = useState(palette[0]?.hex ?? "#ff3d00");
   const [space, setSpace] = useState<HarmonySpace>("oklch");
   const [style, setStyle] = useState<PaletteStyle>("default");
   const [cube, setCube] = useState("itten");
+  // Variant picker: styles for OKLCH, pigment cubes for RYB, nothing for HSV.
   const variants =
     space === "oklch"
       ? HARMONY_STYLES.map((s) => ({
@@ -222,11 +243,28 @@ const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
           active: style === s,
           pick: () => setStyle(s),
         }))
-      : RYB_CUBES.map((c) => ({
-          key: c.key,
-          label: c.label,
-          active: cube === c.key,
-          pick: () => setCube(c.key),
+      : space === "ryb"
+        ? RYB_CUBES.map((c) => ({
+            key: c.key,
+            label: c.label,
+            active: cube === c.key,
+            pick: () => setCube(c.key),
+          }))
+        : [];
+  const rows =
+    space === "hsv"
+      ? HARMONY_HSV_KINDS.map((k) => ({
+          key: k.key,
+          label: k.label,
+          colors: harmonyHsv(base, k.key),
+        }))
+      : HARMONIES.map(([label, kind]) => ({
+          key: kind,
+          label,
+          colors:
+            space === "ryb"
+              ? harmonyRyb(base, kind, cube)
+              : harmony(base, kind, style),
         }));
   return (
     <div style={sectionStyle(ink, isMobile, true)}>
@@ -241,67 +279,58 @@ const HarmonyBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
       >
         <div style={{ marginTop: 12, border: `2px solid ${ink}` }}>
           <div style={{ display: "flex" }}>
-            <Toggle
-              ink={ink}
-              active={space === "oklch"}
-              tall={isMobile}
-              divide
-              onClick={() => setSpace("oklch")}
-            >
-              OKLCH
-            </Toggle>
-            <Toggle
-              ink={ink}
-              active={space === "ryb"}
-              tall={isMobile}
-              onClick={() => setSpace("ryb")}
-            >
-              RYB
-            </Toggle>
-          </div>
-          <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
-            {variants.map((v, i) => (
+            {SPACES.map(([key, label], i) => (
               <Toggle
-                key={v.key}
+                key={key}
                 ink={ink}
-                active={v.active}
+                active={space === key}
                 tall={isMobile}
-                divide={i < variants.length - 1}
-                onClick={v.pick}
+                divide={i < SPACES.length - 1}
+                onClick={() => setSpace(key)}
               >
-                {v.label}
+                {label}
               </Toggle>
             ))}
           </div>
+          {variants.length > 0 && (
+            <div style={{ display: "flex", borderTop: `2px solid ${ink}` }}>
+              {variants.map((v, i) => (
+                <Toggle
+                  key={v.key}
+                  ink={ink}
+                  active={v.active}
+                  tall={isMobile}
+                  divide={i < variants.length - 1}
+                  onClick={v.pick}
+                >
+                  {v.label}
+                </Toggle>
+              ))}
+            </div>
+          )}
         </div>
       </BasePicker>
       <div style={rowsStyle()}>
-        {HARMONIES.map(([label, kind]) => {
-          const colors =
-            space === "ryb"
-              ? harmonyRyb(base, kind, cube)
-              : harmony(base, kind, style);
-          return (
-            <SwatchRow
-              key={kind}
-              ink={ink}
-              isMobile={isMobile}
-              colors={colors}
-              swatchHeight={isMobile ? 76 : 56}
-              onUse={() => onApply(colors)}
+        {rows.map((r) => (
+          <SwatchRow
+            key={r.key}
+            ink={ink}
+            isMobile={isMobile}
+            colors={r.colors}
+            swatchHeight={isMobile ? 76 : 56}
+            onUse={() => onApply(r.colors)}
+          >
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
             >
-              <div
-                style={{
-                  fontFamily: POSTER.display,
-                  fontSize: 16,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {label}
-              </div>
-            </SwatchRow>
-          );
-        })}
+              {r.label}
+            </div>
+          </SwatchRow>
+        ))}
       </div>
     </div>
   );
@@ -449,6 +478,148 @@ const FixersBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
               alreadyOk
                 ? "every swatch is already displayable"
                 : "every swatch snapped into displayable sRGB",
+            )}
+          </div>
+        </SwatchRow>
+      </div>
+    </div>
+  );
+};
+
+// PIGMENT — rybitten cube profiles as a print-like filter over the live palette.
+// No seed colour; a profile picker drives all three rows.
+const PigmentBody = ({ ink, isMobile, palette, onApply }: BodyProps) => {
+  const [cube, setCube] = useState(PIGMENT_CUBES[0]?.key ?? "itten");
+  const active = PIGMENT_CUBES.find((c) => c.key === cube) ?? PIGMENT_CUBES[0];
+  const hexes = palette.map((c) => c.hex);
+  const filtered = pigmentFilter(hexes, cube);
+  const wheel = pigmentWheel(cube, isMobile ? 7 : 11);
+  const corners = cubeCorners(cube);
+  const rowH = isMobile ? 76 : 56;
+  const half = Math.ceil(PIGMENT_CUBES.length / 2);
+  const cubeRows = [PIGMENT_CUBES.slice(0, half), PIGMENT_CUBES.slice(half)];
+  const caption = (text: string) => (
+    <div
+      style={{
+        fontFamily: POSTER.body,
+        fontSize: 10,
+        letterSpacing: "0.04em",
+        opacity: 0.6,
+        marginTop: 2,
+      }}
+    >
+      {text}
+    </div>
+  );
+  return (
+    <div style={sectionStyle(ink, isMobile, false)}>
+      <div style={subHeaderStyle(ink)}>PIGMENT</div>
+      <div
+        style={{
+          padding: "14px 16px",
+          borderBottom: `2px solid ${ink}`,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: POSTER.body,
+            fontWeight: 700,
+            fontSize: 10,
+            letterSpacing: "0.12em",
+            marginBottom: 8,
+          }}
+        >
+          PROFILE
+        </div>
+        <div style={{ border: `2px solid ${ink}` }}>
+          {cubeRows.map((row, ri) => (
+            <div
+              key={ri}
+              style={{
+                display: "flex",
+                borderTop: ri > 0 ? `2px solid ${ink}` : undefined,
+              }}
+            >
+              {row.map((c, i) => (
+                <Toggle
+                  key={c.key}
+                  ink={ink}
+                  active={c.key === cube}
+                  tall={isMobile}
+                  divide={i < row.length - 1}
+                  onClick={() => setCube(c.key)}
+                >
+                  {c.label}
+                </Toggle>
+              ))}
+            </div>
+          ))}
+        </div>
+        {active && caption(active.meta)}
+      </div>
+      <div style={rowsStyle()}>
+        <SwatchRow
+          ink={ink}
+          isMobile={isMobile}
+          colors={filtered}
+          swatchHeight={rowH}
+          onUse={() => onApply(filtered)}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
+            >
+              FILTER
+            </div>
+            {caption(
+              `your palette as ${active?.label ?? cube} would mix it — print-like`,
+            )}
+          </div>
+        </SwatchRow>
+        <SwatchRow
+          ink={ink}
+          isMobile={isMobile}
+          colors={wheel}
+          swatchHeight={rowH}
+          onUse={() => onApply(wheel)}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
+            >
+              WHEEL
+            </div>
+            {caption("the cube's own colour wheel — pigment mixing, not light")}
+          </div>
+        </SwatchRow>
+        <SwatchRow
+          ink={ink}
+          isMobile={isMobile}
+          colors={corners}
+          swatchHeight={rowH}
+          onUse={() => onApply(corners)}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: POSTER.display,
+                fontSize: 16,
+                letterSpacing: "0.02em",
+              }}
+            >
+              THIS CUBE
+            </div>
+            {caption(
+              "corners: white · red · yellow · orange · blue · violet · green · black",
             )}
           </div>
         </SwatchRow>
