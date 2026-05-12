@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Palette } from "../../types/Palette";
+import { useExitAnimation } from "../../hooks/use_exit_animation";
 import { POSTER } from "./tokens";
 import { TRAY_SECTIONS, subHeaderStyle, pillRowStyle } from "./tools";
 import { Toggle } from "./tools/shared";
@@ -30,11 +31,13 @@ export const PosterToolsTray = ({
   const [activeKey, setActiveKey] = useState(TRAY_SECTIONS[0].key);
   const active =
     TRAY_SECTIONS.find((s) => s.key === activeKey) ?? TRAY_SECTIONS[0];
+  const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
 
   return (
     <div
       role="dialog"
       aria-label="tools"
+      onAnimationEnd={isMobile ? onAnimationEnd : undefined}
       style={
         isMobile
           ? {
@@ -45,7 +48,9 @@ export const PosterToolsTray = ({
               color: ink,
               display: "flex",
               flexDirection: "column",
-              animation: "toolsIn .22s cubic-bezier(.2,.7,.3,1)",
+              animation: closing
+                ? "toolsOut .2s cubic-bezier(.4,0,.6,1) forwards"
+                : "toolsIn .22s cubic-bezier(.2,.7,.3,1)",
             }
           : {
               width: "100%",
@@ -58,7 +63,7 @@ export const PosterToolsTray = ({
             }
       }
     >
-      <style>{`@keyframes toolsIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`@keyframes toolsIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } } @keyframes toolsOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }`}</style>
 
       <div
         style={{
@@ -95,7 +100,7 @@ export const PosterToolsTray = ({
           )}
         </div>
         <button
-          onClick={onClose}
+          onClick={isMobile ? requestClose : onClose}
           aria-label="close"
           style={{
             background: "none",

@@ -1,5 +1,6 @@
 import { Backdrop, SmallBtn } from "./Backdrop";
 import { SavedPalette } from "../../functions/saved_palettes";
+import { useExitAnimation } from "../../hooks/use_exit_animation";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -26,9 +27,11 @@ export const PosterSavedDrawer = ({
   onLoad,
   onDelete,
 }: Props) => {
+  const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
   const body = (
     <div
       onClick={(e) => e.stopPropagation()}
+      onAnimationEnd={isMobile ? onAnimationEnd : undefined}
       style={
         isMobile
           ? {
@@ -41,6 +44,9 @@ export const PosterSavedDrawer = ({
               maxHeight: "88vh",
               display: "flex",
               flexDirection: "column",
+              animation: closing
+                ? "savedSheetDown .2s cubic-bezier(.4,0,.6,1) forwards"
+                : "savedSheetUp .26s cubic-bezier(.2,.7,.3,1)",
             }
           : {
               background: bg,
@@ -53,6 +59,7 @@ export const PosterSavedDrawer = ({
             }
       }
     >
+      <style>{`@keyframes savedSheetUp { from { transform: translateY(100%); } } @keyframes savedSheetDown { to { transform: translateY(100%); } }`}</style>
       <div
         style={{
           borderBottom: `${POSTER.borderW}px solid ${ink}`,
@@ -73,7 +80,7 @@ export const PosterSavedDrawer = ({
           SAVE / LOAD
         </div>
         <button
-          onClick={onClose}
+          onClick={isMobile ? requestClose : onClose}
           aria-label="close"
           style={{
             background: "none",
@@ -195,7 +202,7 @@ export const PosterSavedDrawer = ({
   );
 
   return isMobile ? (
-    <Backdrop onClose={onClose} align="bottom">
+    <Backdrop onClose={requestClose} align="bottom">
       {body}
     </Backdrop>
   ) : (

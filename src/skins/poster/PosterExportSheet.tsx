@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SmallBtn } from "./Backdrop";
 import { SavedTemplate } from "../../functions/saved_templates";
 import { EXPORT_PRESETS } from "../../functions/resolve_export_template";
+import { useExitAnimation } from "../../hooks/use_exit_animation";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -51,9 +52,11 @@ export const PosterExportSheet = ({
 }: Props) => {
   const [loadOpen, setLoadOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
 
   return (
     <div
+      onAnimationEnd={isMobile ? onAnimationEnd : undefined}
       style={
         isMobile
           ? {
@@ -65,7 +68,9 @@ export const PosterExportSheet = ({
               color: ink,
               borderTop: `${POSTER.borderW}px solid ${ink}`,
               height: "92%",
-              animation: "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
+              animation: closing
+                ? "maxSheetDown .2s cubic-bezier(.4,0,.6,1) forwards"
+                : "maxSheetUp .3s cubic-bezier(.2,.7,.3,1)",
               display: "flex",
               flexDirection: "column",
               boxShadow: `0 -10px 0 ${POSTER.accent}`,
@@ -83,7 +88,7 @@ export const PosterExportSheet = ({
             }
       }
     >
-      <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}}`}</style>
+      <style>{`@keyframes maxSheetUp { from {transform: translateY(100%);} to{transform:translateY(0);}} @keyframes maxSheetDown { from {transform: translateY(0);} to{transform:translateY(100%);}}`}</style>
 
       <div
         style={{
@@ -172,7 +177,7 @@ export const PosterExportSheet = ({
             {copyLabel}
           </button>
           <button
-            onClick={onClose}
+            onClick={isMobile ? requestClose : onClose}
             aria-label="close"
             style={{
               background: "none",
