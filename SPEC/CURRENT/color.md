@@ -35,21 +35,25 @@
 - **`harmonyHsv(hex, kindKey: string): string[]`** — rampensau HSV-space path. `fn = colorUtils.colorHarmonies[kindKey] ?? .complementary` (unknown → complementary); `{h,s,l} = hexToHsl(hex)`; `fn(h)` (a list of _absolute_ hues, the seed's first) → each `hslToHex({ h: hue mod 360, s, l })` (keeps the seed's HSL S/L — purely a hue-geometry variation).
 - Consumed by `PosterToolsTray` (`HarmonyBody`: `harmony`, `harmonyHsv`, `HarmonyKind`, `PaletteStyle`, `HARMONY_STYLES`, `HARMONY_HSV_KINDS`).
 
-### `tones.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`, `parse`) + **`dittotones`** (`DittoTones`) + **`fettepalette`** (`generateRandomColorRamp`) + **`rampensau`** (`generateColorRamp`); reads `tones_tailwind_data.ts`
+### `tones.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`, `parse`) + **`dittotones`** (`DittoTones`) + **`fettepalette`** (`generateRandomColorRamp`) + **`rampensau`** (`generateColorRamp`); reads `tones_{tailwind,radix,flexoki,shoelace}_data.ts`
 
-- `STEPS = 11`. `ToneMethod = "ditto"|"oklch"|"hsv"|"gen"`. `interface ToneMethodInfo { id: ToneMethod; label: string; caption: string }`. `TONE_METHODS: readonly ToneMethodInfo[]` in row order: `ditto` ("DITTOTONES" / "perceptual scale blended from Tailwind v4 reference ramps"), `oklch` ("OKLCH RAMP" / "perceptually-even lightness; hue held, chroma bowed to the mids"), `hsv` ("HSV CURVE" / "curve through the HSV model via fettepalette — brighter mids"), `gen` ("GENERATIVE" / "single-hue sweep via rampensau — even hue, swept sat & lightness").
-- Private `toHexOklch(l,c,h)` → `formatHex(clampChroma({mode:"oklch",l,c,h},"oklch")) ?? "#000000"`. Module-level: `buildRamps()` → `Map<familyName, Record<step,{l,c,h}>>` by `culori`'s `oklch(parse(cssStr))` over every entry in `tailwindColors`; `dt = new DittoTones({ ramps: buildRamps() as any, gamutMap: true })`.
-- Four scalers (`(hex) → string[]`, length 11, lightest→darkest):
-  - `dittoScale(hex)` — `Object.entries(dt.generate(hex).scale)` sorted by numeric Tailwind shade key (`50…950`), mapped through `toHexOklch`.
+- `STEPS = 11`. `ToneMethod = "ditto"|"oklch"|"hsv"|"gen"`. `interface ToneMethodInfo { id: ToneMethod; label: string; caption: string }`. `TONE_METHODS: readonly ToneMethodInfo[]` in row order: `ditto` ("DITTOTONES" / "perceptual scale blended from a reference ramp set"), `oklch` ("OKLCH RAMP" / "perceptually-even lightness; hue held, chroma bowed to the mids"), `hsv` ("HSV CURVE" / "curve through the HSV model via fettepalette — brighter mids"), `gen` ("GENERATIVE" / "single-hue sweep via rampensau — even hue, swept sat & lightness").
+- Private `toHexOklch(l,c,h)` → `formatHex(clampChroma({mode:"oklch",l,c,h},"oklch")) ?? "#000000"`. Module-level: `buildRamps(raw)` → `Map<familyName, Record<step,{l,c,h}>>` by `culori`'s `oklch(parse(cssStr))` over a raw ramp map. `interface RampSet { key; label; ramps }`; `RAMP_SETS: readonly RampSet[]` — the DITTOTONES reference sets the TONES tool offers, **`TAILWIND v4` first (the default)** then `RADIX` / `FLEXOKI` / `SHOELACE`, each a vendored `tones_<set>_data.ts`. `DITTOS` = one `DittoTones({ ramps: buildRamps(s.ramps) as any, gamutMap: true })` per set; private `dittoFor(set)` → `DITTOS[set] ?? DITTOS.tailwind`.
+- Four scalers (`(hex, …) → string[]`, lightest→darkest; the non-`ditto` ones are length `STEPS=11`, `ditto` is the reference ramp's shade count — Tailwind/Shoelace 11, Radix 12, Flexoki 13):
+  - `dittoScale(hex, set="tailwind")` — `Object.values(dittoFor(set).generate(hex).scale)` mapped through `toHexOklch`, then **re-sorted by `oklch().l` descending** so it's always lightest→darkest regardless of the ramp's shade-key convention (Tailwind `50→950`, Shoelace `95→05`, …).
   - `oklchScale(hex)` — `oklch(hex)`; null → `Array(11).fill(hex)`. Even lightness `L ∈ [0.97, 0.13]`, hue held, chroma `baseC * (0.2 + 0.8*sin(πt))` (bell — full at the centre, 0.2× at the ends), via `toHexOklch`.
   - `fetteHsvScale(hex)` — `{h} = hexToHsv(hex)` → `generateRandomColorRamp({ total:5, centerHue:h, hueCycle:0, curveMethod:"lamé", curveAccent:0.2, offsetTint/Shade:0.05, tintShadeHueShift:0, minSaturationLight:[0.3,0.06], maxSaturationLight:[1,0.96], colorModel:"hsv" })`; takes `.all`'s value channel (clamped to `[0,1]`), sorts desc, resamples to 11, **stretches** the value range to `[0.99, 0.1]`; saturation bowed `100*(0.25 + 0.75*sin(πt))`; `hsvToHex`; finally re-sorts the 11 hexes by `oklch(.).l` desc to guarantee monotonic light→dark. (fettepalette supplies the curve shape; the range stretch makes the ramp always span; hue is held — `hueCycle:0`.)
   - `genScale(hex)` — `{h,s} = hexToHsl(hex)`; `sat = clamp(s/100, 0.15, 0.95)` → `generateColorRamp({ total:11, hStart:h, hCycles:0, sRange:[sat*0.55, sat], lRange:[0.12, 0.97] })` (single hue — `hCycles:0`); `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`; re-sorted by `oklch(.).l` desc.
-- `dittoMatch(hex) → { shade: string; method: "exact"|"single"|"blend" }` — `dt.generate(hex)`; `shade` = `${dominant source ramp}-${matchedShade}` (e.g. `"amber-700"`; dominant = highest-weight `sources` entry), `method` straight from the result. Caption-only helper.
-- `SCALERS: Record<ToneMethod, fn>` = `{ ditto, oklch, hsv, gen }`; **`tones(hex: string, method: ToneMethod): string[]` = `SCALERS[method](hex)`**. Consumed by `PosterToolsTray` (`TonesBody`: `tones`, `TONE_METHODS`, `dittoMatch`).
+- `dittoMatch(hex, set="tailwind") → { shade: string; method: "exact"|"single"|"blend" }` — `dittoFor(set).generate(hex)`; `shade` = `${dominant source ramp}-${matchedShade}` (e.g. `"amber-700"` for tailwind, `"amber-8"` for radix; dominant = highest-weight `sources` entry), `method` straight from the result. Caption-only helper.
+- `SCALERS: Record<ToneMethod, (hex)=>string[]>` = `{ ditto, oklch, hsv, gen }`; **`tones(hex, method, set="tailwind"): string[]` = `method==="ditto" ? dittoScale(hex,set) : SCALERS[method](hex)`** (the `set` arg is ignored by the non-`ditto` methods). Consumed by `PosterToolsTray` (`TonesBody`: `tones`, `TONE_METHODS`, `dittoMatch`, `RAMP_SETS`).
 
-### `tones_tailwind_data.ts` — pure data
+### `tones_{tailwind,radix,flexoki,shoelace}_data.ts` — pure data (vendored DITTOTONES reference ramps)
 
-- `tailwindColors: Record<string, Record<string, string>>` — 22 Tailwind v4.1 families (slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose), each an 11-step `50`–`950` ramp of `oklch(...)` CSS strings. Header comment credits Tailwind (MIT) / `@meodai/dittoTones` (MIT). Used only by `tones.ts#buildRamps`.
+- `tailwindColors` — 22 Tailwind v4.1 families, each an 11-step `50`–`950` ramp of `oklch(...)` CSS strings.
+- `radixColors` — the 31 chromatic Radix Colors v3 light scales (gray, mauve, slate, …, amber, orange), each a 12-step ramp keyed `"1"`–`"12"` (lightest→darkest) of `#rrggbb` hex.
+- `flexokiColors` — the 8 chromatic Flexoki v1.0 hues (red, orange, yellow, green, cyan, blue, purple, magenta), each a 13-step `50`–`950` ramp (incl. `150`/`850`) of `#RRGGBB` hex.
+- `shoelaceColors` — the 10 Shoelace / Web Awesome palette hues (red, orange, …, pink, gray), each an 11-step `95`–`05` ramp (lightest→darkest by key) of `oklch(...)` CSS strings.
+- All are `Record<family, Record<shade, css-color>>` (any `culori.parse`-able string). Each header credits the source design system + `@meodai/dittoTones` (MIT) — the reference data was vendored from dittoTones's `src/ramps/raw/*` because the npm package ships only the engine. Used only by `tones.ts#RAMP_SETS` / `buildRamps`.
 
 ### `color_filters.ts` — uses **`culori`** (`filterDeficiency{Prot,Deuter,Trit}`, `filter{Grayscale,Sepia,Invert,Saturate,Contrast,HueRotate}`, `blend`, `toGamut`, `parse`, `formatHex`)
 
@@ -223,28 +227,44 @@
     ],
     "STEPS": 11,
     "ToneMethod": ["ditto", "oklch", "hsv", "gen"],
-    "TONE_METHODS": "ordered [{ditto,DITTOTONES,…},{oklch,OKLCH RAMP,…},{hsv,HSV CURVE via fettepalette,…},{gen,GENERATIVE via rampensau,…}]",
+    "TONE_METHODS": "ordered [{ditto,DITTOTONES,'…reference ramp set'},{oklch,OKLCH RAMP,…},{hsv,HSV CURVE via fettepalette,…},{gen,GENERATIVE via rampensau,…}]",
+    "RAMP_SETS": [
+      "tailwind (TAILWIND v4 — default)",
+      "radix (RADIX)",
+      "flexoki (FLEXOKI)",
+      "shoelace (SHOELACE)"
+    ],
     "scalers": {
-      "ditto": "dt.generate(hex).scale sorted 50→950 → toHexOklch",
+      "ditto": "dittoFor(set).generate(hex).scale → toHexOklch, re-sorted by oklch L desc; length = the set's shade count (tailwind/shoelace 11, radix 12, flexoki 13)",
       "oklch": "L 0.97→0.13 even, hue held, chroma baseC*(0.2+0.8sin(πt))",
       "hsv": "fettepalette generateRandomColorRamp (hueCycle:0, colorModel:hsv) → value channel resampled to 11, range stretched 0.99→0.1, sat bowed 0.25+0.75sin(πt); re-sorted by oklch L desc",
       "gen": "rampensau generateColorRamp({total:11, hStart:seedHue, hCycles:0, sRange:[sat*0.55,sat], lRange:[0.12,0.97]}) → hslToHex; re-sorted by oklch L desc"
     },
     "exports": [
-      "tones(hex,method)→string[]",
-      "dittoMatch(hex)→{shade:'<ramp>-<step>',method:'exact'|'single'|'blend'}",
-      "TONE_METHODS",
-      "ToneMethod"
+      "tones(hex,method,set='tailwind')→string[] (ditto→dittoScale(hex,set); else SCALERS[method](hex))",
+      "dittoScale(hex,set), dittoMatch(hex,set)→{shade:'<ramp>-<step>',method:'exact'|'single'|'blend'}",
+      "TONE_METHODS, ToneMethod, RAMP_SETS, RampSet"
     ],
-    "reads": "tones_tailwind_data.ts",
-    "consumers": ["PosterToolsTray (TonesBody)"]
+    "reads": [
+      "tones_tailwind_data.ts",
+      "tones_radix_data.ts",
+      "tones_flexoki_data.ts",
+      "tones_shoelace_data.ts"
+    ],
+    "consumers": [
+      "PosterToolsTray (TonesBody — tones, TONE_METHODS, dittoMatch, RAMP_SETS)"
+    ]
   },
-  "tones_tailwind_data.ts": {
+  "tones_{tailwind,radix,flexoki,shoelace}_data.ts": {
     "lib": "none",
     "exports": [
-      "tailwindColors: 22 families × 11 steps of oklch(...) CSS strings"
+      "tailwindColors: 22 families × 11 (oklch CSS strings)",
+      "radixColors: 31 Radix v3 light scales × 12 (keys '1'–'12', #rrggbb)",
+      "flexokiColors: 8 Flexoki hues × 13 (50–950 incl. 150/850, #RRGGBB)",
+      "shoelaceColors: 10 Shoelace hues × 11 (keys 95–05, oklch CSS strings)"
     ],
-    "consumers": ["tones.ts"]
+    "note": "vendored DITTOTONES reference ramps (from @meodai/dittoTones src/ramps/raw — the npm package ships only the engine); Record<family, Record<shade, css-color>>",
+    "consumers": ["tones.ts (RAMP_SETS / buildRamps)"]
   },
   "color_filters.ts": {
     "lib": "culori (filterDeficiency* · filter{Grayscale,Sepia,Invert,Saturate,Contrast,HueRotate} · blend · toGamut)",
@@ -429,7 +449,7 @@ flowchart LR
     cf["color_filters.ts → culori (CVD · gamut · filters · blend)"]
     mx["color_mix.ts → culori (interpolate)"]
     pg["pigment.ts → rybitten (ryb-hsl · cubes)"]
-    td["tones_tailwind_data.ts"]
+    td["tones_*_data.ts (tailwind·radix·flexoki·shoelace — vendored ramps)"]
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
     su["share_url.ts"]
