@@ -26,5 +26,5 @@ export const TRAY_SECTIONS: readonly TraySection[] = [
   { key: "pigment", label: "PIGMENT", Body: PigmentBody },
   { key: "mix", label: "MIX", Body: MixBody },
   { key: "effects", label: "EFFECTS", Body: EffectsBody },
-  { key: "generate", label: "GENERATE", Body: GenerateBody },
+  { key: "shuffle", label: "SHUFFLE SETTINGS", Body: GenerateBody },
 ];

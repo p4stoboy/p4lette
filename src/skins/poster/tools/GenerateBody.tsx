@@ -13,10 +13,10 @@ import { POSTER } from "../tokens";
 import { RangeRow, SwatchRow, Toggle } from "./shared";
 import { BodyProps, rowsStyle } from "./styles";
 
-// GENERATE — pick a palette-generation strategy (and, for rampensau, tune its
-// ramp), preview it, REGENERATE within the bounds, and USE — which both applies
-// the preview *and* commits the strategy/params so the nav SHUFFLE button (and
-// the `Space` shortcut) use them too.
+// SHUFFLE SETTINGS — pick the palette-generation strategy the SHUFFLE button
+// uses (and, for rampensau, tune its ramp), preview it, REGENERATE within the
+// bounds, and USE — which both applies the preview *and* commits the
+// strategy/params so the nav SHUFFLE button (and the `Space` shortcut) use them.
 export const GenerateBody = ({
   ink,
   isMobile,
@@ -67,10 +67,21 @@ export const GenerateBody = ({
             fontWeight: 700,
             fontSize: 10,
             letterSpacing: "0.12em",
-            marginBottom: 8,
+            marginBottom: 4,
           }}
         >
           STRATEGY
+        </div>
+        <div
+          style={{
+            fontFamily: POSTER.body,
+            fontSize: 10,
+            letterSpacing: "0.04em",
+            opacity: 0.6,
+            marginBottom: 8,
+          }}
+        >
+          sets how the SHUFFLE button builds a fresh palette
         </div>
         <div style={{ display: "flex", border: `2px solid ${ink}` }}>
           {GEN_STRATEGIES.map((s, i) => (
