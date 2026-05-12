@@ -55,12 +55,14 @@ const markWelcomeSeen = () => {
   }
 };
 
+// The ticker is opt-in: visible only when the user has explicitly turned it on
+// (a stored `"1"`). No key, or a stored `"0"`, → off.
 const readTickerVisible = (): boolean => {
-  if (typeof localStorage === "undefined") return true;
+  if (typeof localStorage === "undefined") return false;
   try {
-    return localStorage.getItem(TICKER_KEY) !== "0";
+    return localStorage.getItem(TICKER_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 };
 
