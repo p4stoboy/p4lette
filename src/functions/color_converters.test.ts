@@ -3,10 +3,12 @@ import {
   formatColor,
   hexToHsl,
   hexToHsv,
+  hexToOkhsl,
   hexToOklch,
   hexToRgb,
   hslToHex,
   hsvToHex,
+  okhslToHex,
   oklchToHex,
   parseColor,
   randomHex,
@@ -110,6 +112,44 @@ describe("color_converters", () => {
       expect(Math.abs(a.g - b.g)).toBeLessThanOrEqual(1);
       expect(Math.abs(a.b - b.b)).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("hexToOkhsl round-trips through okhslToHex within tolerance", () => {
+    const cases = [
+      "#aabbcc",
+      "#112233",
+      "#445566",
+      "#ff3d00",
+      "#22c55e",
+      "#aa6f3c",
+    ];
+    for (const hex of cases) {
+      const back = okhslToHex(hexToOkhsl(hex)).toLowerCase();
+      const a = hexToRgb(hex);
+      const b = hexToRgb(back);
+      expect(Math.abs(a.r - b.r)).toBeLessThanOrEqual(1);
+      expect(Math.abs(a.g - b.g)).toBeLessThanOrEqual(1);
+      expect(Math.abs(a.b - b.b)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("hexToOkhsl: channels normalised; achromatic colours don't NaN the hue", () => {
+    const red = hexToOkhsl("#ff0000");
+    expect(red.h).toBeGreaterThanOrEqual(0);
+    expect(red.h).toBeLessThan(360);
+    expect(red.s).toBeGreaterThan(0.9);
+    expect(red.s).toBeLessThanOrEqual(1);
+    expect(red.l).toBeGreaterThan(0);
+    expect(red.l).toBeLessThan(1);
+    for (const grey of ["#808080", "#000000", "#ffffff"]) {
+      const o = hexToOkhsl(grey);
+      expect(o.s).toBeCloseTo(0, 5);
+      expect(Number.isFinite(o.h)).toBe(true);
+    }
+  });
+
+  it("okhslToHex clamps out-of-range s/l", () => {
+    expect(okhslToHex({ h: 30, s: 2, l: -1 })).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it("formatColor renders each mode as a display string", () => {

@@ -3,8 +3,8 @@ import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
 import {
   formatColor,
-  hexToHsl,
-  hslToHex,
+  hexToOkhsl,
+  okhslToHex,
   parseColor,
 } from "../../functions/color_converters";
 import { POSTER } from "./tokens";
@@ -50,7 +50,8 @@ export const PosterEditTray = ({
     setHex(h);
     onUpdate(h);
   };
-  const hsl = hexToHsl(hex);
+  // Sliders work in Okhsl (perceptually even) regardless of the display MODE.
+  const ok = hexToOkhsl(hex);
 
   const onInput = (e: ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
@@ -144,25 +145,25 @@ export const PosterEditTray = ({
         label="HUE"
         min={0}
         max={360}
-        value={hsl.h}
+        value={ok.h}
         fontColor={fontColor}
-        onChange={(v) => apply(hslToHex({ ...hsl, h: v }))}
+        onChange={(v) => apply(okhslToHex({ ...ok, h: v }))}
       />
       <ChannelSlider
         label="SAT"
         min={0}
         max={100}
-        value={hsl.s}
+        value={ok.s * 100}
         fontColor={fontColor}
-        onChange={(v) => apply(hslToHex({ ...hsl, s: v }))}
+        onChange={(v) => apply(okhslToHex({ ...ok, s: v / 100 }))}
       />
       <ChannelSlider
         label="LUM"
         min={0}
         max={100}
-        value={hsl.l}
+        value={ok.l * 100}
         fontColor={fontColor}
-        onChange={(v) => apply(hslToHex({ ...hsl, l: v }))}
+        onChange={(v) => apply(okhslToHex({ ...ok, l: v / 100 }))}
       />
 
       <div style={{ marginTop: 8 }}>
@@ -184,18 +185,21 @@ export const PosterEditTray = ({
             gap: 4,
           }}
         >
-          {[0, 60, 120, 180, 240, 300].map((h) => (
-            <button
-              key={h}
-              onClick={() => apply(hslToHex({ h, s: 70, l: 55 }))}
-              style={{
-                height: 24,
-                background: hslToHex({ h, s: 70, l: 55 }),
-                border: `2px solid ${fontColor}`,
-                cursor: "pointer",
-              }}
-            />
-          ))}
+          {[0, 60, 120, 180, 240, 300].map((h) => {
+            const swatch = okhslToHex({ h, s: 0.82, l: 0.62 });
+            return (
+              <button
+                key={h}
+                onClick={() => apply(swatch)}
+                style={{
+                  height: 24,
+                  background: swatch,
+                  border: `2px solid ${fontColor}`,
+                  cursor: "pointer",
+                }}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

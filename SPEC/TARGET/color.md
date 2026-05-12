@@ -4,13 +4,14 @@
 
 ## Verbal outline
 
-### `color_converters.ts` — pure, no external lib
+### `color_converters.ts` — pure (mostly hand-rolled; Okhsl via **`culori`** `okhsl`/`formatHex`)
 
 - Hand-rolled space conversions: `clamp(v,lo,hi)`; `hexToRgb` (3- or 6-digit) / `rgbToHex` (round + pad); `rgbToHsl`/`hslToRgb`; `hexToHsl`/`hslToHex`; `rgbToHsv`/`hsvToRgb`; `hexToHsv`/`hsvToHex`; `rgbToOklch`/`oklchToRgb` (private sRGB↔OKLab matrices + `srgbToLinear`/`linearToSrgb`); `hexToOklch`/`oklchToHex`.
+- `hexToOkhsl(hex) → {h:0–360, s:0–1, l:0–1}` / `okhslToHex({h,s,l})` — perceptually-even Okhsl (Björn Ottosson). Backed by `culori`'s `okhsl` converter + `formatHex` (the gamut-aware S normalisation is a footgun to hand-roll); `h` is `0` for achromatic colours; `s`/`l` clamped to `[0,1]`.
 - `formatColor(hex, mode: ColorMode) → string` — exhaustive over `ColorMode`: `hex`→`#RRGGBB` uppercased; `rgb`→`rgb(r, g, b)`; `hsl`→`hsl(h, s%, l%)`; `hsv`→`hsv(h, s%, v%)`; `oklch`→`oklch(L%, c.3f, h.2f)`.
 - `parseColor(input, mode: ColorMode) → string | null` — `hex`: `/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i` → normalised `#rrggbb`. `rgb`/`hsl`/`hsv`/`oklch`: pull ≥3 numbers via `extractNumbers`, **clamp** to range, convert to hex (oklch lightness `≤1` treated as 0..1 and ×100). `null` on empty/unparseable. **Quirk: out-of-range channels are clamped, not rejected** (`parseColor("rgb(999,0,0)","rgb") → "#ff0000"`).
 - `randomHex() → string` — random HSL `h∈[0,360)`, `s∈[35,90]`, `l∈[30,80]` → `hslToHex` (avoids near-black/white/grey). The per-slot random used by `addColor` and as the `randomizeUnlocked` fallback.
-- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`clamp`, `hexToHsl`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile`/`PosterEditTray` (`formatColor`, `parseColor`, `hexToHsl`, `hslToHex`).
+- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`clamp`, `hexToHsl`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`), `PosterEditTray` (`formatColor`, `parseColor`, `hexToOkhsl`, `okhslToHex` — the EDIT-tray sliders run in Okhsl).
 
 ### `generate_palette.ts` — uses **`rampensau`** `generateColorRamp`
 
@@ -94,7 +95,7 @@
 ```json
 {
   "color_converters.ts": {
-    "lib": "none (hand-rolled)",
+    "lib": "mostly hand-rolled; culori (okhsl, formatHex) for the Okhsl pair",
     "exports": [
       "clamp",
       "hexToRgb",
@@ -111,6 +112,8 @@
       "oklchToRgb",
       "hexToOklch",
       "oklchToHex",
+      "hexToOkhsl(hex)→{h:0–360,s:0–1,l:0–1} (culori; h=0 when achromatic; s/l clamped)",
+      "okhslToHex({h,s,l})",
       "formatColor(hex,mode)",
       "parseColor(input,mode)→string|null",
       "randomHex()"
