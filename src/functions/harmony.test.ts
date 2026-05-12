@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { oklch } from "culori";
-import { HarmonyKind, harmony, harmonyRyb } from "./harmony";
+import {
+  HARMONY_STYLES,
+  HarmonyKind,
+  RYB_CUBES,
+  harmony,
+  harmonyRyb,
+} from "./harmony";
 import { hexToHsl } from "./color_converters";
 
 const expectations: Record<HarmonyKind, number> = {
@@ -13,7 +19,10 @@ const expectations: Record<HarmonyKind, number> = {
   shades: 3,
 };
 
+const KINDS = Object.entries(expectations) as Array<[HarmonyKind, number]>;
+
 const BASE = "#aa6f3c";
+const HEX_RE = /^#[0-9a-f]{6}$/;
 
 const hueDelta = (a: number, b: number): number => {
   const d = (((b - a) % 360) + 360) % 360;
@@ -138,5 +147,83 @@ describe("harmonyRyb", () => {
         expect(oklch(h)!.c ?? 0).toBeGreaterThan(seedC * 0.7);
       }
     }
+  });
+});
+
+describe("harmony — pro-color-harmonies styles", () => {
+  it("HARMONY_STYLES lists the geometric styles, 'default' included", () => {
+    expect(HARMONY_STYLES).toContain("default");
+    expect(HARMONY_STYLES.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(HARMONY_STYLES)(
+    "style %s — every kind still returns COUNTS[kind] valid hexes",
+    (style) => {
+      for (const [kind, count] of KINDS) {
+        const result = harmony(BASE, kind, style);
+        expect(result).toHaveLength(count);
+        for (const h of result) expect(h).toMatch(HEX_RE);
+      }
+    },
+  );
+
+  it("a non-default style changes the result", () => {
+    expect(harmony(BASE, "tetradic", "square")).not.toEqual(
+      harmony(BASE, "tetradic", "default"),
+    );
+  });
+
+  it("harmony(hex, kind) defaults to the 'default' style", () => {
+    expect(harmony(BASE, "triadic")).toEqual(
+      harmony(BASE, "triadic", "default"),
+    );
+  });
+});
+
+describe("harmonyRyb — pigment cube picker", () => {
+  const KINDS_ROT: HarmonyKind[] = [
+    "analogous",
+    "complementary",
+    "triadic",
+    "tetradic",
+    "split",
+  ];
+
+  it("RYB_CUBES is a curated list with an itten default", () => {
+    expect(RYB_CUBES.length).toBeGreaterThanOrEqual(2);
+    expect(RYB_CUBES.map((c) => c.key)).toContain("itten");
+    for (const c of RYB_CUBES) {
+      expect(c.key).toMatch(/\S/);
+      expect(c.label).toMatch(/\S/);
+    }
+  });
+
+  it.each(RYB_CUBES.map((c) => c.key))(
+    "cube %s — rotational kinds return COUNTS[kind] valid hexes at the seed's lightness",
+    (key) => {
+      const seed = "#2b6cb0";
+      const seedL = oklch(seed)!.l;
+      for (const kind of KINDS_ROT) {
+        const result = harmonyRyb(seed, kind, key);
+        expect(result).toHaveLength(expectations[kind]);
+        for (const h of result) {
+          expect(h).toMatch(HEX_RE);
+          expect(Math.abs(oklch(h)!.l - seedL)).toBeLessThan(0.05);
+        }
+      }
+    },
+  );
+
+  it("harmonyRyb(hex, kind) defaults to the itten cube", () => {
+    expect(harmonyRyb("#ff0000", "complementary")).toEqual(
+      harmonyRyb("#ff0000", "complementary", "itten"),
+    );
+  });
+
+  it("a different pigment cube changes the rotation", () => {
+    const other = RYB_CUBES.find((c) => c.key !== "itten")!.key;
+    expect(harmonyRyb("#ff0000", "triadic", other)).not.toEqual(
+      harmonyRyb("#ff0000", "triadic", "itten"),
+    );
   });
 });
