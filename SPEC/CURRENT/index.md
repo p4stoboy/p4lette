@@ -38,7 +38,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
 | localStorage | `p4lette_saved_v1`                   | `src/functions/saved_palettes.ts`                                               | JSON `SavedPalette[]`, capped `SAVED_LIMIT=20`                              |
 | localStorage | `p4lette_saved_templates_v1`         | `src/functions/saved_templates.ts`                                              | JSON `SavedTemplate[]`, capped `SAVED_TEMPLATES_LIMIT=20`                   |
 | localStorage | `p4lette_seen_welcome_v1`            | `src/skins/poster/PosterSkin.tsx`                                               | `"1"` once the welcome modal is dismissed                                   |
-| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                               | `"0"`/`"1"` ticker visibility (visible unless `"0"`)                        |
+| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                               | `"0"`/`"1"` ticker visibility — off by default, visible only if `"1"`       |
 | URL hash     | `#p=<hex>-<hex>-…` (6-digit, no `#`) | `src/context/PaletteContext.tsx` (write) / `src/functions/share_url.ts` (codec) | the live palette; debounced 150 ms; seeds startup state via `decodePalette` |
 
 ## JSON
