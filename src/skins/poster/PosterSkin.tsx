@@ -335,9 +335,13 @@ export const PosterSkin = () => {
   // a left-"+" inserts before the column (pin it + everything right → "right"); a
   // right-"+" inserts after it (pin it + everything left → "left"). Snapshot the
   // current widths so the pinned side doesn't move while the new colour grows into
-  // the fluid side — unless that would crush the new colour, in which case just
-  // rebalance. Closes any open editor (an insert renumbers ids, which `editingId`
-  // is keyed by).
+  // the fluid side. On the *first* insert near a hovered column, if pinning would
+  // crush the new colour below MIN_NEW_COLUMN_PX we skip the freeze and just
+  // rebalance (the degenerate few-column case). Once frozen, stay frozen across
+  // repeated inserts — the pinned side never grows (inserts land in the fluid
+  // zone), so the hovered column never drifts; new colours just take a thinner
+  // fluid share until the cursor leaves and everything rebalances. Closes any open
+  // editor (an insert renumbers ids, which `editingId` is keyed by).
   const freezeAndInsert = (
     index: number,
     side: "left" | "right",
@@ -357,7 +361,8 @@ export const PosterSkin = () => {
     );
     const fluidCount = palette.length + 1 - pinnedCols.length;
     const newColShare = fluidCount > 0 ? (w - pinnedTotal) / fluidCount : 0;
-    if (w > 0 && newColShare >= MIN_NEW_COLUMN_PX) setFrozen({ side, widths });
+    if (w > 0 && (frozen != null || newColShare >= MIN_NEW_COLUMN_PX))
+      setFrozen({ side, widths });
     else setFrozen(null);
     setEditingId(null);
     insertColor(side === "right" ? index : index + 1, hex);
