@@ -17,6 +17,7 @@ import {
   persistSavedTemplates,
 } from "../../functions/saved_templates";
 import { DEFAULT_TEMPLATE } from "../../functions/resolve_export_template";
+import { encodePalette } from "../../functions/share_url";
 import { useFitNameSize } from "../../hooks/use_fit_name_size";
 import { useGlobalShortcuts } from "../../hooks/use_global_shortcuts";
 import { useTouchDragReorder } from "../../hooks/use_touch_drag_reorder";
@@ -196,6 +197,29 @@ export const PosterSkin = () => {
     }
     window.setTimeout(() => setCopyLabel("COPY!"), 1500);
   }, [resolvedTemplate]);
+
+  // The mobile menu's SHARE LINK row — mirrors the footer's `ShareButton`
+  // (Web Share API on mobile, clipboard fallback). No transient label: the
+  // menu auto-closes on click, so the share sheet (on mobile) / a silent
+  // clipboard write *is* the feedback.
+  const handleShareLink = useCallback(async () => {
+    const enc = encodePalette(palette);
+    const origin = window.location.origin;
+    const url = enc ? `${origin}/share?p=${enc}` : origin + "/";
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ url, title: "P4LETTE" });
+      } catch {
+        /* user dismissed — fine */
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      /* clipboard unavailable — silent fail, the menu still closes */
+    }
+  }, [palette]);
 
   const handleSavePalette = useCallback(
     (name: string) => {
@@ -688,6 +712,7 @@ export const PosterSkin = () => {
           onTools={openTools}
           onExport={openExport}
           onSettings={openSettings}
+          onShareLink={handleShareLink}
           onAbout={() => setShowAbout(true)}
         />
       )}
