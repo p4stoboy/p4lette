@@ -12,7 +12,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
   - `src/skins/poster/*` + `src/hooks/*` + `src/App.tsx` + `src/index.tsx` → **`spa.md`** — every component, the overlay/edit state in `PosterSkin`, the hooks.
   - `*.test.ts(x)` (colocated next to source) + `src/setupTests.ts` + Vitest config → **`testing.md`**.
   - this file → **`index.md`** — plus `index.html` (Vite shell), `scripts/generate-og.mjs` (build-time favicon/OG generator), `public/*` (generated assets), root config (`vite.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `package.json`).
-- **Persistence surfaces** — see table below. Two kinds: **localStorage** (8 keys, `v1`-suffixed) and the **URL hash** (two shapes — `#p=<hex>-<hex>-…` is the editor's live-palette hash, written debounced 150 ms via `history.replaceState`, cleared to a bare path when empty, read once at startup to seed state; `#/share?p=<hex>-<hex>-…` is the share-page route, produced only by the footer SHARE action and read by `parseShareHash` — **not** a startup seed). `decodePalette` is only ever handed a bare `#p=…`/`""` (editor) or just the `p=` _value_ (share page) — never the raw `#/share?p=…` string. Every localStorage/`window`/`crypto`/`navigator` access is `typeof`-guarded + wrapped in try/catch (SSR- and private-mode-safe; quota errors swallowed).
+- **Persistence surfaces** — see table below. Two kinds: **localStorage** (9 keys, `v1`-suffixed) and the **URL hash** (two shapes — `#p=<hex>-<hex>-…` is the editor's live-palette hash, written debounced 150 ms via `history.replaceState`, cleared to a bare path when empty, read once at startup to seed state; `#/share?p=<hex>-<hex>-…` is the share-page route, produced only by the footer SHARE action and read by `parseShareHash` — **not** a startup seed). `decodePalette` is only ever handed a bare `#p=…`/`""` (editor) or just the `p=` _value_ (share page) — never the raw `#/share?p=…` string. Every localStorage/`window`/`crypto`/`navigator` access is `typeof`-guarded + wrapped in try/catch (SSR- and private-mode-safe; quota errors swallowed).
 - **External HTTP dependency** — `color.pizza`, no auth, no key, fail-soft:
   - `GET https://api.color.pizza/v1/?values=<csv-hex>&noduplicates=true&list=<list>` → color names — `src/functions/get_color_card_props.ts`. On any failure: per-slot fallback to the previous name, else the hex.
   - `GET https://api.color.pizza/v1/lists/` → available name-list keys — `src/functions/color_lists.ts` (module-memoised). On failure: a "load failed" UI state.
@@ -30,18 +30,19 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
 
 ### Persistence surfaces
 
-| Surface      | Key / format                         | Owner (sole writer)                                                                        | Holds                                                                          |
-| ------------ | ------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| localStorage | `p4lette_export_template_v1`         | `src/context/PaletteContext.tsx`                                                           | export-template string (effect on change)                                      |
-| localStorage | `p4lette_name_list_v1`               | `src/context/PaletteContext.tsx`                                                           | active color.pizza list key                                                    |
-| localStorage | `p4lette_color_mode_v1`              | `src/context/PaletteContext.tsx`                                                           | `DisplayMode` incl. `all` — **default `all`**; validated against `VALID_MODES` |
-| localStorage | `p4lette_edit_space_v1`              | `src/context/PaletteContext.tsx`                                                           | `EditSpace` — the EDIT tray's editing space; **default `okhsl`**; validated    |
-| localStorage | `p4lette_saved_v1`                   | `src/functions/saved_palettes.ts`                                                          | JSON `SavedPalette[]`, capped `SAVED_LIMIT=20`                                 |
-| localStorage | `p4lette_saved_templates_v1`         | `src/functions/saved_templates.ts`                                                         | JSON `SavedTemplate[]`, capped `SAVED_TEMPLATES_LIMIT=20`                      |
-| localStorage | `p4lette_seen_welcome_v1`            | `src/skins/poster/PosterSkin.tsx`                                                          | `"1"` once the welcome modal is dismissed                                      |
-| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                                          | `"0"`/`"1"` ticker visibility — off by default, visible only if `"1"`          |
-| URL hash     | `#p=<hex>-<hex>-…` (6-digit, no `#`) | `src/context/PaletteContext.tsx` (write) / `src/functions/share_url.ts` (codec)            | the live palette; debounced 150 ms; seeds startup state via `decodePalette`    |
-| URL hash     | `#/share?p=<hex>-<hex>-…`            | `PosterFooter`'s `ShareButton` (write) / `src/skins/poster/share/parseShareHash.ts` (read) | the shared palette — the read-only share-page route; **not** a startup seed    |
+| Surface      | Key / format                         | Owner (sole writer)                                                                        | Holds                                                                                                 |
+| ------------ | ------------------------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| localStorage | `p4lette_export_template_v1`         | `src/context/PaletteContext.tsx`                                                           | export-template string (effect on change)                                                             |
+| localStorage | `p4lette_name_list_v1`               | `src/context/PaletteContext.tsx`                                                           | active color.pizza list key                                                                           |
+| localStorage | `p4lette_color_mode_v1`              | `src/context/PaletteContext.tsx`                                                           | `DisplayMode` incl. `all` — **default `all`**; validated against `VALID_MODES`                        |
+| localStorage | `p4lette_edit_space_v1`              | `src/context/PaletteContext.tsx`                                                           | `EditSpace` — the EDIT tray's editing space; **default `okhsl`**; validated                           |
+| localStorage | `p4lette_saved_v1`                   | `src/functions/saved_palettes.ts`                                                          | JSON `SavedPalette[]`, capped `SAVED_LIMIT=20`                                                        |
+| localStorage | `p4lette_saved_templates_v1`         | `src/functions/saved_templates.ts`                                                         | JSON `SavedTemplate[]`, capped `SAVED_TEMPLATES_LIMIT=20`                                             |
+| localStorage | `p4lette_seen_welcome_v1`            | `src/skins/poster/PosterSkin.tsx`                                                          | `"1"` once the welcome modal is dismissed                                                             |
+| localStorage | `p4lette_ticker_v1`                  | `src/skins/poster/PosterSkin.tsx`                                                          | `"0"`/`"1"` ticker visibility — off by default, visible only if `"1"`                                 |
+| localStorage | `p4lette_theme_v1`                   | `src/skins/poster/PosterSkin.tsx`                                                          | `ThemeChoice` (`system`/`light`/`dark`) — **default `system`** (resolves via `matchMedia`); validated |
+| URL hash     | `#p=<hex>-<hex>-…` (6-digit, no `#`) | `src/context/PaletteContext.tsx` (write) / `src/functions/share_url.ts` (codec)            | the live palette; debounced 150 ms; seeds startup state via `decodePalette`                           |
+| URL hash     | `#/share?p=<hex>-<hex>-…`            | `PosterFooter`'s `ShareButton` (write) / `src/skins/poster/share/parseShareHash.ts` (read) | the shared palette — the read-only share-page route; **not** a startup seed                           |
 
 ## JSON
 
@@ -103,7 +104,8 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
       "p4lette_saved_v1": "src/functions/saved_palettes.ts (cap 20)",
       "p4lette_saved_templates_v1": "src/functions/saved_templates.ts (cap 20)",
       "p4lette_seen_welcome_v1": "src/skins/poster/PosterSkin.tsx",
-      "p4lette_ticker_v1": "src/skins/poster/PosterSkin.tsx"
+      "p4lette_ticker_v1": "src/skins/poster/PosterSkin.tsx",
+      "p4lette_theme_v1": "src/skins/poster/PosterSkin.tsx (ThemeChoice system|light|dark — default system; resolved via matchMedia)"
     },
     "urlHash": {
       "editor": {
@@ -147,8 +149,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
       "terminal skin — removed (no src/ code; OG script no longer draws it; README copy stale)",
       "src/types/Colors.ts Colors/ColorProperty unused",
       "useViewport().isLandscape unused",
-      "context exportVisible/setExportVisible unused by UI",
-      "PosterNamingPicker.tsx — no live importer; kept for the settings drawer (PR-4)"
+      "context exportVisible/setExportVisible unused by UI"
     ],
     "gitignoredArtifacts": [
       "build/",

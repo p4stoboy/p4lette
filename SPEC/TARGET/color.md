@@ -22,7 +22,7 @@
   - `"default"` / `"rampensau"` — `"default"` ≡ `"rampensau"` with no `params` (the out-of-the-box sweep; the panel hides the tuning sliders for it). No `params` → the random bounds (`sRange ≈ [0.4–0.6, 0.72–0.9]`, `lRange ≈ [0.18–0.3, 0.8–0.9]`, `hCycles = (0.2 + rnd()*0.8)·(±1)`) via `generateColorRamp`; with `params` (only ever via `"rampensau"`) → those bounds via `generateColorRampWithCurve({…, curveMethod:"lamé", curveAccent})`. Either way `hStart = rnd()*360`, `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`. **A _coherent_ ramp (single hue arc, perceptual light→dark), not N randoms.**
   - `"poline"` — `new Poline({ numPoints: max(count,2), anchorColors: [a,b] })` with two `rnd`-derived anchors → `.colors` (`[h,s,l]`) → `hslToHex` → resampled to exactly `count` (private `resampleHexList` — evenly-spaced indices).
   - `"random"` — `count` independent `randomHex()` (the incoherent escape hatch).
-  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`) — and by `PosterToolsTray` (`GenerateBody`: `generatePalette`, `GEN_STRATEGIES`, `GenStrategy`, `RAMP_PARAM_META`, `RampParams`, `defaultRampParams`).
+  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`) — and by `PosterSettingsDrawer` (`settings/RandomiseSection`: `generatePalette`, `GEN_STRATEGIES`, `GenStrategy`, `RAMP_PARAM_META`, `RampParams`, `defaultRampParams`).
 
 ### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rampensau`** (`colorUtils.colorHarmonies`)
 
@@ -173,7 +173,7 @@
     ],
     "consumers": [
       "paletteReducer (seed + randomizeUnlocked, via state.genStrategy/genParams)",
-      "PosterToolsTray (GenerateBody)"
+      "PosterSettingsDrawer (settings/RandomiseSection)"
     ]
   },
   "harmony.ts": {
@@ -495,7 +495,7 @@ flowchart LR
   cc --> gp & hm & tn & ct & rt & pg & ps
   td --> tn
   gp --> red["paletteReducer — state.md"]
-  gp --> ttray["PosterToolsTray — spa.md"]
+  gp --> drawer["PosterSettingsDrawer — spa.md"]
   su --> red
   su --> pctx["PaletteContext — state.md"]
   su --> sharepg["share page reps + PosterFooter ShareButton — spa.md"]
