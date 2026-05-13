@@ -10,7 +10,6 @@ interface MenuProps {
   tickerVisible: boolean;
   onClose: () => void;
   onTheme: () => void;
-  onAdd: () => void;
   onRandomize: () => void;
   onSaved: () => void;
   onTools: () => void;
@@ -29,7 +28,6 @@ export const PosterMobileMenu = ({
   tickerVisible,
   onClose,
   onTheme,
-  onAdd,
   onRandomize,
   onSaved,
   onTools,
@@ -121,9 +119,6 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onNaming)}>
           NAMES · {nameList}
-        </Row>
-        <Row ink={ink} onClick={fire(onAdd)} bold>
-          ＋ ADD COLOR
         </Row>
         <Row ink={ink} onClick={fire(onRandomize)}>
           SHUFFLE UNLOCKED

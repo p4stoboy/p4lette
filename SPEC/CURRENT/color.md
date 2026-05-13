@@ -67,11 +67,13 @@
 - **`blendWith(hexes: string[], over: string, mode: BlendMode): string[]`** — `over` unparsable → input unchanged; else each `formatHex(blend([h, over], mode))` (composite `over` on top of the swatch).
 - Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`; `EffectsBody`: `EFFECTS`, `applyEffect`, `BLEND_MODES`, `BlendMode`, `blendWith`).
 
-### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`)
+### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`, `toGamut`)
 
 - `MixSpace = "oklch"|"lab"|"hsl"`; `MIX_SPACES` = `[{oklch,OKLCH},{lab,LAB},{hsl,HSL}]`. `MIX_STEPS = [3,5,7,9,11]`. `MixCurve = "even"|"ease-from"|"ease-to"`; `MIX_CURVES` = `[{even,EVEN},{ease-from,EASE FROM},{ease-to,EASE TO}]`; private `GAMMA = { even:1, "ease-from":1.8, "ease-to":0.55 }` (γ on the sample parameter — `>1` bunches steps toward FROM, `<1` toward TO).
 - **`mixSteps(a, b, n, space, curve): string[]`** — if either hex doesn't parse, fill `n` with the parsable one (or `#000000`). Else `itp = interpolate([a,b], space)` (culori's default hue fixup = shortest arc; `lab` has no hue), then `samples(n).map(t => formatHex(itp(t**GAMMA[curve])))`. Two stops → no polynomial spline; the curve just biases where the `n` samples land.
-- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`).
+- **`mixHex(a, b, t = 0.5): string`** — the OKLab `t`-point between two hexes (`t=0.5` = the Coolors-style midpoint), gamut-clamped into sRGB (module-level `intoSrgb = toGamut("rgb","oklch")`). Bad input falls back to the parsable arg, else `#000000`. `mixHex(a,a) ≈ a`.
+- **`extrapolateHex(anchor, neighbor, t = 0.6): string`** — step `t` of a unit _past_ `anchor`, away from `neighbor`, in OKLab (`interpolate([neighbor, anchor], "oklab")(1 + t)`) — continues a ramp past its endpoint — gamut-clamped into sRGB. Bad input falls back to the parsable arg, else `#000000`.
+- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`) and `PosterColumn` (`mixHex`/`extrapolateHex` — the "+" insert-between previews).
 
 ### `pigment.ts` — uses **`rybitten`** (`rybHsl2rgb`, `RYB_ITTEN`/`cubes` from `rybitten/cubes`) + `culori` `formatHex` + `color_converters` (`clamp`, `hexToHsl`)
 
@@ -305,15 +307,20 @@
     "consumers": ["PosterToolsTray (FixersBody · EffectsBody)"]
   },
   "color_mix.ts": {
-    "lib": "culori (interpolate · samples)",
+    "lib": "culori (interpolate · samples · toGamut)",
     "MixSpace": ["oklch", "lab", "hsl"],
     "MIX_STEPS": [3, 5, 7, 9, 11],
     "MixCurve": ["even", "ease-from", "ease-to"],
     "exports": [
       "MIX_SPACES, MIX_STEPS, MIX_CURVES, MixSpace, MixCurve",
-      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)"
+      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)",
+      "mixHex(a,b,t=0.5)→string (the OKLab t-point between, t=0.5 = Coolors-style midpoint; gamut-clamped via toGamut('rgb','oklch'); bad input → the parsable arg | #000000)",
+      "extrapolateHex(anchor,neighbor,t=0.6)→string (interpolate([neighbor,anchor],'oklab')(1+t) — a step past anchor away from neighbor, continuing a ramp past its end; gamut-clamped; bad input → the parsable arg | #000000)"
     ],
-    "consumers": ["PosterToolsTray (MixBody)"]
+    "consumers": [
+      "PosterToolsTray (MixBody)",
+      "PosterColumn (mixHex/extrapolateHex — the + insert previews)"
+    ]
   },
   "pigment.ts": {
     "lib": [

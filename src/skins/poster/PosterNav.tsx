@@ -18,7 +18,6 @@ interface NavProps {
   onTools: () => void;
   onExport: () => void;
   onRandomize: () => void;
-  onAdd: () => void;
   onMenu: () => void;
   onToggleTicker: () => void;
   savedCount: number;
@@ -35,7 +34,6 @@ export const PosterNav = ({
   onTools,
   onExport,
   onRandomize,
-  onAdd,
   onMenu,
   onToggleTicker,
   savedCount,
@@ -122,10 +120,7 @@ export const PosterNav = ({
         {tickerVisible ? "▼" : "▶"} TICKER
       </NavBtn>
       <div style={{ flex: 1, minWidth: 40 }} />
-      <NavBtn ink={ink} onClick={onAdd} bold large borderLeft width={RIGHT_W}>
-        ＋ ADD COLOR
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onRandomize} width={RIGHT_W}>
+      <NavBtn ink={ink} onClick={onRandomize} borderLeft width={RIGHT_W}>
         SHUFFLE
       </NavBtn>
       <NavBtn ink={ink} onClick={onTools} width={RIGHT_W}>

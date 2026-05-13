@@ -1,5 +1,6 @@
 import { DragEvent, useCallback, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
+import { ColorCardProps } from "../../types/ColorCardProps";
 import {
   SAVED_LIMIT,
   SavedPalette,
@@ -37,6 +38,16 @@ import { PosterNamingSheet } from "./PosterNamingSheet";
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 const TICKER_KEY = "p4lette_ticker_v1";
 
+// A hovered column widens to this so its EDIT/LOCK/REMOVE stack has room — but only
+// if its fair share of the strip (`stripW / palette.length`) is currently below it;
+// a few-colour strip is already roomy, so hovering one then changes no widths.
+const EXPAND_TARGET = 340;
+// The editing column's flex basis — the prototype's `min(max(EXPAND_TARGET·1.2, 45%),
+// 65%)`, in CSS so the `%` resolves against the strip without measuring it.
+const EDITING_FLEX = "0 0 min(max(408px, 45%), 65%)";
+// Don't freeze widths around an insert if doing so would crush the new colour below this.
+const MIN_NEW_COLUMN_PX = 120;
+
 const readSeenWelcome = (): boolean => {
   if (typeof localStorage === "undefined") return true;
   try {
@@ -72,6 +83,7 @@ export const PosterSkin = () => {
     names,
     resolvedTemplate,
     addColor,
+    insertColor,
     deleteColor,
     updateColor,
     reorderColor,
@@ -104,6 +116,15 @@ export const PosterSkin = () => {
   // True while the desktop side-panel slot is playing its slide-away exit; the
   // show* flags drop in the slot's onAnimationEnd. (Mobile panels self-animate.)
   const [panelClosing, setPanelClosing] = useState(false);
+  // Strip-level state for the per-column hover-expand + the Coolors-style insert.
+  // `hoveredId`/`frozen` track by `dataId` — stable across `insertColor`'s id-renumber.
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredExpands, setHoveredExpands] = useState(false);
+  const [frozen, setFrozen] = useState<{
+    side: "left" | "right";
+    widths: Record<string, number>;
+  } | null>(null);
+  const colRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const toggleTicker = useCallback(() => {
     setTickerVisible((v) => {
@@ -289,6 +310,75 @@ export const PosterSkin = () => {
     letterSpacing: "-0.02em",
   });
 
+  // --- per-column hover-expand + insert-between ---------------------------------
+  // Cursor entered / left a column. On enter (when not mid-insert): track it, and
+  // grow it to EXPAND_TARGET iff its fair share of the strip is currently narrower
+  // than that. On leave of the tracked column: drop the expand and any post-insert
+  // width freeze. While `frozen`, a *different* column entering is ignored — the
+  // just-inserted one appears under the cursor and must not steal the hover.
+  const handleColumnHover = (dataId: string, hovered: boolean) => {
+    if (!hovered) {
+      if (hoveredId === dataId) {
+        setHoveredId(null);
+        setHoveredExpands(false);
+        setFrozen(null);
+      }
+      return;
+    }
+    if (frozen) return;
+    const w = paletteRef.current?.getBoundingClientRect().width ?? 0;
+    setHoveredId(dataId);
+    setHoveredExpands(w > 0 && w / palette.length < EXPAND_TARGET);
+  };
+
+  // Insert a colour next to the column at `index`. `side` is which side stays put:
+  // a left-"+" inserts before the column (pin it + everything right → "right"); a
+  // right-"+" inserts after it (pin it + everything left → "left"). Snapshot the
+  // current widths so the pinned side doesn't move while the new colour grows into
+  // the fluid side — unless that would crush the new colour, in which case just
+  // rebalance. Closes any open editor (an insert renumbers ids, which `editingId`
+  // is keyed by).
+  const freezeAndInsert = (
+    index: number,
+    side: "left" | "right",
+    hex: string,
+  ) => {
+    const w = paletteRef.current?.getBoundingClientRect().width ?? 0;
+    const widths: Record<string, number> = {};
+    for (const c of palette) {
+      const node = colRefs.current[c.dataId];
+      if (node) widths[c.dataId] = node.getBoundingClientRect().width;
+    }
+    const pinnedCols =
+      side === "right" ? palette.slice(index) : palette.slice(0, index + 1);
+    const pinnedTotal = pinnedCols.reduce(
+      (s, c) => s + (widths[c.dataId] ?? 0),
+      0,
+    );
+    const fluidCount = palette.length + 1 - pinnedCols.length;
+    const newColShare = fluidCount > 0 ? (w - pinnedTotal) / fluidCount : 0;
+    if (w > 0 && newColShare >= MIN_NEW_COLUMN_PX) setFrozen({ side, widths });
+    else setFrozen(null);
+    setEditingId(null);
+    insertColor(side === "right" ? index : index + 1, hex);
+  };
+
+  // The flex shorthand for the column at index `i`: editing → EDITING_FLEX; mid-insert
+  // → frozen-side columns keep their snapshot px, the rest go fluid; hover-expanded →
+  // EXPAND_TARGET px; else → fluid.
+  const flexFor = (c: ColorCardProps, i: number): string => {
+    if (editingId === c.id) return EDITING_FLEX;
+    if (frozen) {
+      const hi = palette.findIndex((p) => p.dataId === hoveredId);
+      const pinned = hi >= 0 && (frozen.side === "right" ? i >= hi : i <= hi);
+      const w = frozen.widths[c.dataId];
+      return pinned && w != null ? `0 0 ${w}px` : "1 1 0";
+    }
+    if (c.dataId === hoveredId && hoveredExpands)
+      return `0 0 ${EXPAND_TARGET}px`;
+    return "1 1 0";
+  };
+
   // Tools / export / save-load. On desktop these go in the content row's
   // side-panel slot (sized + slid in/out by that slot — see the render); on
   // mobile they're overlay siblings (self-animating). Mutually exclusive
@@ -367,7 +457,6 @@ export const PosterSkin = () => {
         onTools={openTools}
         onExport={openExport}
         onRandomize={randomizeUnlocked}
-        onAdd={() => addColor()}
         onMenu={() => setShowMenu(true)}
         onToggleTicker={toggleTicker}
         savedCount={savedList.length}
@@ -457,6 +546,15 @@ export const PosterSkin = () => {
                 index={i}
                 editing={editingId === c.id}
                 nameFontSize={nameFontSize}
+                flexDecl={flexFor(c, i)}
+                leftHex={palette[i - 1]?.hex}
+                rightHex={palette[i + 1]?.hex}
+                columnRef={(el) => {
+                  if (el) colRefs.current[c.dataId] = el;
+                }}
+                onHoverChange={(h) => handleColumnHover(c.dataId, h)}
+                onInsertLeft={(hex) => freezeAndInsert(i, "right", hex)}
+                onInsertRight={(hex) => freezeAndInsert(i, "left", hex)}
                 onEdit={() => {
                   setEditingId(c.id);
                   setLastEditedId(c.id);
@@ -544,7 +642,6 @@ export const PosterSkin = () => {
           tickerVisible={tickerVisible}
           onClose={() => setShowMenu(false)}
           onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-          onAdd={() => addColor()}
           onRandomize={randomizeUnlocked}
           onSaved={openSaved}
           onTools={openTools}
