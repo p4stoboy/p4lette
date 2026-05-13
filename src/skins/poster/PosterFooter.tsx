@@ -82,11 +82,9 @@ export const PosterFooter = ({ palette, ink, onAbout }: Props) => {
         )}
       </Stat>
       <div style={{ flex: 1 }} />
-      <Stat ink={ink} label="INFO">
-        <FooterLink ink={ink} onClick={onAbout}>
-          ABOUT
-        </FooterLink>
-      </Stat>
+      <FooterBtn ink={ink} onClick={onAbout}>
+        ABOUT
+      </FooterBtn>
       <Stat ink={ink} label="SHARE" right>
         <ShareButton ink={ink} palette={palette} />
       </Stat>
@@ -94,7 +92,8 @@ export const PosterFooter = ({ palette, ink, onAbout }: Props) => {
   );
 };
 
-const FooterLink = ({
+// A footer-sized version of the top-nav button — hover inverts to ink/bg.
+const FooterBtn = ({
   ink,
   onClick,
   children,
@@ -102,25 +101,33 @@ const FooterLink = ({
   ink: string;
   onClick: () => void;
   children: ReactNode;
-}) => (
-  <button
-    onClick={onClick}
-    style={{
-      background: "transparent",
-      border: "none",
-      color: ink,
-      font: "inherit",
-      letterSpacing: "inherit",
-      textTransform: "inherit",
-      padding: 0,
-      cursor: "pointer",
-      textDecoration: "underline",
-      textUnderlineOffset: 2,
-    }}
-  >
-    {children}
-  </button>
-);
+}) => {
+  const [hov, setHov] = useState(false);
+  const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        fontFamily: POSTER.body,
+        fontWeight: 700,
+        fontSize: 11,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        padding: "10px 18px",
+        border: "none",
+        borderLeft: `${POSTER.borderW}px solid ${ink}`,
+        background: hov ? ink : "transparent",
+        color: hov ? invert : ink,
+        cursor: "pointer",
+        transition: "background .12s, color .12s",
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
 const ShareButton = ({ ink, palette }: { ink: string; palette: Palette }) => {
   const [label, setLabel] = useState("URL ↗");

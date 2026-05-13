@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Backdrop, SmallBtn } from "./Backdrop";
+import { useExitAnimation } from "../../hooks/use_exit_animation";
 import { POSTER } from "./tokens";
 
 interface Props {
@@ -15,12 +16,13 @@ interface Props {
   onClose: () => void;
 }
 
-// The preferences drawer. PR-3 ships the shell plus the bits that used to live
-// in the nav: Appearance (LIGHT|DARK), Display (ticker on/off) and a link to
-// the saved-palettes panel. PR-4 fills in palette name + save, the saved list
-// inline, the SYSTEM theme option, the colour-format picker, the randomise-
-// strategy picker and the naming gallery. Desktop: a ~380px right-docked
-// panel; mobile: a bottom sheet.
+// The preferences drawer. On desktop it docks in PosterSkin's content-row
+// side-panel slot (a bare flex column — the slot supplies the borderLeft +
+// the slide-in, like the other side panels); on mobile it's a Backdrop-backed
+// bottom sheet. PR-3 holds Appearance (LIGHT|DARK), Display (ticker on/off)
+// and a link to the saved-palettes panel; PR-4 fills in palette name + save,
+// the saved list inline, the SYSTEM theme option, the colour-format picker,
+// the randomise-strategy picker and the naming gallery.
 export const PosterSettingsDrawer = ({
   ink,
   bg,
@@ -32,33 +34,43 @@ export const PosterSettingsDrawer = ({
   savedCount,
   onManageSaved,
   onClose,
-}: Props) => (
-  <Backdrop onClose={onClose} align={isMobile ? "bottom" : "right"}>
-    <style>{`@keyframes settingsInRight { from { transform: translateX(100%); } to { transform: translateX(0); } } @keyframes settingsInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+}: Props) => {
+  const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
+  const body = (
     <div
       onClick={(e) => e.stopPropagation()}
-      style={{
-        background: bg,
-        color: ink,
-        borderLeft: isMobile ? "none" : `${POSTER.borderW}px solid ${ink}`,
-        borderTop: isMobile ? `${POSTER.borderW}px solid ${ink}` : "none",
-        width: isMobile ? "100%" : 380,
-        maxWidth: "100%",
-        height: isMobile ? "78%" : "100%",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: isMobile
-          ? `0 -10px 0 ${POSTER.accent}`
-          : `-12px 0 0 ${POSTER.accent}`,
-        animation: isMobile
-          ? "settingsInUp .22s cubic-bezier(.2,.7,.3,1)"
-          : "settingsInRight .24s cubic-bezier(.2,.7,.3,1)",
-      }}
+      onAnimationEnd={isMobile ? onAnimationEnd : undefined}
+      style={
+        isMobile
+          ? {
+              background: bg,
+              color: ink,
+              borderTop: `${POSTER.borderW}px solid ${ink}`,
+              width: "100%",
+              maxWidth: "100vw",
+              maxHeight: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              animation: closing
+                ? "settingsSheetDown .2s cubic-bezier(.4,0,.6,1) forwards"
+                : "settingsSheetUp .26s cubic-bezier(.2,.7,.3,1)",
+            }
+          : {
+              background: bg,
+              color: ink,
+              width: "100%",
+              height: "100%",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }
+      }
     >
+      <style>{`@keyframes settingsSheetUp { from { transform: translateY(100%); } } @keyframes settingsSheetDown { to { transform: translateY(100%); } }`}</style>
       <div
         style={{
           borderBottom: `${POSTER.borderW}px solid ${ink}`,
-          padding: "14px 18px",
+          padding: isMobile ? "16px 22px" : "14px 24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -68,23 +80,24 @@ export const PosterSettingsDrawer = ({
         <div
           style={{
             fontFamily: POSTER.display,
-            fontSize: 22,
-            letterSpacing: "-0.01em",
+            fontSize: isMobile ? 28 : 34,
+            letterSpacing: "-0.02em",
           }}
         >
           SETTINGS
         </div>
         <button
-          onClick={onClose}
+          onClick={isMobile ? requestClose : onClose}
           aria-label="close settings"
           style={{
             background: "none",
-            border: isMobile ? `2px solid ${ink}` : "none",
-            fontSize: 22,
-            cursor: "pointer",
+            border: `2px solid ${ink}`,
             color: ink,
-            width: isMobile ? 44 : undefined,
-            height: isMobile ? 44 : undefined,
+            width: isMobile ? 44 : 34,
+            height: isMobile ? 44 : 34,
+            fontSize: isMobile ? 22 : 18,
+            fontWeight: 700,
+            cursor: "pointer",
             touchAction: "manipulation",
           }}
         >
@@ -161,8 +174,16 @@ export const PosterSettingsDrawer = ({
         </Section>
       </div>
     </div>
-  </Backdrop>
-);
+  );
+
+  return isMobile ? (
+    <Backdrop onClose={requestClose} align="bottom">
+      {body}
+    </Backdrop>
+  ) : (
+    body
+  );
+};
 
 interface SectionProps {
   ink: string;
@@ -174,7 +195,7 @@ const Section = ({ ink, title, children }: SectionProps) => (
   <div
     style={{
       borderBottom: `1px solid ${ink}`,
-      padding: "16px 18px",
+      padding: "16px 24px",
     }}
   >
     <div
