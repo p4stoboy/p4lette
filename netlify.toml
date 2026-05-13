@@ -1,0 +1,33 @@
+# Netlify deploy configuration.
+#
+# The SPA is a static Vite build. Two Edge Functions sit in front of it:
+#   /share?p=… → `share-html` rewrites the OG/Twitter meta tags in dist/index.html
+#                so each shared palette gets its own scraper preview. Browsers
+#                receive the same HTML and the SPA hydrates into PosterSharePage.
+#   /og?p=…    → `og-image` renders a 1200×630 PNG of the palette via satori +
+#                resvg-wasm. Cached aggressively (deterministic from `?p=`).
+#
+# Bare URLs (/, /index.html) hit the static SPA and the static /og.png from
+# `scripts/generate-og.mjs` (a Puppeteer screenshot of the landing page).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: client-routed paths have no static file in dist/, so without
+# this rewrite Netlify serves its 404 page for /share. The 200 means the URL
+# stays /share (no redirect chain) and the browser receives index.html. The
+# edge function on /share still fires first; its `ctx.next()` then follows
+# this rewrite to fetch index.html, which it rewrites and returns.
+[[redirects]]
+  from = "/share"
+  to = "/index.html"
+  status = 200
+
+[[edge_functions]]
+  path = "/share"
+  function = "share-html"
+
+[[edge_functions]]
+  path = "/og"
+  function = "og-image"

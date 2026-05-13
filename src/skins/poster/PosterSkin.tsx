@@ -204,8 +204,8 @@ export const PosterSkin = () => {
   // clipboard write *is* the feedback.
   const handleShareLink = useCallback(async () => {
     const enc = encodePalette(palette);
-    const base = window.location.origin + window.location.pathname;
-    const url = enc ? `${base}#/share?p=${enc}` : base;
+    const origin = window.location.origin;
+    const url = enc ? `${origin}/share?p=${enc}` : origin + "/";
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ url, title: "P4LETTE" });
