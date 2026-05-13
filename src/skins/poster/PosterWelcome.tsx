@@ -9,7 +9,7 @@ interface Props {
 }
 
 const KEYMAP: ReadonlyArray<readonly [string, string]> = [
-  ["SPACE", "Shuffle unlocked colors"],
+  ["SPACE", "Randomise unlocked colors"],
   ["TAP", "Edit a color inline"],
   ["DRAG", "Reorder columns"],
   ["L", "Lock a color"],
@@ -94,9 +94,9 @@ export const PosterWelcome = ({ ink, bg, isMobile, onClose }: Props) => (
             marginTop: 14,
           }}
         >
-          P4LETTE is a small, opinionated palette tool. Generate, shuffle, lock,
-          edit and export — then steal the result into whatever you&apos;re
-          building.
+          P4LETTE is a small, opinionated palette tool. Generate, randomise,
+          lock, edit and export — then steal the result into whatever
+          you&apos;re building.
         </p>
       </div>
       {!isMobile && (
