@@ -356,7 +356,7 @@ const InsertEdge = ({
         position: "absolute",
         top: "50%",
         ...(side === "left" ? { left: 0 } : { right: 0 }),
-        transform: hov ? "translateY(-50%) scale(1.04)" : "translateY(-50%)",
+        transform: "translateY(-50%)",
         width: "calc(50% - 8px)",
         maxWidth: 120,
         height: "40%",
@@ -373,9 +373,7 @@ const InsertEdge = ({
         fontSize: 56,
         lineHeight: 1,
         cursor: "pointer",
-        boxShadow: hov ? "0 8px 24px rgba(0,0,0,.28)" : "none",
-        transition:
-          "background .15s ease, opacity .15s ease, transform .15s ease, box-shadow .15s ease",
+        transition: "background .15s ease, opacity .15s ease",
         zIndex: 2,
       }}
     >
