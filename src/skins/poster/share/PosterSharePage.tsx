@@ -5,7 +5,7 @@ import {
 } from "../../../functions/get_color_card_props";
 import { useViewport } from "../../../hooks/use_viewport";
 import { POSTER } from "../tokens";
-import { parseShareHash } from "./parseShareHash";
+import { parseShareSearch } from "./parseShareSearch";
 import { ShareMosaic } from "./ShareMosaic";
 import { ShareContrastMatrix } from "./ShareContrastMatrix";
 import { ShareWheel } from "./ShareWheel";
@@ -19,7 +19,7 @@ import { ShareLine } from "./ShareLine";
 import { ShareDots } from "./ShareDots";
 
 interface Props {
-  hash: string;
+  search: string;
 }
 
 const enc = (hexes: string[]): string => hexes.map((h) => h.slice(1)).join("-");
@@ -149,25 +149,24 @@ const DESKTOP_BENTO: CSSProperties = {
 // representations reachable at `…#/share?p=rrggbb-…`. No PaletteContext: the
 // palette comes straight from the hash. Desktop = an irregular grid; mobile =
 // one column. An "open in p4lette" link leads back to the editor.
-export const PosterSharePage = ({ hash }: Props) => {
+export const PosterSharePage = ({ search }: Props) => {
   const ink = POSTER.ink;
   const bg = POSTER.bg;
   const { isMobile } = useViewport();
-  const hexes = parseShareHash(hash);
+  const hexes = parseShareSearch(search);
   const [names, setNames] = useState<string[] | null>(null);
   const [namesLabel, setNamesLabel] = useState("SHOW NAMES");
-  const path = typeof window === "undefined" ? "/" : window.location.pathname;
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   // Esc → leave the share page. `history.back()` when there's anywhere to go
-  // back to (the user navigated here from the editor); otherwise clear the
-  // hash and let `App`'s `hashchange` listener fall through to the editor (a
-  // fresh tab opened straight to the share URL).
+  // back to (the user navigated here from the editor); otherwise a full
+  // navigation to the editor root (no SPA-internal route to fall through to
+  // now that the route is path-based — and a fresh tab → root reload is fine).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (window.history.length > 1) window.history.back();
-      else window.location.hash = "";
+      else window.location.assign("/");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -193,7 +192,7 @@ export const PosterSharePage = ({ hash }: Props) => {
           NOTHING TO SHOW.
         </div>
         <a
-          href={path}
+          href="/"
           style={{
             color: ink,
             fontWeight: 700,
@@ -207,8 +206,8 @@ export const PosterSharePage = ({ hash }: Props) => {
     );
   }
 
-  const editorHref = `${path}#p=${enc(hexes)}`;
-  const shareHref = `${origin}${path}#/share?p=${enc(hexes)}`;
+  const editorHref = `/#p=${enc(hexes)}`;
+  const shareHref = `${origin}/share?p=${enc(hexes)}`;
 
   const showNames = () => {
     if (names) return;
@@ -329,7 +328,7 @@ export const PosterSharePage = ({ hash }: Props) => {
             label="COPY HEXES"
             text={hexes.map((h) => h.toUpperCase()).join(", ")}
           />
-          <a href={path} style={{ fontSize: 11, opacity: 0.7, color: ink }}>
+          <a href="/" style={{ fontSize: 11, opacity: 0.7, color: ink }}>
             made with p4lette
           </a>
         </span>

@@ -100,7 +100,7 @@
 
 ### `share_url.ts` — pure
 
-- `HEX_RE = /^#[0-9a-f]{6}$/i`. `encodePalette(palette): string` → `palette.map(c => c.hex.replace("#","")).join("-")` (e.g. `ff0000-00ff00-0000ff`; **6-digit only — assumes normalised hexes**). `decodePalette(raw): string[] | null` → strip a leading `#?p=`; `""` → null; split on `-`, drop empties, prefix `#`, **keep only `HEX_RE` matches**, lowercase; `null` if none survive. So a partly-garbage hash yields the valid subset; an all-garbage hash → `null`. Consumed by `PaletteContext` (`encodePalette` in the hash effect), `paletteReducer` (`decodePalette` in `createPaletteState`), `src/skins/poster/share/parseShareHash.ts` (`decodePalette` of just the `?p=` query value — **never the raw `#/share?p=…` string**; see `spa.md`), and `PosterFooter`'s `ShareButton` (`encodePalette` for the `#/share?p=…` link).
+- `HEX_RE = /^#[0-9a-f]{6}$/i`. `encodePalette(palette): string` → `palette.map(c => c.hex.replace("#","")).join("-")` (e.g. `ff0000-00ff00-0000ff`; **6-digit only — assumes normalised hexes**). `decodePalette(raw): string[] | null` → strip a leading `#?p=`; `""` → null; split on `-`, drop empties, prefix `#`, **keep only `HEX_RE` matches**, lowercase; `null` if none survive. So a partly-garbage hash yields the valid subset; an all-garbage hash → `null`. Consumed by `PaletteContext` (`encodePalette` in the hash effect), `paletteReducer` (`decodePalette` in `createPaletteState`), `src/skins/poster/share/parseShareSearch.ts` (`decodePalette` of just the `?p=` query value — **never the raw `?p=…` string**; see `spa.md`), `PosterFooter`'s `ShareButton` (`encodePalette` for the `${origin}/share?p=…` path-form link), and `PosterSkin`'s `handleShareLink` (same).
 
 ### `palette_stats.ts` — pure (depends on `color_converters` + `contrast`)
 
@@ -407,8 +407,8 @@
     "consumers": [
       "PaletteContext (encode, hash effect)",
       "paletteReducer (decode, createPaletteState)",
-      "parseShareHash (decode of the ?p= value — never the raw #/share?p= string)",
-      "PosterFooter ShareButton (encode for the #/share?p= link)"
+      "parseShareSearch (decode of the ?p= value — never the raw ?p= string)",
+      "PosterFooter ShareButton + PosterSkin handleShareLink (encode for the path-form ${origin}/share?p= link)"
     ]
   },
   "get_color_card_props.ts": {

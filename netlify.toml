@@ -1,0 +1,23 @@
+# Netlify deploy configuration.
+#
+# The SPA is a static Vite build. Two Edge Functions sit in front of it:
+#   /share?p=… → `share-html` rewrites the OG/Twitter meta tags in dist/index.html
+#                so each shared palette gets its own scraper preview. Browsers
+#                receive the same HTML and the SPA hydrates into PosterSharePage.
+#   /og?p=…    → `og-image` renders a 1200×630 PNG of the palette via satori +
+#                resvg-wasm. Cached aggressively (deterministic from `?p=`).
+#
+# Bare URLs (/, /index.html) hit the static SPA and the static /og.png from
+# `scripts/generate-og.mjs` (a Puppeteer screenshot of the landing page).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[edge_functions]]
+  path = "/share"
+  function = "share-html"
+
+[[edge_functions]]
+  path = "/og"
+  function = "og-image"
