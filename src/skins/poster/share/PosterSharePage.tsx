@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useState } from "react";
 import {
   DEFAULT_NAME_LIST,
   getColorNames,
@@ -158,6 +158,20 @@ export const PosterSharePage = ({ hash }: Props) => {
   const [namesLabel, setNamesLabel] = useState("SHOW NAMES");
   const path = typeof window === "undefined" ? "/" : window.location.pathname;
   const origin = typeof window === "undefined" ? "" : window.location.origin;
+
+  // Esc → leave the share page. `history.back()` when there's anywhere to go
+  // back to (the user navigated here from the editor); otherwise clear the
+  // hash and let `App`'s `hashchange` listener fall through to the editor (a
+  // fresh tab opened straight to the share URL).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (window.history.length > 1) window.history.back();
+      else window.location.hash = "";
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   if (!hexes || hexes.length === 0) {
     return (
