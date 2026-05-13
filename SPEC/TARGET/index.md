@@ -174,7 +174,7 @@ flowchart TD
   app -->|"#/share?p="| share["PosterSharePage — spa.md (no Provider)"]
   app -->|else| prov["Provider — src/context (state.md)"]
   prov --> skin["PosterSkin — src/skins/poster (spa.md)"]
-  share -->|"parseShareHash·iso_cube·fontColorFor·decodePalette"| fns
+  share -->|"parseShareHash · contrast · tones · color_filters · resolveTemplate · palette_stats"| fns
   share -.->|"getColorNames (opt-in)"| pizza
   prov <-->|reducer + effects| persist[("localStorage keys + URL #p= hash")]
   prov -->|getColorNames / loadColorLists| pizza{{"color.pizza HTTP API"}}

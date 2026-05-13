@@ -13,8 +13,6 @@ describe("App routing", () => {
     expect(
       screen.getByRole("link", { name: /open in p4lette/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: /isometric stack/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /mosaic/i })).toBeInTheDocument();
   });
 });
