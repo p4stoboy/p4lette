@@ -58,6 +58,68 @@ describe("paletteReducer", () => {
     expect(result.names).toEqual(["SKY", "MIDNIGHT", "..."]);
   });
 
+  it("insertColor splices at the index, renumbers ids, keeps names aligned", () => {
+    const result = paletteReducer(baseState(), {
+      type: "insertColor",
+      index: 1,
+      hex: "#445566",
+    });
+    expect(result.palette.map((c) => c.hex)).toEqual([
+      "#aabbcc",
+      "#445566",
+      "#112233",
+    ]);
+    expect(result.palette.map((c) => c.id)).toEqual([0, 1, 2]);
+    expect(result.names).toEqual(["SKY", "...", "MIDNIGHT"]);
+  });
+
+  it("insertColor at index 0 prepends; at index === length appends", () => {
+    const a = paletteReducer(baseState(), {
+      type: "insertColor",
+      index: 0,
+      hex: "#111111",
+    });
+    expect(a.palette.map((c) => c.hex)).toEqual([
+      "#111111",
+      "#aabbcc",
+      "#112233",
+    ]);
+    expect(a.names).toEqual(["...", "SKY", "MIDNIGHT"]);
+    const b = paletteReducer(baseState(), {
+      type: "insertColor",
+      index: 2,
+      hex: "#222222",
+    });
+    expect(b.palette.map((c) => c.hex)).toEqual([
+      "#aabbcc",
+      "#112233",
+      "#222222",
+    ]);
+  });
+
+  it("insertColor clamps an out-of-range index", () => {
+    const a = paletteReducer(baseState(), {
+      type: "insertColor",
+      index: 99,
+      hex: "#333333",
+    });
+    expect(a.palette.map((c) => c.hex)).toEqual([
+      "#aabbcc",
+      "#112233",
+      "#333333",
+    ]);
+    const b = paletteReducer(baseState(), {
+      type: "insertColor",
+      index: -5,
+      hex: "#444444",
+    });
+    expect(b.palette.map((c) => c.hex)).toEqual([
+      "#444444",
+      "#aabbcc",
+      "#112233",
+    ]);
+  });
+
   it("deletes by id and renumbers", () => {
     const result = paletteReducer(baseState(), { type: "deleteColor", id: 0 });
     expect(result.palette).toHaveLength(1);

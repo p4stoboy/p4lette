@@ -3,24 +3,26 @@ import { Palette } from "../../types/Palette";
 import { contrast } from "../../functions/contrast";
 import { encodePalette } from "../../functions/share_url";
 import { POSTER } from "./tokens";
-import { PosterNamingPicker } from "./PosterNamingPicker";
-import { PosterModePicker } from "./PosterModePicker";
 
 interface Props {
   palette: Palette;
   ink: string;
-  bg: string;
+  onAbout: () => void;
 }
 
-export const PosterFooter = ({ palette, ink, bg }: Props) => {
-  let worst = { ratio: 99, a: "", b: "" };
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+export const PosterFooter = ({ palette, ink, onAbout }: Props) => {
+  // Lowest-contrast pair in the palette — track the swatch indices so the chip
+  // can name them (`#01 ↔ #04`) and show their colours side by side.
+  let worst = { ratio: Infinity, ia: -1, ib: -1 };
   for (let i = 0; i < palette.length; i++) {
     for (let j = i + 1; j < palette.length; j++) {
       const r = contrast(palette[i].hex, palette[j].hex);
-      if (r < worst.ratio)
-        worst = { ratio: r, a: palette[i].hex, b: palette[j].hex };
+      if (r < worst.ratio) worst = { ratio: r, ia: i, ib: j };
     }
   }
+  const hasPair = worst.ia >= 0 && worst.ib >= 0;
   const grade =
     worst.ratio >= 7
       ? "AAA"
@@ -45,35 +47,85 @@ export const PosterFooter = ({ palette, ink, bg }: Props) => {
         textTransform: "uppercase",
       }}
     >
-      <Stat ink={ink} label="LIVE">
-        <span
-          style={{
-            display: "inline-block",
-            width: 8,
-            height: 8,
-            background: "#22c55e",
-            borderRadius: 4,
-            marginRight: 6,
-          }}
-        />
-        STREAMING
-      </Stat>
-      <Stat ink={ink} label="CONTRAST">
-        <span style={{ color: gradeColor, fontWeight: 700 }}>
-          {worst.ratio.toFixed(2)}:1 · {grade}
-        </span>
-      </Stat>
-      <Stat ink={ink} label="MODE">
-        <PosterModePicker ink={ink} bg={bg} />
-      </Stat>
-      <Stat ink={ink} label="NAMING">
-        <PosterNamingPicker ink={ink} bg={bg} />
+      <Stat ink={ink} label="LOWEST CONTRAST">
+        {hasPair ? (
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 10 }}
+          >
+            <span
+              style={{ display: "inline-flex", border: `2px solid ${ink}` }}
+            >
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  background: palette[worst.ia].hex,
+                }}
+              />
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  background: palette[worst.ib].hex,
+                }}
+              />
+            </span>
+            <span>
+              #{pad2(worst.ia + 1)} ↔ #{pad2(worst.ib + 1)}
+            </span>
+            <span style={{ color: gradeColor, fontWeight: 700 }}>
+              {worst.ratio.toFixed(2)}:1 · {grade}
+            </span>
+          </span>
+        ) : (
+          <span style={{ opacity: 0.5 }}>—</span>
+        )}
       </Stat>
       <div style={{ flex: 1 }} />
+      <FooterBtn ink={ink} onClick={onAbout}>
+        ABOUT
+      </FooterBtn>
       <Stat ink={ink} label="SHARE" right>
         <ShareButton ink={ink} palette={palette} />
       </Stat>
     </div>
+  );
+};
+
+// A footer-sized version of the top-nav button — hover inverts to ink/bg.
+const FooterBtn = ({
+  ink,
+  onClick,
+  children,
+}: {
+  ink: string;
+  onClick: () => void;
+  children: ReactNode;
+}) => {
+  const [hov, setHov] = useState(false);
+  const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        fontFamily: POSTER.body,
+        fontWeight: 700,
+        fontSize: 11,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        padding: "10px 18px",
+        border: "none",
+        borderLeft: `${POSTER.borderW}px solid ${ink}`,
+        background: hov ? ink : "transparent",
+        color: hov ? invert : ink,
+        cursor: "pointer",
+        transition: "background .12s, color .12s",
+      }}
+    >
+      {children}
+    </button>
   );
 };
 

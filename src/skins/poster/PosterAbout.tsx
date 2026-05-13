@@ -93,9 +93,9 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
             maxWidth: 480,
           }}
         >
-          P4LETTE is a one-page color palette tool. Drag, click, lock, shuffle,
-          name, and export. No accounts. No newsletters. No &quot;premium
-          tier.&quot;
+          P4LETTE is a one-page color palette tool. Drag, click, lock,
+          randomise, name, and export. No accounts. No newsletters. No
+          &quot;premium tier.&quot;
         </p>
         <a
           href="https://github.com/p4stoboy/p4lette"
@@ -141,8 +141,8 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
           }}
         >
           <AboutBlock ink={ink} title="HOW TO">
-            Click a column to edit. Drag to reorder. Hit shuffle to randomize
-            the unlocked ones. Save what you love to the vault. Export as code,
+            Click a column to edit. Drag to reorder. Hit RANDOMISE to reroll the
+            unlocked ones. Save what you love to the vault. Export as code,
             JSON, CSS — start from a preset or shape your own template.
           </AboutBlock>
           <AboutBlock ink={ink} title="WHY">
@@ -219,12 +219,12 @@ export const PosterAbout = ({ ink, bg, isMobile, onClose }: Props) => (
               <Ref ink={ink} href="https://github.com/meodai/rampensau">
                 rampensau
               </Ref>{" "}
-              powers <strong>SHUFFLE</strong>, the HSV harmonies and the
+              powers <strong>RANDOMISE</strong>, the HSV harmonies and the
               GENERATIVE tone;{" "}
               <Ref ink={ink} href="https://github.com/meodai/poline">
                 poline
               </Ref>{" "}
-              is the POLINE ANCHORS shuffle strategy; and{" "}
+              is the POLINE ANCHORS randomise strategy; and{" "}
               <Ref ink={ink} href="https://color.pizza/">
                 color.pizza
               </Ref>{" "}

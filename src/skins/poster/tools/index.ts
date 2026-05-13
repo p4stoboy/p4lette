@@ -6,7 +6,6 @@ import { FixersBody } from "./FixersBody";
 import { PigmentBody } from "./PigmentBody";
 import { MixBody } from "./MixBody";
 import { EffectsBody } from "./EffectsBody";
-import { GenerateBody } from "./GenerateBody";
 
 export type { BodyProps };
 export { subHeaderStyle, pillRowStyle, pillRowLabelStyle } from "./styles";
@@ -19,6 +18,7 @@ export interface TraySection {
 
 // The TOOLS-tray sections, in display order. Adding / renaming / removing a tool
 // is a one-line change here — see the SPEC-workflow note in `SPEC/CURRENT/index.md`.
+// (The randomise-strategy picker lives in the settings drawer, not here.)
 export const TRAY_SECTIONS: readonly TraySection[] = [
   { key: "harmony", label: "HARMONY", Body: HarmonyBody },
   { key: "tones", label: "TONES", Body: TonesBody },
@@ -26,5 +26,4 @@ export const TRAY_SECTIONS: readonly TraySection[] = [
   { key: "pigment", label: "PIGMENT", Body: PigmentBody },
   { key: "mix", label: "MIX", Body: MixBody },
   { key: "effects", label: "EFFECTS", Body: EffectsBody },
-  { key: "shuffle", label: "SHUFFLE SETTINGS", Body: GenerateBody },
 ];

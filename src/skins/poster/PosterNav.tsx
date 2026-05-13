@@ -1,44 +1,28 @@
 import { ReactNode, useState } from "react";
+import { fontColorFor } from "../../functions/contrast";
 import { POSTER } from "./tokens";
 
-// Fixed widths so each nav cluster reads as a uniform block: the three
-// left-side toggles share LEFT_W, the right-side actions share RIGHT_W.
-const LEFT_W = 124;
-const RIGHT_W = 172;
+// Fixed width so the right-side verb cluster reads as a uniform block.
+const RIGHT_W = 168;
 
 interface NavProps {
   ink: string;
-  bg: string;
-  isDark: boolean;
   compact: boolean;
-  tickerVisible: boolean;
-  onTheme: () => void;
-  onAbout: () => void;
-  onSaved: () => void;
+  onSettings: () => void;
   onTools: () => void;
   onExport: () => void;
   onRandomize: () => void;
-  onAdd: () => void;
   onMenu: () => void;
-  onToggleTicker: () => void;
-  savedCount: number;
 }
 
 export const PosterNav = ({
   ink,
-  isDark,
   compact,
-  tickerVisible,
-  onTheme,
-  onAbout,
-  onSaved,
+  onSettings,
   onTools,
   onExport,
   onRandomize,
-  onAdd,
   onMenu,
-  onToggleTicker,
-  savedCount,
 }: NavProps) => {
   if (compact) {
     return (
@@ -112,30 +96,25 @@ export const PosterNav = ({
       >
         P4<span style={{ color: POSTER.accent }}>★</span>LETTE
       </div>
-      <NavBtn ink={ink} onClick={onTheme} width={LEFT_W}>
-        {isDark ? "☀" : "☾"} {isDark ? "LIGHT" : "DARK"}
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onAbout} width={LEFT_W}>
-        ABOUT
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onToggleTicker} width={LEFT_W}>
-        {tickerVisible ? "▼" : "▶"} TICKER
-      </NavBtn>
       <div style={{ flex: 1, minWidth: 40 }} />
-      <NavBtn ink={ink} onClick={onAdd} bold large borderLeft width={RIGHT_W}>
-        ＋ ADD COLOR
-      </NavBtn>
-      <NavBtn ink={ink} onClick={onRandomize} width={RIGHT_W}>
-        SHUFFLE
+      <NavBtn
+        ink={ink}
+        onClick={onRandomize}
+        bold
+        accent
+        borderLeft
+        width={RIGHT_W}
+      >
+        RANDOMISE
       </NavBtn>
       <NavBtn ink={ink} onClick={onTools} width={RIGHT_W}>
         TOOLS
       </NavBtn>
-      <NavBtn ink={ink} onClick={onSaved} width={RIGHT_W}>
-        SAVE / LOAD [{savedCount}]
-      </NavBtn>
       <NavBtn ink={ink} onClick={onExport} width={RIGHT_W}>
         EXPORT
+      </NavBtn>
+      <NavBtn ink={ink} onClick={onSettings} icon ariaLabel="settings">
+        ⚙
       </NavBtn>
     </div>
   );
@@ -146,9 +125,11 @@ interface NavBtnProps {
   onClick: () => void;
   children: ReactNode;
   bold?: boolean;
-  large?: boolean;
+  accent?: boolean;
+  icon?: boolean;
   borderLeft?: boolean;
   width?: number;
+  ariaLabel?: string;
 }
 
 const NavBtn = ({
@@ -156,26 +137,31 @@ const NavBtn = ({
   onClick,
   children,
   bold,
-  large,
+  accent,
+  icon,
   borderLeft,
   width,
+  ariaLabel,
 }: NavBtnProps) => {
   const [hov, setHov] = useState(false);
   const invert = ink === POSTER.ink ? POSTER.bg : POSTER.ink;
   const edge = `${POSTER.borderW}px solid ${ink}`;
+  const hoverBg = accent ? POSTER.accent : ink;
+  const hoverFg = accent ? fontColorFor(POSTER.accent) : invert;
   return (
     <button
       onClick={onClick}
+      aria-label={ariaLabel}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
         fontFamily: POSTER.body,
         fontWeight: bold ? 700 : 600,
-        fontSize: large ? 16 : 13,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
+        fontSize: icon ? 20 : 13,
+        letterSpacing: icon ? 0 : "0.08em",
+        textTransform: icon ? "none" : "uppercase",
         padding: "0 18px",
-        width,
+        width: width ?? (icon ? 60 : undefined),
         boxSizing: "border-box",
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -183,8 +169,8 @@ const NavBtn = ({
         border: "none",
         borderRight: edge,
         borderLeft: borderLeft ? edge : "none",
-        background: hov ? ink : "transparent",
-        color: hov ? invert : ink,
+        background: hov ? hoverBg : "transparent",
+        color: hov ? hoverFg : ink,
         cursor: "pointer",
         transition: "background .12s, color .12s",
       }}

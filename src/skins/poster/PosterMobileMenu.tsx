@@ -4,39 +4,23 @@ import { POSTER } from "./tokens";
 interface MenuProps {
   ink: string;
   bg: string;
-  isDark: boolean;
-  savedCount: number;
-  nameList: string;
-  tickerVisible: boolean;
   onClose: () => void;
-  onTheme: () => void;
-  onAdd: () => void;
   onRandomize: () => void;
-  onSaved: () => void;
   onTools: () => void;
   onExport: () => void;
+  onSettings: () => void;
   onAbout: () => void;
-  onNaming: () => void;
-  onToggleTicker: () => void;
 }
 
 export const PosterMobileMenu = ({
   ink,
   bg,
-  isDark,
-  savedCount,
-  nameList,
-  tickerVisible,
   onClose,
-  onTheme,
-  onAdd,
   onRandomize,
-  onSaved,
   onTools,
   onExport,
+  onSettings,
   onAbout,
-  onNaming,
-  onToggleTicker,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -110,32 +94,20 @@ export const PosterMobileMenu = ({
           overflowY: "auto",
         }}
       >
-        <Row ink={ink} onClick={fire(onTheme)}>
-          {isDark ? "LIGHT MODE" : "DARK MODE"}
-        </Row>
-        <Row ink={ink} onClick={fire(onAbout)}>
-          ABOUT
-        </Row>
-        <Row ink={ink} onClick={fire(onToggleTicker)}>
-          {tickerVisible ? "▼" : "▶"} TICKER
-        </Row>
-        <Row ink={ink} onClick={fire(onNaming)}>
-          NAMES · {nameList}
-        </Row>
-        <Row ink={ink} onClick={fire(onAdd)} bold>
-          ＋ ADD COLOR
-        </Row>
-        <Row ink={ink} onClick={fire(onRandomize)}>
-          SHUFFLE UNLOCKED
+        <Row ink={ink} onClick={fire(onRandomize)} bold>
+          RANDOMISE
         </Row>
         <Row ink={ink} onClick={fire(onTools)}>
           TOOLS
         </Row>
-        <Row ink={ink} onClick={fire(onSaved)}>
-          SAVE / LOAD [{savedCount}]
-        </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
+        </Row>
+        <Row ink={ink} onClick={fire(onSettings)}>
+          SETTINGS
+        </Row>
+        <Row ink={ink} onClick={fire(onAbout)}>
+          ABOUT
         </Row>
       </div>
     </div>

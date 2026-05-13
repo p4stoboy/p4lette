@@ -28,6 +28,7 @@ export type PaletteState = {
 
 export type PaletteAction =
   | { type: "addColor"; hex?: string }
+  | { type: "insertColor"; index: number; hex: string }
   | { type: "deleteColor"; id: number }
   | { type: "updateColor"; id: number; hex: string }
   | { type: "reorderColor"; fromIndex: number; toIndex: number }
@@ -125,6 +126,25 @@ export const paletteReducer = (
           makeColor(hex, state.palette.length),
         ]),
         names: [...state.names, NAME_PLACEHOLDER],
+      };
+    }
+    case "insertColor": {
+      // Splice a new colour in at `index` (clamped to `[0, length]`) — keeps
+      // `names` aligned with a placeholder, renumbers ids. The caller (the
+      // strip's "+" affordance) passes the exact preview hex.
+      const idx = Math.max(0, Math.min(action.index, state.palette.length));
+      return {
+        ...state,
+        palette: renumber([
+          ...state.palette.slice(0, idx),
+          makeColor(action.hex, idx),
+          ...state.palette.slice(idx),
+        ]),
+        names: [
+          ...state.names.slice(0, idx),
+          NAME_PLACEHOLDER,
+          ...state.names.slice(idx),
+        ],
       };
     }
     case "deleteColor": {

@@ -213,6 +213,11 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
     (hex?: string) => dispatch({ type: "addColor", hex }),
     [],
   );
+  const insertColor = useCallback(
+    (index: number, hex: string) =>
+      dispatch({ type: "insertColor", index, hex }),
+    [],
+  );
   const deleteColor = useCallback(
     (id: number) => dispatch({ type: "deleteColor", id }),
     [],
@@ -277,6 +282,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       genStrategy,
       genParams,
       addColor,
+      insertColor,
       deleteColor,
       updateColor,
       reorderColor,
@@ -302,6 +308,7 @@ export const Provider = ({ children, initialState }: ProviderProps) => {
       genStrategy,
       genParams,
       addColor,
+      insertColor,
       deleteColor,
       updateColor,
       reorderColor,

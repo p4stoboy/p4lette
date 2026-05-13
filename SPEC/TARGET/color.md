@@ -12,7 +12,7 @@
 - `formatAll(hex) → { mode: ColorMode; label: string; value: string }[]` — the five `formatColor` outputs, **HEX first** (`label` = the mode uppercased) — for the `"all"` display MODE (`PosterColumn`/`PosterTile` stack them under the swatch).
 - `parseColor(input, mode: ColorMode) → string | null` — `hex`: `/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i` → normalised `#rrggbb`. `rgb`/`hsl`/`hsv`/`oklch`: pull ≥3 numbers via `extractNumbers`, **clamp** to range, convert to hex (oklch lightness `≤1` treated as 0..1 and ×100). `null` on empty/unparseable. **Quirk: out-of-range channels are clamped, not rejected** (`parseColor("rgb(999,0,0)","rgb") → "#ff0000"`).
 - `randomHex() → string` — random HSL `h∈[0,360)`, `s∈[35,90]`, `l∈[30,80]` → `hslToHex` (avoids near-black/white/grey). The per-slot random used by `addColor` and as the `randomizeUnlocked` fallback.
-- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`hexToHsl`, `hslToHex`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `PosterColumn`/`PosterTile` (`formatColor`, `formatAll`), `PosterEditTray` (`formatColor`, `parseColor`, and `hexToOkhsl`/`okhslToHex` + `hexToHsl`/`hslToHex` + `hexToHsv`/`hsvToHex` + `hexToRgb`/`rgbToHex` + `hexToOklch`/`oklchToHex` — the EDIT-tray sliders run in the picked `editSpace`); `ShareIsoCube` (`hexToOkhsl`/`okhslToHex` for the iso face shading).
+- Consumers: `paletteReducer` (`randomHex`), `contrast.ts` (`hexToRgb`), `generate_palette.ts` (`hslToHex`), `harmony.ts` (`hexToHsl`, `hslToHex`), `tones.ts` (`clamp`, `hexToHsv`, `hsvToHex`), `resolve_export_template.ts` (`hexToRgb/Hsl/Hsv/Oklch`), `palette_stats.ts` (`hexToOkhsl`), `PosterColumn`/`PosterTile` (`formatColor`, `formatAll`), `PosterEditTray` (`formatColor`, `parseColor`, and `hexToOkhsl`/`okhslToHex` + `hexToHsl`/`hslToHex` + `hexToHsv`/`hsvToHex` + `hexToRgb`/`rgbToHex` + `hexToOklch`/`oklchToHex` — the EDIT-tray sliders run in the picked `editSpace`); `ShareWheel` (`hexToOkhsl` — hue + saturation for the share-page hue wheel).
 
 ### `generate_palette.ts` — uses **`rampensau`** (`generateColorRamp`, `generateColorRampWithCurve`, `generateColorRampParams`) + **`poline`** (`Poline`)
 
@@ -22,7 +22,7 @@
   - `"default"` / `"rampensau"` — `"default"` ≡ `"rampensau"` with no `params` (the out-of-the-box sweep; the panel hides the tuning sliders for it). No `params` → the random bounds (`sRange ≈ [0.4–0.6, 0.72–0.9]`, `lRange ≈ [0.18–0.3, 0.8–0.9]`, `hCycles = (0.2 + rnd()*0.8)·(±1)`) via `generateColorRamp`; with `params` (only ever via `"rampensau"`) → those bounds via `generateColorRampWithCurve({…, curveMethod:"lamé", curveAccent})`. Either way `hStart = rnd()*360`, `[h,s,l] → hslToHex({h, s:s*100, l:l*100})`. **A _coherent_ ramp (single hue arc, perceptual light→dark), not N randoms.**
   - `"poline"` — `new Poline({ numPoints: max(count,2), anchorColors: [a,b] })` with two `rnd`-derived anchors → `.colors` (`[h,s,l]`) → `hslToHex` → resampled to exactly `count` (private `resampleHexList` — evenly-spaced indices).
   - `"random"` — `count` independent `randomHex()` (the incoherent escape hatch).
-  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`) — and by `PosterToolsTray` (`GenerateBody`: `generatePalette`, `GEN_STRATEGIES`, `GenStrategy`, `RAMP_PARAM_META`, `RampParams`, `defaultRampParams`).
+  - Pass a deterministic `rnd` for reproducible `default`/`rampensau`/`poline`. Consumed by `paletteReducer` — the initial seed (`createPaletteState` — `genStrategy:"default"`) and `randomizeUnlocked` (`state.genStrategy`/`state.genParams`) — and by `PosterSettingsDrawer` (`settings/RandomiseSection`: `generatePalette`, `GEN_STRATEGIES`, `GenStrategy`, `RAMP_PARAM_META`, `RampParams`, `defaultRampParams`).
 
 ### `harmony.ts` — uses **`culori`** (`clampChroma`, `formatHex`, `oklch`) + **`pro-color-harmonies`** (`ColorPaletteGenerator`, `PaletteStyle`) + **`rampensau`** (`colorUtils.colorHarmonies`)
 
@@ -67,11 +67,13 @@
 - **`blendWith(hexes: string[], over: string, mode: BlendMode): string[]`** — `over` unparsable → input unchanged; else each `formatHex(blend([h, over], mode))` (composite `over` on top of the swatch).
 - Consumed by `PosterToolsTray` (`FixersBody`: `CvdType`, `simulateCvd`, `snapToGamut`; `EffectsBody`: `EFFECTS`, `applyEffect`, `BLEND_MODES`, `BlendMode`, `blendWith`).
 
-### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`)
+### `color_mix.ts` — uses **`culori`** (`interpolate`, `samples`, `parse`, `formatHex`, `toGamut`)
 
 - `MixSpace = "oklch"|"lab"|"hsl"`; `MIX_SPACES` = `[{oklch,OKLCH},{lab,LAB},{hsl,HSL}]`. `MIX_STEPS = [3,5,7,9,11]`. `MixCurve = "even"|"ease-from"|"ease-to"`; `MIX_CURVES` = `[{even,EVEN},{ease-from,EASE FROM},{ease-to,EASE TO}]`; private `GAMMA = { even:1, "ease-from":1.8, "ease-to":0.55 }` (γ on the sample parameter — `>1` bunches steps toward FROM, `<1` toward TO).
 - **`mixSteps(a, b, n, space, curve): string[]`** — if either hex doesn't parse, fill `n` with the parsable one (or `#000000`). Else `itp = interpolate([a,b], space)` (culori's default hue fixup = shortest arc; `lab` has no hue), then `samples(n).map(t => formatHex(itp(t**GAMMA[curve])))`. Two stops → no polynomial spline; the curve just biases where the `n` samples land.
-- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`).
+- **`mixHex(a, b, t = 0.5): string`** — the OKLab `t`-point between two hexes (`t=0.5` = the Coolors-style midpoint), gamut-clamped into sRGB (module-level `intoSrgb = toGamut("rgb","oklch")`). Bad input falls back to the parsable arg, else `#000000`. `mixHex(a,a) ≈ a`.
+- **`extrapolateHex(anchor, neighbor, t = 0.6): string`** — step `t` of a unit _past_ `anchor`, away from `neighbor`, in OKLab (`interpolate([neighbor, anchor], "oklab")(1 + t)`) — continues a ramp past its endpoint — gamut-clamped into sRGB. Bad input falls back to the parsable arg, else `#000000`.
+- Consumed by `PosterToolsTray` (`MixBody`: `MIX_SPACES`, `MIX_STEPS`, `MIX_CURVES`, `MixSpace`, `MixCurve`, `mixSteps`) and `PosterColumn` (`mixHex`/`extrapolateHex` — the "+" insert-between previews).
 
 ### `pigment.ts` — uses **`rybitten`** (`rybHsl2rgb`, `RYB_ITTEN`/`cubes` from `rybitten/cubes`) + `culori` `formatHex` + `color_converters` (`clamp`, `hexToHsl`)
 
@@ -83,7 +85,7 @@
 
 ### `contrast.ts` — pure, depends on `color_converters` only
 
-- `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray` and the share-page `ShareGrid`/`ShareBars` (`fontColorFor`), and `PosterFooter` (`contrast` grade).
+- `luminance(hex) → number` (WCAG relative luminance). `contrast(a,b) → number` = `(hi+0.05)/(lo+0.05)`, symmetric. `fontColorFor(hex) → "#000000"|"#ffffff"` — whichever has higher contrast against `hex`. Consumed by `PosterColumn`/`PosterTile`/`PosterEditTray`, `PosterFooter` (`contrast` grade), `palette_stats.ts` (`contrast` — the worst-pair scan), and the share-page reps `ShareGrid`/`ShareBars`/`ShareMosaic`/`ShareCvd` (`fontColorFor`) + `ShareContrastMatrix` (`contrast` + `fontColorFor`).
 
 ### `resolve_export_template.ts` — pure, depends on `color_converters` only
 
@@ -100,10 +102,10 @@
 
 - `HEX_RE = /^#[0-9a-f]{6}$/i`. `encodePalette(palette): string` → `palette.map(c => c.hex.replace("#","")).join("-")` (e.g. `ff0000-00ff00-0000ff`; **6-digit only — assumes normalised hexes**). `decodePalette(raw): string[] | null` → strip a leading `#?p=`; `""` → null; split on `-`, drop empties, prefix `#`, **keep only `HEX_RE` matches**, lowercase; `null` if none survive. So a partly-garbage hash yields the valid subset; an all-garbage hash → `null`. Consumed by `PaletteContext` (`encodePalette` in the hash effect), `paletteReducer` (`decodePalette` in `createPaletteState`), `src/skins/poster/share/parseShareHash.ts` (`decodePalette` of just the `?p=` query value — **never the raw `#/share?p=…` string**; see `spa.md`), and `PosterFooter`'s `ShareButton` (`encodePalette` for the `#/share?p=…` link).
 
-### `iso_cube.ts` — pure (layout math, no deps)
+### `palette_stats.ts` — pure (depends on `color_converters` + `contrast`)
 
-- `interface IsoBlock { top; left; right }` — SVG `<polygon>` `points` strings for the three visible faces. `interface IsoStack { width; height; blocks: IsoBlock[] }`.
-- **`isoBlockStack(count, opts?: { unit?=110; cube?=64 }) → IsoStack`** — a vertical stack of `count` flat-2:1 isometric blocks, one per palette colour, **block 0 on top**, laid out in a `(2·unit) × (unit + count·cube)` box (block `i`'s top rhombus is centred at `(unit, unit/2 + i·cube)`; the three faces per the formulae in the file header — the front faces of block `i` end exactly where block `i+1`'s top rhombus begins, so the stack reads as one extruded N-band bar). `count <= 0` → `{ width:0, height:0, blocks:[] }`. The **first non-colour** pure module in `src/functions/` — layout geometry for the share page's ISO-CUBE panel. Consumed by `src/skins/poster/share/ShareIsoCube.tsx` (which fills each block's faces from a colour with Okhsl lightness steps).
+- `interface PaletteStats { avgLightness:0–100; hueSpreadDeg:0–360; warmCount; coolCount; mostSaturated; leastSaturated; worstContrast:{ratio,a,b} }`.
+- **`paletteStats(hexes: string[]) → PaletteStats`** — mean Okhsl lightness ×100; `hueSpreadDeg` = the smallest arc containing every _chromatic_ hue (wrap-around aware — `350°`+`10°` → `20°`; `0` for ≤1 hue, a monochrome palette, or an all-grayscale one — achromatic `s ≤ 0.02` colours are dropped from the spread); warm = Okhsl hue in `[0,60) ∪ [300,360)`, else cool (a rough "vibe" cutoff); most/least saturated by Okhsl `s`; `worstContrast` = the lowest-`contrast` pair (`{ratio:1, a:hexes[0]??"", b:…}` when there's no pair). Empty input → all-zero / empty stats. Feeds the share page's `PALETTE STATS` panel. Consumed by `src/skins/poster/share/ShareStats.tsx`.
 
 ### `get_color_card_props.ts` — `fetch`, no color lib
 
@@ -171,7 +173,7 @@
     ],
     "consumers": [
       "paletteReducer (seed + randomizeUnlocked, via state.genStrategy/genParams)",
-      "PosterToolsTray (GenerateBody)"
+      "PosterSettingsDrawer (settings/RandomiseSection)"
     ]
   },
   "harmony.ts": {
@@ -305,15 +307,20 @@
     "consumers": ["PosterToolsTray (FixersBody · EffectsBody)"]
   },
   "color_mix.ts": {
-    "lib": "culori (interpolate · samples)",
+    "lib": "culori (interpolate · samples · toGamut)",
     "MixSpace": ["oklch", "lab", "hsl"],
     "MIX_STEPS": [3, 5, 7, 9, 11],
     "MixCurve": ["even", "ease-from", "ease-to"],
     "exports": [
       "MIX_SPACES, MIX_STEPS, MIX_CURVES, MixSpace, MixCurve",
-      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)"
+      "mixSteps(a,b,n,space,curve)→string[] (bad hex → fill with the parsable one or #000000; else interpolate([a,b],space) — default shortest-arc hue fixup — sampled at t**γ where γ=GAMMA[curve]; 2-stop so the 'curve' just biases sample density)",
+      "mixHex(a,b,t=0.5)→string (the OKLab t-point between, t=0.5 = Coolors-style midpoint; gamut-clamped via toGamut('rgb','oklch'); bad input → the parsable arg | #000000)",
+      "extrapolateHex(anchor,neighbor,t=0.6)→string (interpolate([neighbor,anchor],'oklab')(1+t) — a step past anchor away from neighbor, continuing a ramp past its end; gamut-clamped; bad input → the parsable arg | #000000)"
     ],
-    "consumers": ["PosterToolsTray (MixBody)"]
+    "consumers": [
+      "PosterToolsTray (MixBody)",
+      "PosterColumn (mixHex/extrapolateHex — the + insert previews)"
+    ]
   },
   "pigment.ts": {
     "lib": [
@@ -354,19 +361,22 @@
       "PosterTile",
       "PosterEditTray",
       "PosterFooter",
+      "palette_stats.ts (contrast — worst-pair scan)",
       "ShareGrid",
-      "ShareBars"
+      "ShareBars",
+      "ShareMosaic",
+      "ShareCvd",
+      "ShareContrastMatrix (contrast + fontColorFor)"
     ]
   },
-  "iso_cube.ts": {
-    "lib": "none",
+  "palette_stats.ts": {
+    "lib": "color_converters (hexToOkhsl) + contrast",
     "exports": [
-      "IsoBlock {top,left,right} (SVG polygon points strings)",
-      "IsoStack {width,height,blocks}",
-      "isoBlockStack(count, {unit?=110,cube?=64})→IsoStack — vertical stack of N flat-2:1 iso blocks, block 0 on top, in a 2u×(u+N·c) box; count<=0→empty"
+      "PaletteStats {avgLightness:0–100, hueSpreadDeg:0–360, warmCount, coolCount, mostSaturated, leastSaturated, worstContrast:{ratio,a,b}}",
+      "paletteStats(hexes)→PaletteStats — mean Okhsl L×100; hueSpreadDeg = smallest arc over chromatic hues (wrap-aware; 0 for ≤1 hue / monochrome / all-grayscale — s≤0.02 dropped); warm = Okhsl hue in [0,60)∪[300,360) else cool; most/least sat by Okhsl s; worstContrast = lowest-contrast pair ({ratio:1,…} when no pair); empty input → all-zero"
     ],
-    "note": "the first non-color pure module — layout geometry for the share page's ISO-CUBE panel",
-    "consumers": ["ShareIsoCube"]
+    "note": "feeds the share page's PALETTE STATS panel",
+    "consumers": ["ShareStats"]
   },
   "resolve_export_template.ts": {
     "lib": "color_converters",
@@ -474,7 +484,7 @@ flowchart LR
     ct["contrast.ts"]
     rt["resolve_export_template.ts"]
     su["share_url.ts"]
-    iso["iso_cube.ts (layout, no deps)"]
+    ps["palette_stats.ts (Okhsl stats + contrast; no I/O)"]
   end
   subgraph io["thin I/O shims"]
     gcn["get_color_card_props.ts (fetch)"]
@@ -482,14 +492,14 @@ flowchart LR
     sp["saved_palettes.ts (localStorage)"]
     st["saved_templates.ts (localStorage)"]
   end
-  cc --> gp & hm & tn & ct & rt & pg
+  cc --> gp & hm & tn & ct & rt & pg & ps
   td --> tn
   gp --> red["paletteReducer — state.md"]
-  gp --> ttray["PosterToolsTray — spa.md"]
+  gp --> drawer["PosterSettingsDrawer — spa.md"]
   su --> red
   su --> pctx["PaletteContext — state.md"]
-  su --> sharepg["share page (parseShareHash) + PosterFooter ShareButton — spa.md"]
-  iso --> sharepg
+  su --> sharepg["share page reps + PosterFooter ShareButton — spa.md"]
+  tn & cf & rt & ct & ps --> sharepg
   rt --> pctx
   gcn --> pctx
   rt --> skin["PosterSkin — spa.md (DEFAULT_TEMPLATE)"]
