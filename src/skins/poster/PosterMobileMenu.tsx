@@ -9,6 +9,7 @@ interface MenuProps {
   onTools: () => void;
   onExport: () => void;
   onSettings: () => void;
+  onShareLink: () => void;
   onAbout: () => void;
 }
 
@@ -20,6 +21,7 @@ export const PosterMobileMenu = ({
   onTools,
   onExport,
   onSettings,
+  onShareLink,
   onAbout,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
@@ -102,6 +104,9 @@ export const PosterMobileMenu = ({
         </Row>
         <Row ink={ink} onClick={fire(onExport)}>
           EXPORT
+        </Row>
+        <Row ink={ink} onClick={fire(onShareLink)}>
+          SHARE LINK
         </Row>
         <Row ink={ink} onClick={fire(onSettings)}>
           SETTINGS
