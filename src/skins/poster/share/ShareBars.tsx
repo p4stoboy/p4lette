@@ -13,7 +13,7 @@ export const ShareBars = ({ ink, hexes, names }: Props) => (
   <div
     style={{
       display: "flex",
-      height: 200,
+      height: 140,
       borderTop: `1px solid ${ink}`,
       borderBottom: `1px solid ${ink}`,
     }}
