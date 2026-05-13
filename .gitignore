@@ -26,6 +26,7 @@ yarn-error.log*
 
 # prototype reference — kept locally, not committed
 /handoff
+/p4lette-redesign-EXAMPLE
 
 # OG generator font cache
 /scripts/.fonts

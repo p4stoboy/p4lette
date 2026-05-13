@@ -25,7 +25,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
   - `tsconfig.json`: `strict`, `noEmit`, `noFallthroughCasesInSwitch` (reducer/`formatColor`/`parseColor` switches are exhaustive, no `default`), `isolatedModules`, `moduleResolution: "bundler"`, `jsx: "react-jsx"`, `types: ["vite/client"]`. `package.json` `overrides` pins `@types/react`/`@types/react-dom` to `^18.3.x` so React-18 typings survive newer tooling.
   - **Branching**: feature branches off `dev`; PRs target `dev`. Conventional commits. (The GitHub default branch differs — releasing `dev` onward is the maintainer's call.)
   - **Vestigial / unused** (don't mistake for live surface): there was a "terminal" skin once — it's gone (no `src/` code, and `scripts/generate-og.mjs` no longer draws it; only stale README copy still mentions it). `src/types/Colors.ts` exports `Colors`/`ColorProperty` that nothing imports. `useViewport().isLandscape` has no consumer. `exportVisible` / `setExportVisible` exist on the context but `PosterSkin` manages export visibility with its own local `showExport`.
-  - `build/`, `handoff/`, `scripts/.fonts/` are gitignored local artifacts, not source.
+  - `build/`, `handoff/`, `p4lette-redesign-EXAMPLE/` (the local redesign prototype), `scripts/.fonts/` are gitignored local artifacts, not source.
 - **SPEC workflow** — opening a plan: write the post-plan state into `SPEC/TARGET/<subsystem>.md` first. Shipping it: sync `SPEC/CURRENT/<subsystem>.md` to match `TARGET/` **in the same commit as the implementation**. Divergence between the trees = work in flight. `.claude/.spec-enabled` (empty marker) opts this repo into the convention. **Adding / renaming / removing a TOOLS-tray tool** is one line in `src/skins/poster/tools/index.ts` (`TRAY_SECTIONS`) — and in SPEC, one new bullet + one new key in `spa.md`'s `PosterToolsTray.sections`, plus (if a new `functions/*` module backs it) one new `<module> --> ttray` edge in `color.md` and a `Consumed by PosterToolsTray (XBody: …)` line in that module's section. Keep symbol-level imports in the `functions/*` "Consumed by" lines — don't re-enumerate them in the `PosterToolsTray` bullet (that was the recurring merge-conflict magnet).
 
 ### Persistence surfaces
@@ -153,6 +153,7 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
       "build/",
       "dist/",
       "handoff/",
+      "p4lette-redesign-EXAMPLE/",
       "scripts/.fonts/",
       "coverage/"
     ]
