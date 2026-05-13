@@ -34,6 +34,7 @@ import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterToolsTray } from "./PosterToolsTray";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
+import { PosterSettingsDrawer } from "./PosterSettingsDrawer";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 const TICKER_KEY = "p4lette_ticker_v1";
@@ -104,6 +105,7 @@ export const PosterSkin = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
@@ -250,6 +252,7 @@ export const PosterSkin = () => {
 
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
+    else if (showSettings) setShowSettings(false);
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
     else if (showExport || showTools || showSaved) closeSidePanel();
@@ -257,6 +260,7 @@ export const PosterSkin = () => {
     else if (editingId !== null) setEditingId(null);
   }, [
     showWelcome,
+    showSettings,
     showMenu,
     showNaming,
     showExport,
@@ -452,19 +456,12 @@ export const PosterSkin = () => {
     >
       <PosterNav
         ink={ink}
-        bg={bg}
-        isDark={isDark}
         compact={isMobile}
-        tickerVisible={tickerVisible}
-        onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-        onAbout={() => setShowAbout(true)}
-        onSaved={openSaved}
+        onSettings={() => setShowSettings(true)}
         onTools={openTools}
         onExport={openExport}
         onRandomize={randomizeUnlocked}
         onMenu={() => setShowMenu(true)}
-        onToggleTicker={toggleTicker}
-        savedCount={savedList.length}
       />
 
       {!isMobile && tickerVisible && (
@@ -616,7 +613,13 @@ export const PosterSkin = () => {
         </div>
       )}
 
-      {!isMobile && <PosterFooter palette={palette} ink={ink} bg={bg} />}
+      {!isMobile && (
+        <PosterFooter
+          palette={palette}
+          ink={ink}
+          onAbout={() => setShowAbout(true)}
+        />
+      )}
 
       {showWelcome && (
         <PosterWelcome
@@ -634,6 +637,23 @@ export const PosterSkin = () => {
           onClose={() => setShowAbout(false)}
         />
       )}
+      {showSettings && (
+        <PosterSettingsDrawer
+          ink={ink}
+          bg={bg}
+          isMobile={isMobile}
+          theme={theme}
+          onSetTheme={setTheme}
+          tickerVisible={tickerVisible}
+          onToggleTicker={toggleTicker}
+          savedCount={savedList.length}
+          onManageSaved={() => {
+            setShowSettings(false);
+            openSaved();
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
       {isMobile && toolsPanel}
       {isMobile && exportPanel}
       {isMobile && savedPanel}
@@ -641,19 +661,14 @@ export const PosterSkin = () => {
         <PosterMobileMenu
           ink={ink}
           bg={bg}
-          isDark={isDark}
-          savedCount={savedList.length}
           nameList={nameList}
-          tickerVisible={tickerVisible}
           onClose={() => setShowMenu(false)}
-          onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onRandomize={randomizeUnlocked}
-          onSaved={openSaved}
           onTools={openTools}
           onExport={openExport}
+          onSettings={() => setShowSettings(true)}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
-          onToggleTicker={toggleTicker}
         />
       )}
       {showNaming && (

@@ -147,7 +147,8 @@ Entry point for the SPEC. Repo-at-a-glance, layout, persistence surfaces, cross-
       "terminal skin — removed (no src/ code; OG script no longer draws it; README copy stale)",
       "src/types/Colors.ts Colors/ColorProperty unused",
       "useViewport().isLandscape unused",
-      "context exportVisible/setExportVisible unused by UI"
+      "context exportVisible/setExportVisible unused by UI",
+      "PosterNamingPicker.tsx — no live importer; kept for the settings drawer (PR-4)"
     ],
     "gitignoredArtifacts": [
       "build/",
