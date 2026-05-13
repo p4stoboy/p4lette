@@ -1,28 +1,48 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Backdrop, SmallBtn } from "./Backdrop";
 import { useExitAnimation } from "../../hooks/use_exit_animation";
+import { usePalette } from "../../context/PaletteContext";
+import { DisplayMode } from "../../types/Colors";
+import {
+  SavedPalette,
+  defaultPaletteName,
+} from "../../functions/saved_palettes";
 import { POSTER } from "./tokens";
+import { RandomiseSection } from "./settings/RandomiseSection";
+import { NamingSection } from "./settings/NamingSection";
+
+export type ThemeChoice = "system" | "light" | "dark";
 
 interface Props {
   ink: string;
   bg: string;
   isMobile: boolean;
-  theme: "light" | "dark";
-  onSetTheme: (t: "light" | "dark") => void;
+  theme: ThemeChoice;
+  onSetTheme: (t: ThemeChoice) => void;
   tickerVisible: boolean;
   onToggleTicker: () => void;
-  savedCount: number;
-  onManageSaved: () => void;
+  savedList: SavedPalette[];
+  onSavePalette: (name: string) => void;
+  onLoadPalette: (hexes: string[]) => void;
+  onDeletePalette: (id: string) => void;
   onClose: () => void;
 }
 
+const FORMAT_OPTIONS: { value: DisplayMode; label: string }[] = [
+  { value: "hex", label: "HEX" },
+  { value: "rgb", label: "RGB" },
+  { value: "hsl", label: "HSL" },
+  { value: "hsv", label: "HSV" },
+  { value: "oklch", label: "OKLCH" },
+  { value: "all", label: "ALL" },
+];
+
 // The preferences drawer. On desktop it docks in PosterSkin's content-row
-// side-panel slot (a bare flex column — the slot supplies the borderLeft +
-// the slide-in, like the other side panels); on mobile it's a Backdrop-backed
-// bottom sheet. PR-3 holds Appearance (LIGHT|DARK), Display (ticker on/off)
-// and a link to the saved-palettes panel; PR-4 fills in palette name + save,
-// the saved list inline, the SYSTEM theme option, the colour-format picker,
-// the randomise-strategy picker and the naming gallery.
+// side-panel slot (a bare flex column — the slot supplies the borderLeft + the
+// slide-in, like the other side panels); on mobile it's a Backdrop-backed
+// bottom sheet. Sections: palette name + SAVE · saved palettes (load/del) ·
+// appearance (SYSTEM|LIGHT|DARK) · colour format · randomise strategy · naming ·
+// display (ticker).
 export const PosterSettingsDrawer = ({
   ink,
   bg,
@@ -31,11 +51,18 @@ export const PosterSettingsDrawer = ({
   onSetTheme,
   tickerVisible,
   onToggleTicker,
-  savedCount,
-  onManageSaved,
+  savedList,
+  onSavePalette,
+  onLoadPalette,
+  onDeletePalette,
   onClose,
 }: Props) => {
   const { closing, requestClose, onAnimationEnd } = useExitAnimation(onClose);
+  const [name, setName] = useState("");
+  const save = () => {
+    onSavePalette(name.trim() || defaultPaletteName(Date.now()));
+    setName("");
+  };
   const body = (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -106,17 +133,146 @@ export const PosterSettingsDrawer = ({
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
+        <Section ink={ink} title="PALETTE NAME">
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+              }}
+              placeholder="name this palette…"
+              aria-label="palette name"
+              style={{
+                fontFamily: POSTER.mono,
+                fontSize: 13,
+                padding: isMobile ? "10px 12px" : "7px 10px",
+                border: `2px solid ${ink}`,
+                background: "transparent",
+                color: ink,
+                flex: 1,
+                minWidth: 0,
+                outline: "none",
+                minHeight: isMobile ? 44 : undefined,
+              }}
+            />
+            <SmallBtn ink={ink} onClick={save} tall>
+              ♥ SAVE
+            </SmallBtn>
+          </div>
+        </Section>
+
+        <Section ink={ink} title={`SAVED PALETTES (${savedList.length})`}>
+          {savedList.length === 0 ? (
+            <div
+              style={{
+                fontFamily: POSTER.body,
+                fontSize: 12,
+                opacity: 0.55,
+              }}
+            >
+              Nothing saved yet — name a palette above and hit SAVE.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {savedList.map((s) => (
+                <div key={s.id} style={{ border: `2px solid ${ink}` }}>
+                  <div style={{ display: "flex", height: isMobile ? 40 : 28 }}>
+                    {s.hexes.map((h, i) => (
+                      <div key={i} style={{ flex: 1, background: h }} />
+                    ))}
+                  </div>
+                  <div
+                    style={{
+                      padding: "8px 10px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      borderTop: `2px solid ${ink}`,
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          fontFamily: POSTER.display,
+                          fontSize: 15,
+                          letterSpacing: "0.02em",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {s.name}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: POSTER.mono,
+                          fontSize: 10,
+                          opacity: 0.6,
+                        }}
+                      >
+                        {new Date(s.createdAt).toLocaleDateString()} ·{" "}
+                        {s.hexes.length} colors
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <SmallBtn
+                        ink={ink}
+                        tall={isMobile}
+                        onClick={() => onLoadPalette(s.hexes)}
+                      >
+                        LOAD
+                      </SmallBtn>
+                      <SmallBtn
+                        ink={ink}
+                        tall={isMobile}
+                        onClick={() => onDeletePalette(s.id)}
+                      >
+                        DEL
+                      </SmallBtn>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
         <Section ink={ink} title="APPEARANCE">
           <Segmented
             ink={ink}
             bg={bg}
             value={theme}
             options={[
+              { value: "system", label: "SYSTEM" },
               { value: "light", label: "LIGHT" },
               { value: "dark", label: "DARK" },
             ]}
             onChange={onSetTheme}
           />
+          <div
+            style={{
+              fontFamily: POSTER.body,
+              fontSize: 11,
+              opacity: 0.55,
+              marginTop: 6,
+            }}
+          >
+            SYSTEM follows your browser preference.
+          </div>
+        </Section>
+
+        <Section ink={ink} title="COLOUR FORMAT">
+          <FormatSection ink={ink} bg={bg} />
+        </Section>
+
+        <Section ink={ink} title="RANDOMISE">
+          <RandomiseSection ink={ink} isMobile={isMobile} />
+        </Section>
+
+        <Section ink={ink} title="NAMING">
+          <NamingSection ink={ink} bg={bg} isMobile={isMobile} />
         </Section>
 
         <Section ink={ink} title="DISPLAY">
@@ -133,45 +289,6 @@ export const PosterSettingsDrawer = ({
             }}
           />
         </Section>
-
-        <Section ink={ink} title="SAVED PALETTES">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: POSTER.body,
-                fontSize: 13,
-                opacity: 0.8,
-              }}
-            >
-              {savedCount} saved
-            </span>
-            <SmallBtn ink={ink} onClick={() => onManageSaved()} tall>
-              MANAGE →
-            </SmallBtn>
-          </div>
-        </Section>
-
-        <Section ink={ink} title="MORE">
-          <p
-            style={{
-              margin: 0,
-              fontSize: 12,
-              lineHeight: 1.5,
-              opacity: 0.65,
-              fontFamily: POSTER.body,
-            }}
-          >
-            Palette name &amp; save, the saved list inline, the SYSTEM theme
-            option, colour format and naming move here next.
-          </p>
-        </Section>
       </div>
     </div>
   );
@@ -185,6 +302,19 @@ export const PosterSettingsDrawer = ({
   );
 };
 
+const FormatSection = ({ ink, bg }: { ink: string; bg: string }) => {
+  const { colorMode, setColorMode } = usePalette();
+  return (
+    <Segmented
+      ink={ink}
+      bg={bg}
+      value={colorMode}
+      options={FORMAT_OPTIONS}
+      onChange={setColorMode}
+    />
+  );
+};
+
 interface SectionProps {
   ink: string;
   title: string;
@@ -192,12 +322,7 @@ interface SectionProps {
 }
 
 const Section = ({ ink, title, children }: SectionProps) => (
-  <div
-    style={{
-      borderBottom: `1px solid ${ink}`,
-      padding: "16px 24px",
-    }}
-  >
+  <div style={{ borderBottom: `1px solid ${ink}`, padding: "16px 24px" }}>
     <div
       style={{
         fontFamily: POSTER.body,
@@ -233,6 +358,7 @@ const Segmented = <T extends string>({
   <div
     style={{
       display: "flex",
+      flexWrap: "wrap",
       border: `2px solid ${ink}`,
       width: "fit-content",
       maxWidth: "100%",

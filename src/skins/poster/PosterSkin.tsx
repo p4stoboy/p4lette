@@ -1,4 +1,4 @@
-import { DragEvent, useCallback, useRef, useState } from "react";
+import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import { usePalette } from "../../context/PaletteContext";
 import { ColorCardProps } from "../../types/ColorCardProps";
 import {
@@ -30,14 +30,13 @@ import { PosterMobileMenu } from "./PosterMobileMenu";
 import { PosterFooter } from "./PosterFooter";
 import { PosterWelcome } from "./PosterWelcome";
 import { PosterAbout } from "./PosterAbout";
-import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterToolsTray } from "./PosterToolsTray";
 import { PosterExportSheet } from "./PosterExportSheet";
-import { PosterNamingSheet } from "./PosterNamingSheet";
-import { PosterSettingsDrawer } from "./PosterSettingsDrawer";
+import { PosterSettingsDrawer, ThemeChoice } from "./PosterSettingsDrawer";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 const TICKER_KEY = "p4lette_ticker_v1";
+const THEME_KEY = "p4lette_theme_v1";
 
 // A hovered column widens to this so its EDIT/LOCK/REMOVE stack has room — but only
 // if its fair share of the strip (`stripW / palette.length`) is currently below it;
@@ -78,6 +77,25 @@ const readTickerVisible = (): boolean => {
   }
 };
 
+// Tri-state theme: SYSTEM (follow the OS), LIGHT, DARK. Default SYSTEM.
+const readTheme = (): ThemeChoice => {
+  if (typeof localStorage === "undefined") return "system";
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    return raw === "light" || raw === "dark" || raw === "system"
+      ? raw
+      : "system";
+  } catch {
+    return "system";
+  }
+};
+
+const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
+const readSystemPrefersDark = (): boolean =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia(SYSTEM_DARK_QUERY).matches
+    : false;
+
 export const PosterSkin = () => {
   const {
     palette,
@@ -98,13 +116,14 @@ export const PosterSkin = () => {
 
   const { isMobile } = useViewport();
 
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setThemeState] = useState<ThemeChoice>(readTheme);
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    readSystemPrefersDark,
+  );
   const [showAbout, setShowAbout] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !readSeenWelcome());
   const [showExport, setShowExport] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
   const [showTools, setShowTools] = useState(false);
-  const [showNaming, setShowNaming] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -141,7 +160,30 @@ export const PosterSkin = () => {
     });
   }, []);
 
-  const isDark = theme === "dark";
+  const setTheme = useCallback((t: ThemeChoice) => {
+    setThemeState(t);
+    try {
+      if (typeof localStorage !== "undefined")
+        localStorage.setItem(THEME_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Track the OS colour-scheme preference (only matters while theme === "system").
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return;
+    const mq = window.matchMedia(SYSTEM_DARK_QUERY);
+    const onChange = () => setSystemPrefersDark(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const isDark = theme === "dark" || (theme === "system" && systemPrefersDark);
   const bg = isDark ? POSTER.bgDark : POSTER.bg;
   const ink = isDark ? POSTER.inkDark : POSTER.ink;
 
@@ -155,23 +197,20 @@ export const PosterSkin = () => {
     window.setTimeout(() => setCopyLabel("COPY!"), 1500);
   }, [resolvedTemplate]);
 
-  const handleSavePalette = useCallback(() => {
-    const fallback = defaultPaletteName(Date.now());
-    const raw =
-      typeof window !== "undefined"
-        ? window.prompt("Name this palette", fallback)
-        : fallback;
-    if (raw === null) return;
-    const entry: SavedPalette = {
-      id: newSavedId(),
-      name: raw.trim() || fallback,
-      hexes: palette.map((c) => c.hex),
-      createdAt: Date.now(),
-    };
-    const next = [entry, ...savedList].slice(0, SAVED_LIMIT);
-    setSavedList(next);
-    persistSaved(next);
-  }, [palette, savedList]);
+  const handleSavePalette = useCallback(
+    (name: string) => {
+      const entry: SavedPalette = {
+        id: newSavedId(),
+        name: name.trim() || defaultPaletteName(Date.now()),
+        hexes: palette.map((c) => c.hex),
+        createdAt: Date.now(),
+      };
+      const next = [entry, ...savedList].slice(0, SAVED_LIMIT);
+      setSavedList(next);
+      persistSaved(next);
+    },
+    [palette, savedList],
+  );
 
   const removeSaved = useCallback(
     (id: string) => {
@@ -217,33 +256,23 @@ export const PosterSkin = () => {
     markWelcomeSeen();
   }, []);
 
-  // Tools, export, save/load and settings share the desktop side-panel slot, so
-  // opening one closes the others (and cancels any in-flight slide-away).
+  // Tools, export and settings share the desktop side-panel slot, so opening one
+  // closes the others (and cancels any in-flight slide-away).
   const openTools = useCallback(() => {
     setShowExport(false);
-    setShowSaved(false);
     setShowSettings(false);
     setPanelClosing(false);
     setShowTools(true);
   }, []);
   const openExport = useCallback(() => {
     setShowTools(false);
-    setShowSaved(false);
     setShowSettings(false);
     setPanelClosing(false);
     setShowExport(true);
   }, []);
-  const openSaved = useCallback(() => {
-    setShowTools(false);
-    setShowExport(false);
-    setShowSettings(false);
-    setPanelClosing(false);
-    setShowSaved(true);
-  }, []);
   const openSettings = useCallback(() => {
     setShowTools(false);
     setShowExport(false);
-    setShowSaved(false);
     setPanelClosing(false);
     setShowSettings(true);
   }, []);
@@ -254,7 +283,6 @@ export const PosterSkin = () => {
     if (isMobile) {
       setShowTools(false);
       setShowExport(false);
-      setShowSaved(false);
       setShowSettings(false);
     } else {
       setPanelClosing(true);
@@ -264,18 +292,14 @@ export const PosterSkin = () => {
   const closeAllOverlays = useCallback(() => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
-    else if (showNaming) setShowNaming(false);
-    else if (showExport || showTools || showSaved || showSettings)
-      closeSidePanel();
+    else if (showExport || showTools || showSettings) closeSidePanel();
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
   }, [
     showWelcome,
     showMenu,
-    showNaming,
     showExport,
     showTools,
-    showSaved,
     showSettings,
     showAbout,
     editingId,
@@ -434,21 +458,6 @@ export const PosterSkin = () => {
       onClose={closeSidePanel}
     />
   ) : null;
-  const savedPanel = showSaved ? (
-    <PosterSavedDrawer
-      ink={ink}
-      bg={bg}
-      isMobile={isMobile}
-      list={savedList}
-      onClose={closeSidePanel}
-      onSave={handleSavePalette}
-      onLoad={(hexes) => {
-        replaceAll(hexes);
-        closeSidePanel();
-      }}
-      onDelete={removeSaved}
-    />
-  ) : null;
   const settingsPanel = showSettings ? (
     <PosterSettingsDrawer
       ink={ink}
@@ -458,13 +467,17 @@ export const PosterSkin = () => {
       onSetTheme={setTheme}
       tickerVisible={tickerVisible}
       onToggleTicker={toggleTicker}
-      savedCount={savedList.length}
-      onManageSaved={openSaved}
+      savedList={savedList}
+      onSavePalette={handleSavePalette}
+      onLoadPalette={(hexes) => {
+        replaceAll(hexes);
+        closeSidePanel();
+      }}
+      onDeletePalette={removeSaved}
       onClose={closeSidePanel}
     />
   ) : null;
-  const sidePanelChild =
-    toolsPanel ?? exportPanel ?? savedPanel ?? settingsPanel;
+  const sidePanelChild = toolsPanel ?? exportPanel ?? settingsPanel;
 
   return (
     <div
@@ -627,7 +640,6 @@ export const PosterSkin = () => {
                 if (panelClosing) {
                   setShowTools(false);
                   setShowExport(false);
-                  setShowSaved(false);
                   setShowSettings(false);
                   setPanelClosing(false);
                 }
@@ -666,27 +678,17 @@ export const PosterSkin = () => {
       )}
       {isMobile && toolsPanel}
       {isMobile && exportPanel}
-      {isMobile && savedPanel}
       {isMobile && settingsPanel}
       {showMenu && (
         <PosterMobileMenu
           ink={ink}
           bg={bg}
-          nameList={nameList}
           onClose={() => setShowMenu(false)}
           onRandomize={randomizeUnlocked}
           onTools={openTools}
           onExport={openExport}
           onSettings={openSettings}
           onAbout={() => setShowAbout(true)}
-          onNaming={() => setShowNaming(true)}
-        />
-      )}
-      {showNaming && (
-        <PosterNamingSheet
-          ink={ink}
-          bg={bg}
-          onClose={() => setShowNaming(false)}
         />
       )}
     </div>

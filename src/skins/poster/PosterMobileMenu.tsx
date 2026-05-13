@@ -4,27 +4,23 @@ import { POSTER } from "./tokens";
 interface MenuProps {
   ink: string;
   bg: string;
-  nameList: string;
   onClose: () => void;
   onRandomize: () => void;
   onTools: () => void;
   onExport: () => void;
   onSettings: () => void;
   onAbout: () => void;
-  onNaming: () => void;
 }
 
 export const PosterMobileMenu = ({
   ink,
   bg,
-  nameList,
   onClose,
   onRandomize,
   onTools,
   onExport,
   onSettings,
   onAbout,
-  onNaming,
 }: MenuProps) => {
   const fire = (fn: () => void) => () => {
     fn();
@@ -100,9 +96,6 @@ export const PosterMobileMenu = ({
       >
         <Row ink={ink} onClick={fire(onRandomize)} bold>
           RANDOMISE
-        </Row>
-        <Row ink={ink} onClick={fire(onNaming)}>
-          NAMES · {nameList}
         </Row>
         <Row ink={ink} onClick={fire(onTools)}>
           TOOLS
