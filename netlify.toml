@@ -14,6 +14,16 @@
   command = "npm run build"
   publish = "dist"
 
+# SPA fallback: client-routed paths have no static file in dist/, so without
+# this rewrite Netlify serves its 404 page for /share. The 200 means the URL
+# stays /share (no redirect chain) and the browser receives index.html. The
+# edge function on /share still fires first; its `ctx.next()` then follows
+# this rewrite to fetch index.html, which it rewrites and returns.
+[[redirects]]
+  from = "/share"
+  to = "/index.html"
+  status = 200
+
 [[edge_functions]]
   path = "/share"
   function = "share-html"
