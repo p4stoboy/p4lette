@@ -34,6 +34,7 @@ import { PosterSavedDrawer } from "./PosterSavedDrawer";
 import { PosterToolsTray } from "./PosterToolsTray";
 import { PosterExportSheet } from "./PosterExportSheet";
 import { PosterNamingSheet } from "./PosterNamingSheet";
+import { PosterSettingsDrawer } from "./PosterSettingsDrawer";
 
 const WELCOME_KEY = "p4lette_seen_welcome_v1";
 const TICKER_KEY = "p4lette_ticker_v1";
@@ -104,6 +105,7 @@ export const PosterSkin = () => {
   const [showSaved, setShowSaved] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showNaming, setShowNaming] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [lastEditedId, setLastEditedId] = useState<number | null>(null);
@@ -215,25 +217,35 @@ export const PosterSkin = () => {
     markWelcomeSeen();
   }, []);
 
-  // Tools, export and save/load share the desktop side-panel slot, so opening
-  // one closes the others (and cancels any in-flight slide-away).
+  // Tools, export, save/load and settings share the desktop side-panel slot, so
+  // opening one closes the others (and cancels any in-flight slide-away).
   const openTools = useCallback(() => {
     setShowExport(false);
     setShowSaved(false);
+    setShowSettings(false);
     setPanelClosing(false);
     setShowTools(true);
   }, []);
   const openExport = useCallback(() => {
     setShowTools(false);
     setShowSaved(false);
+    setShowSettings(false);
     setPanelClosing(false);
     setShowExport(true);
   }, []);
   const openSaved = useCallback(() => {
     setShowTools(false);
     setShowExport(false);
+    setShowSettings(false);
     setPanelClosing(false);
     setShowSaved(true);
+  }, []);
+  const openSettings = useCallback(() => {
+    setShowTools(false);
+    setShowExport(false);
+    setShowSaved(false);
+    setPanelClosing(false);
+    setShowSettings(true);
   }, []);
   // Close whichever side panel is open. Desktop: flip panelClosing → the slot
   // plays sidePanelOutRight, then its onAnimationEnd drops the flags. Mobile:
@@ -243,6 +255,7 @@ export const PosterSkin = () => {
       setShowTools(false);
       setShowExport(false);
       setShowSaved(false);
+      setShowSettings(false);
     } else {
       setPanelClosing(true);
     }
@@ -252,7 +265,8 @@ export const PosterSkin = () => {
     if (showWelcome) dismissWelcome();
     else if (showMenu) setShowMenu(false);
     else if (showNaming) setShowNaming(false);
-    else if (showExport || showTools || showSaved) closeSidePanel();
+    else if (showExport || showTools || showSaved || showSettings)
+      closeSidePanel();
     else if (showAbout) setShowAbout(false);
     else if (editingId !== null) setEditingId(null);
   }, [
@@ -262,6 +276,7 @@ export const PosterSkin = () => {
     showExport,
     showTools,
     showSaved,
+    showSettings,
     showAbout,
     editingId,
     dismissWelcome,
@@ -434,7 +449,22 @@ export const PosterSkin = () => {
       onDelete={removeSaved}
     />
   ) : null;
-  const sidePanelChild = toolsPanel ?? exportPanel ?? savedPanel;
+  const settingsPanel = showSettings ? (
+    <PosterSettingsDrawer
+      ink={ink}
+      bg={bg}
+      isMobile={isMobile}
+      theme={theme}
+      onSetTheme={setTheme}
+      tickerVisible={tickerVisible}
+      onToggleTicker={toggleTicker}
+      savedCount={savedList.length}
+      onManageSaved={openSaved}
+      onClose={closeSidePanel}
+    />
+  ) : null;
+  const sidePanelChild =
+    toolsPanel ?? exportPanel ?? savedPanel ?? settingsPanel;
 
   return (
     <div
@@ -452,19 +482,12 @@ export const PosterSkin = () => {
     >
       <PosterNav
         ink={ink}
-        bg={bg}
-        isDark={isDark}
         compact={isMobile}
-        tickerVisible={tickerVisible}
-        onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-        onAbout={() => setShowAbout(true)}
-        onSaved={openSaved}
+        onSettings={openSettings}
         onTools={openTools}
         onExport={openExport}
         onRandomize={randomizeUnlocked}
         onMenu={() => setShowMenu(true)}
-        onToggleTicker={toggleTicker}
-        savedCount={savedList.length}
       />
 
       {!isMobile && tickerVisible && (
@@ -605,6 +628,7 @@ export const PosterSkin = () => {
                   setShowTools(false);
                   setShowExport(false);
                   setShowSaved(false);
+                  setShowSettings(false);
                   setPanelClosing(false);
                 }
               }}
@@ -616,7 +640,13 @@ export const PosterSkin = () => {
         </div>
       )}
 
-      {!isMobile && <PosterFooter palette={palette} ink={ink} bg={bg} />}
+      {!isMobile && (
+        <PosterFooter
+          palette={palette}
+          ink={ink}
+          onAbout={() => setShowAbout(true)}
+        />
+      )}
 
       {showWelcome && (
         <PosterWelcome
@@ -637,23 +667,19 @@ export const PosterSkin = () => {
       {isMobile && toolsPanel}
       {isMobile && exportPanel}
       {isMobile && savedPanel}
+      {isMobile && settingsPanel}
       {showMenu && (
         <PosterMobileMenu
           ink={ink}
           bg={bg}
-          isDark={isDark}
-          savedCount={savedList.length}
           nameList={nameList}
-          tickerVisible={tickerVisible}
           onClose={() => setShowMenu(false)}
-          onTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onRandomize={randomizeUnlocked}
-          onSaved={openSaved}
           onTools={openTools}
           onExport={openExport}
+          onSettings={openSettings}
           onAbout={() => setShowAbout(true)}
           onNaming={() => setShowNaming(true)}
-          onToggleTicker={toggleTicker}
         />
       )}
       {showNaming && (
